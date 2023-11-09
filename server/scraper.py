@@ -1,6 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
-from requests.exceptions import RequestException
+# from requests.exceptions import RequestException
+from requests.exceptions import RequestException, HTTPError, ConnectionError, Timeout, TooManyRedirects
+import time
 
 def get_text_or_default(soup, selector, attribute=None, default='Not Available'):
     """
@@ -17,6 +19,25 @@ def get_text_or_default(soup, selector, attribute=None, default='Not Available')
             return element[attribute] if element.has_attr(attribute) else default
         return element.get_text().strip()
     return default
+
+
+def scrape_with_retries(book_url, max_retries=3, delay=10):
+    """
+    Attempts to scrape the book details, retrying on failure up to a maximum number of retries.
+    :param book_url: URL to scrape
+    :param max_retries: Maximum number of retries
+    :param delay: Delay between retries in seconds
+    :return: Scraped data or None
+    """
+    for attempt in range(max_retries):
+        try:
+            return scrape_book_details(book_url)
+        except (ConnectionError, Timeout):
+            print(f"Attempt {attempt + 1} failed. Retrying in {delay} seconds...")
+            time.sleep(delay)
+    
+    print(f"Failed to scrape {book_url} after {max_retries} attempts.")
+    return None
 
 
 def scrape_book_details(book_url):
@@ -82,9 +103,21 @@ def scrape_book_details(book_url):
 
         return details
 
+    except HTTPError as http_err:
+        print(f"HTTP error occurred: {http_err}")
+    except ConnectionError as conn_err:
+        print(f"Connection error occurred: {conn_err}")
+    except Timeout as timeout_err:
+        print(f"Timeout error occurred: {timeout_err}")
+    except TooManyRedirects as redirects_err:
+        print(f"Too many redirects: {redirects_err}")
     except RequestException as e:
         print(f"Error fetching book details from {book_url}: {e}")
-        return None
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+    # Return some default value
+    return None
 
 
 def scrape_book_titles(url):
@@ -105,23 +138,39 @@ def scrape_book_titles(url):
             title = element.get_text().strip()
             if title and title not in books:
                 book_url = element['href']
-                books[title] = scrape_book_details(book_url) or 'Details not available'
+                books[title] = scrape_with_retries(book_url) or 'Details not available'
+                # books[title] = scrape_book_details(book_url) or 'Details not available'
 
         return books
 
+    except HTTPError as http_err:
+        print(f"HTTP error occurred: {http_err}")
+    except ConnectionError as conn_err:
+        print(f"Connection error occurred: {conn_err}")
+    except Timeout as timeout_err:
+        print(f"Timeout error occurred: {timeout_err}")
+    except TooManyRedirects as redirects_err:
+        print(f"Too many redirects: {redirects_err}")
     except RequestException as e:
         print(f"Error fetching the main page: {e}")
-        return {}
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    
+    # Return some default value
+    return {}
 
-# URL of the webpage to scrape
-url = 'https://asuratoon.com/manga/list-mode/'
 
-# Scrape the titles and details
-books = scrape_book_titles(url)
-for title, details in books.items():
-    print(f"{title}:")
-    for key, value in details.items():
-        print(f"  {key}: {value}")
+# Main function:
+if __name__ == "__main__":
+    # URL of the webpage to scrape
+    url = 'https://asuratoon.com/manga/list-mode/'
 
-print(f"A total of {len(books)} books were scraped from AsuraScans")
+    # Scrape the titles and details
+    books = scrape_book_titles(url)
+    for title, details in books.items():
+        print(f"{title}:")
+        for key, value in details.items():
+            print(f"  {key}: {value}")
+
+    print(f"A total of {len(books)} books were scraped from AsuraScans")
 
