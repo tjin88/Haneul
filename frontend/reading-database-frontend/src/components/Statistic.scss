@@ -1,0 +1,23 @@
+.statistic {
+    text-align: center;
+    margin: 20px 0;
+  
+    h2 {
+      display: inline-block;
+      margin: 0;
+      padding: 10px;
+      background-color: #f2f2f2;
+      border-radius: 8px;
+      font-size: 1.5rem;
+      font-weight: normal;
+      color: #333;
+  
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      
+      span {
+        font-weight: bold;
+        color: #2c3e50;
+      }
+    }
+  }
+  

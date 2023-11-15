@@ -1,0 +1,53 @@
+.browse {
+  padding: 10vh 10vw 0;
+
+  .search-input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+  }
+
+  .sort-select {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+  }
+
+  .books-grid {
+      display: grid;
+      // TODO: Adjust this value (5) to a scalable value
+      grid-template-columns: repeat(5, 1fr);
+      grid-gap: 10px;
+
+      .book-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+
+          img {
+              width: 100%; 
+              height: auto;
+              object-fit: cover;
+              border-radius: 5px;
+          }
+
+          .book-info {
+              text-align: center;
+
+              h3 {
+                  font-size: 1rem;
+                  margin: 5px 0;
+              }
+
+              p {
+                  font-size: 0.875rem;
+                  color: #666;
+              }
+          }
+      }
+  }
+}

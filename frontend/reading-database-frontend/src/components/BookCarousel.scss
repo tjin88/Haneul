@@ -1,0 +1,43 @@
+.carousel-container {
+    overflow-x: hidden;
+}
+
+.book-carousel {
+    // overflow-x: hidden;
+    max-width: 100%;
+    margin: auto;
+
+    .slick-list {
+      margin: 0 0 30px; 
+      overflow: hidden; 
+
+      .slick-track {
+        display: flex;
+        align-items: center; 
+      }
+    }
+  
+    .slick-slide {
+      display: flex;
+      justify-content: center; 
+      align-items: center; 
+      height: auto; 
+  
+      > div {
+        margin: 0 5px;
+        height: 100%;
+      }
+    }
+  
+    .slick-dots {
+      li {
+        margin: 0;
+      }
+    }
+  
+    .slick-prev, .slick-next {
+      top: 50%; 
+      transform: translateY(-50%);
+    }
+  }
+  
