@@ -4,6 +4,7 @@ from requests.exceptions import RequestException, HTTPError, ConnectionError, Ti
 import time
 from dateutil.parser import parse
 import urllib.parse
+import re
 
 def get_text_or_default(soup, selector, attribute=None, default='Not Available'):
     """
@@ -50,6 +51,11 @@ def scrape_with_retries(book_url, max_retries=3, delay=10):
     return None
 
 
+def extract_chapter_number(chapter_str):
+    match = re.search(r'\d+', chapter_str)
+    return match.group(0) if match else None
+
+
 def scrape_book_details(book_url):
     """
     Scrapes detailed information about a book from its individual page.
@@ -76,7 +82,7 @@ def scrape_book_details(book_url):
             'posted_by': get_text_or_default(soup, ('span', {'class': 'author'})),
             'posted_on': get_text_or_default(soup, ('time', {'itemprop': 'datePublished'}), attribute='datetime'),
             'updated_on': get_text_or_default(soup, ('time', {'itemprop': 'dateModified'}), attribute='datetime'),
-            'newest_chapter': get_text_or_default(soup, ('span', {'class': 'epcur epcurlast'})),
+            'newest_chapter': extract_chapter_number(get_text_or_default(soup, ('span', {'class': 'epcur epcurlast'}))),
             'genres': [a.get_text().strip() for a in soup.find('span', class_='mgen').find_all('a')] if soup.find('span', class_='mgen') else [],
             'image_url': get_text_or_default(soup, ('img', {'class': 'wp-post-image'}), attribute='src'),
             'rating': get_text_or_default(soup, ('div', {'itemprop': 'ratingValue'})),

@@ -12,18 +12,13 @@ const TopTenBooks = ({ title, books }) => {
       <div className="books-slider relative">
         <div className="books-list flex gap-4 overflow-x-auto">
           {books.slice(0, 11).map((book, index) => (
-            <div key={index} className="book-card">
-              <a href={book.link}>
-                <img src={book.image_url} alt={book.title} className="book-cover rounded-lg" />
-              </a>
+            <a href={book.link} key={index} className="book-card">
+              <img src={book.image_url} alt={book.title} className="book-cover rounded-lg" />
               <div className="book-info">
-                <a href={book.link}>
-                  <span className="book-title">{book.title}</span>
-                </a>
+                <p className="book-title">{book.title}</p>
                 <p className="tracking-info">Rating: {book.rating}</p>
-                {/* <p className="tracking-info">0 Users Tracking</p> */}
               </div>
-            </div>
+            </a>
           ))}
         </div>
       </div>

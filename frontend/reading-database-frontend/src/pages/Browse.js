@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './Browse.scss';
 
-const Browse = ({ books }) => {
+const Browse = ({ books, lightMode }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortType, setSortType] = useState('default');
   const [genreFilter, setGenreFilter] = useState('');
@@ -76,7 +76,7 @@ const Browse = ({ books }) => {
             <img src={book.image_url} alt={book.title} />
             <div className="book-info">
               <h3>{book.title}</h3>
-              <p>{book.newest_chapter}</p>
+              <p>Chapter: {book.newest_chapter}</p>
               <p>{book.followers}</p>
               <p>{book.genres.join(', ')}</p>
               <p>Rating: {book.rating}</p>

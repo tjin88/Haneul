@@ -1,4 +1,3 @@
-// BookCarousel.js
 import React from 'react';
 import Slider from 'react-slick';
 import BookCard from './BookCard';
@@ -13,10 +12,10 @@ const BookCarousel = ({ books }) => {
     speed: 500,
     slidesToShow: 6, // Shows 6 books at once
     slidesToScroll: 1,
-    draggable: true, // Allows dragging with the mouse
+    draggable: true,
     swipe: true,
-    swipeToSlide: true, // Allows scrolling with a trackpad --> TODO: Still working on this!s
-    lazyLoad: true,
+    swipeToSlide: true, // Allows scrolling with a trackpad --> TODO: Still working on this!
+    lazyLoad: false,
     autoplay: true,
     autoplaySpeed: 2000,
     pauseOnDotsHover: true,

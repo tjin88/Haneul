@@ -9,7 +9,7 @@ const BookCard = ({ image_url, title, newest_chapter }) => {
       </div>
       <div className="book-info">
         {/* <span className="title">{title}</span> */}
-        <span className="chapters">{newest_chapter}</span>
+        <span className="chapters">Chapter {newest_chapter}</span>
         {/* <span className="chapters">Latest Chapter: {newest_chapter}</span> */}
       </div>
     </div>

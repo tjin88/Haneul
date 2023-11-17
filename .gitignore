@@ -1,0 +1,16 @@
+server/myenv/
+.env
+server/issues.txt
+
+*.pyc
+*~
+/static/
+/media/
+.DS_Store
+
+server/django_app/django_app/__pycache__
+server/django_app/centralized_API_backend/__pycache__
+server/django_app/db.sqlite3
+server/django_app/centralized_API_backend/migrations/
+
+frontend/reading-database-frontend/src/assets/

@@ -1,66 +1,75 @@
 .header {
-    background: #1e1e1e;
-    padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #333; 
+  color: white; 
+
+  .left-side {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  
+
     .branding {
       display: flex;
       align-items: center;
-      gap: 1rem;
-  
+      text-decoration: none;
+      color: white;
+
       .logo {
         height: 50px;
+        margin-right: 1rem;
         -webkit-filter: invert(100%);
         filter: invert(100%);
       }
-  
+
       .title {
-        color: #FFFFFF;
-        margin: 0; 
-        font-size: 1.5rem; 
+        color: white !important;
+        font-size: 1.5rem;
+        margin: 0;
       }
     }
-  
-    .top-bar {
-      display: flex;
-      gap: 1rem;
-  
-      .login-button,
-      .register-button {
-        padding: 0.5rem 1.5rem; 
-        border: none;
-        font-size: 1rem; 
-        font-weight: bold;
-        border-radius: 4px;
-        cursor: pointer; 
-        transition: background-color 0.3s, color 0.3s;
-  
-        &:hover {
-          background-color: #4a90e2; 
-          color: #fff; 
-        }
-      }
-  
-      .login-button {
-        background-color: transparent; 
-        color: #9b9b9b; 
-  
-        &:hover {
-          background-color: #3578e5;
-        }
-      }
-  
-      .register-button {
-        background-color: #5cb85c; 
-        color: #fff;
-  
-        &:hover {
-          background-color: #4cae4c;
-        }
+
+    .header_browse_redirect {
+      text-decoration: none;
+      color: inherit; 
+      margin-left: 2rem; 
+
+      .browse_redirect {
+        font-size: 1rem;
+        margin: 0; 
       }
     }
   }
-  
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .login-button,
+    .register-button,
+    .profile-button {
+      padding: 0.5rem 1rem;
+      border: none;
+      background-color: #4a90e2;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+
+      &:hover {
+        background-color: darken(#4a90e2, 10%);
+      }
+    }
+
+    .profile-button {
+      display: flex;
+      align-items: center;
+
+      img {
+        height: 30px; 
+        border-radius: 50%;
+      }
+    }
+  }
+}

@@ -3,7 +3,7 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 1rem;
+    padding: 0 0 0.5rem;
     border-radius: 15px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
     transition: transform 0.3s ease-in-out;
@@ -38,6 +38,7 @@
         font-size: 1rem; 
         font-weight: bold;
         margin: 0.5rem 0;
+        overflow: ellipsis;
       }
   
       .chapters {

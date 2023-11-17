@@ -1,7 +1,7 @@
 import React from 'react';
 import './NotFound.scss';
 
-const NotFound = () => {
+const NotFound = ({ lightMode }) => {
   return (
     <div className="not-found-container">
       <h1>404</h1>
