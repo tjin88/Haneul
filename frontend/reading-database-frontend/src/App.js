@@ -8,7 +8,7 @@ import HomeLogged from './pages/HomeLogged';
 import HomeUnlogged from './pages/HomeUnlogged'; 
 import Browse from './pages/Browse'; 
 import NotFound from './pages/NotFound';
-import { AuthProvider } from './components/AuthContext2';
+import { AuthProvider } from './components/AuthContext';
 
 const App = () => {
   const [books, setBooks] = useState([]);

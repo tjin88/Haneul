@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Header.scss';
 import ManBlackWhite from '../assets/ManBlackWhite.png';
 import { useAuth } from './AuthContext2';
@@ -9,6 +9,19 @@ const Header = () => {
   const { user, login, register, logout } = useAuth();
   // const [userInfo, setUserInfo] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [profileName, setProfileName] = useState("");
+
+  const loadUserFromLocalStorage = () => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setProfileName(JSON.parse(storedUser).profileName);
+    }
+  };
+
+  // Check local storage for user data on initial load
+  useEffect(() => {
+    loadUserFromLocalStorage();
+  }, []);
 
   return (
     <header className="header">
@@ -29,13 +42,13 @@ const Header = () => {
             <button onClick={logout} className="login-button">Logout</button>
             {/* Profile Button */}
             <button className="profile-button">
+              <p>{profileName}</p>
               <img src={user.image || ManColour} alt="Profile" />
             </button>
           </div>
         ) : (
           <div className="top-bar">
             <button onClick={() => setShowModal(true)} className="login-button">Login</button>
-            {/* ... */}
           </div>
         )
       }

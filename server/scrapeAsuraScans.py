@@ -5,6 +5,8 @@ import time
 from dateutil.parser import parse
 import urllib.parse
 import re
+import os
+from dotenv import load_dotenv
 
 def get_text_or_default(soup, selector, attribute=None, default='Not Available'):
     """
@@ -309,7 +311,10 @@ def send_book_data(api_url, book_data, existing_data):
 if __name__ == "__main__":
     # Define URLs for scraping and API endpoint
     url = 'https://asuratoon.com/manga/list-mode/'
-    api_url = 'http://127.0.0.1:8000/centralized_API_backend/api/manga/'
+
+    # Load environment variables from .env file
+    load_dotenv()  
+    api_url = os.getenv('BACKEND_URL')
 
     # Retrieve existing data from the API
     existing_data = format_existing_data_to_dict(get_existing_data(api_url))

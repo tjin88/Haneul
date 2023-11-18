@@ -27,8 +27,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
+# TODO: Change this to False for production
 DEBUG = True
 
+# TODO: Add domain here when deploying
 ALLOWED_HOSTS = []
 
 # Application definition
@@ -97,7 +99,7 @@ cluster = os.getenv('CLUSTER')
 DATABASES = {
     'default': {
         'ENGINE': 'djongo',
-        'NAME': 'SCRAPED_MANGA_AND_LIGHTNOVEL_DATABASE',  # Replace with your database name
+        'NAME': 'SCRAPED_MANGA_AND_LIGHTNOVEL_DATABASE',
         'ENFORCE_SCHEMA': False,
         'CLIENT': {
             'host': f"mongodb+srv://{username}:{password}@{os.getenv('CLUSTER')}/?retryWrites=true&w=majority"
@@ -108,7 +110,7 @@ DATABASES = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    # Add production frontend domain here if needed
+    # TODO: Add production frontend domain when deploying**
 ]
 
 # Password validation
