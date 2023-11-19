@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class Manga(models.Model):
     title = models.CharField(max_length=255, primary_key=True)
@@ -21,5 +22,11 @@ class Manga(models.Model):
 
     def __str__(self):
         return self.title
-    
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    reading_list = models.JSONField(default=list)
+
+    def __str__(self):
+        return self.user.username
 # Add more models below if needed

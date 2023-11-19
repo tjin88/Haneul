@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './Header.scss';
 import ManBlackWhite from '../assets/ManBlackWhite.png';
-import { useAuth } from './AuthContext2';
-import LoginModal from './LoginModal3';
+import { useAuth } from './AuthContext';
+import LoginModal from './LoginModal';
 import ManColour from '../assets/ManColour.png';
 
 const Header = () => {
@@ -33,6 +33,10 @@ const Header = () => {
 
         <a href="/browse" className="header_browse_redirect">
           <h1 className="browse_redirect">Browse</h1>
+        </a>
+
+        <a href="/track" className="header_browse_redirect">
+          <h1 className="browse_redirect">Track</h1>
         </a>
       </div>
 

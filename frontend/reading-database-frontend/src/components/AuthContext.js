@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
   /*
+  // TODO: Add tokenization for authenticating users**
   function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {

@@ -9,6 +9,7 @@ import HomeUnlogged from './pages/HomeUnlogged';
 import Browse from './pages/Browse'; 
 import NotFound from './pages/NotFound';
 import { AuthProvider } from './components/AuthContext';
+import TrackerPage from './pages/TrackerPage';
 
 const App = () => {
   const [books, setBooks] = useState([]);
@@ -54,6 +55,7 @@ const App = () => {
             <Route exact path="/" element={<HomeUnlogged books={books} lightMode={lightMode} />} />
             <Route path="/home" element={<HomeLogged books={books} lightMode={lightMode} />} />
             <Route path="/browse" element={<Browse books={books} lightMode={lightMode} />} />
+            <Route path="/track" element={<TrackerPage lightMode={lightMode} />} />
             <Route path="*" element={<NotFound lightMode={lightMode} />} />
           </Routes>
         <Footer/>
