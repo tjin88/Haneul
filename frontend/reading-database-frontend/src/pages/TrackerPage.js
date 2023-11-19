@@ -3,9 +3,11 @@ import axios from 'axios';
 import TrackerTable from '../components/TrackerTable';
 import { useAuth } from '../components/AuthContext';
 import AddBookToTracker from '../components/AddBookToTracker';
+import './TrackerPage.scss';
 
 const TrackerPage = () => {
   const [trackingList, setTrackingList] = useState([]);
+  const [showModal, setShowModal] = useState(false);
   const { user } = useAuth();
 
   const fetchTrackingList = async () => {
@@ -29,11 +31,17 @@ const TrackerPage = () => {
     fetchTrackingList(); 
   };
 
+  const handleCloseModal = () => {
+    setShowModal(false);
+};
+
   return (
-    <div>
+    <div className='trackerPage'>
       <h1>My Tracking List</h1>
-      <AddBookToTracker onBookAdded={handleBookAdded} />
-      <TrackerTable books={trackingList} />
+        {/* <AddBookToTracker onBookAdded={handleBookAdded} /> */}
+        <button className='addButton' onClick={() => setShowModal(true)}>Add Book</button>
+        {showModal && <AddBookToTracker onClose={handleCloseModal} onBookAdded={handleBookAdded} />}
+        <TrackerTable books={trackingList} />
     </div>
   );
 };

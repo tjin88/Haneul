@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
+import './AddBookToTracker.scss';
 
-const AddBookToTracker = ({ onBookAdded }) => {
+const AddBookToTracker = ({ onBookAdded, onClose }) => {
     const [bookTitle, setBookTitle] = useState('');
     const [readingStatus, setReadingStatus] = useState('');
     const [userTags, setUserTags] = useState('');
@@ -37,6 +38,8 @@ const AddBookToTracker = ({ onBookAdded }) => {
                 setReadingStatus('');
                 setUserTags('');
                 setLatestReadChapter('');
+
+                onClose();
             } catch (error) {
                 console.error('Error adding book to tracker:', error);
             }
@@ -47,33 +50,42 @@ const AddBookToTracker = ({ onBookAdded }) => {
     
 
     return (
-        <form onSubmit={handleSubmit}>
-            <input 
-                type="text" 
-                value={bookTitle} 
-                onChange={(e) => setBookTitle(e.target.value)} 
-                placeholder="Book Title" 
-            />
-            <input 
-                type="text" 
-                value={readingStatus} 
-                onChange={(e) => setReadingStatus(e.target.value)} 
-                placeholder="Reading Status" 
-            />
-            <input 
-                type="text" 
-                value={userTags} 
-                onChange={(e) => setUserTags(e.target.value)} 
-                placeholder="User Tags" 
-            />
-            <input 
-                type="text" 
-                value={latestReadChapter} 
-                onChange={(e) => setLatestReadChapter(e.target.value)} 
-                placeholder="Latest Read Chapter" 
-            />
-            <button type="submit">Add Book</button>
-        </form>
+        <div className="modalBackdrop">
+            <div className="modalContent">
+                <button className='closeButton' onClick={onClose}>X</button>
+                <form onSubmit={handleSubmit}>
+                    <input 
+                        className='formInput'
+                        type="text" 
+                        value={bookTitle} 
+                        onChange={(e) => setBookTitle(e.target.value)} 
+                        placeholder="Book Title" 
+                    />
+                    <input 
+                        className='formInput'
+                        type="text" 
+                        value={readingStatus} 
+                        onChange={(e) => setReadingStatus(e.target.value)} 
+                        placeholder="Reading Status" 
+                    />
+                    <input 
+                        className='formInput'
+                        type="text" 
+                        value={userTags} 
+                        onChange={(e) => setUserTags(e.target.value)} 
+                        placeholder="User Tags" 
+                    />
+                    <input 
+                        className='formInput'
+                        type="text" 
+                        value={latestReadChapter} 
+                        onChange={(e) => setLatestReadChapter(e.target.value)} 
+                        placeholder="Latest Read Chapter" 
+                    />
+                    <button className="formButton" type="submit">Add Book</button>
+                </form>
+            </div>
+        </div>
     );
 };
 

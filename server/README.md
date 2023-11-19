@@ -44,14 +44,18 @@ pip freeze > requirements.txt
 5. Frontend (React)
 
 ## Short-term
-- Add MongoDB configuration to save on a cloud database rather than a local database
 - Create a frontend that will display the image, title, and chapter information for each book
     - Bookmarking function
     - User's current chapter information
     - Tags function
     - Reading status
+- Add a page for user settings, where you can change your profile image, password, and email
+- Add a page for each book, where you can add the book to your tracker,
+and you can see the book's details (Total chapters, synopsis, genres, book type, etc.) 
+- Add tokenization to ensure proper CSRF protection. Currently I've bypassed this, which definitely needs to be fixed before deploying
 
 ## Long-term
 - Add AWS or other cloud hosting to run every x minutes/hours
+- Look into how to solve the problem where the book is both a light novel and manga. Planning to use a primary key of a combination of book_title and book_type
 - Look at how to solve the problem where the novel has mutliple names
     - Look into finding/creating a database with all novel/manga, along with their alt names?

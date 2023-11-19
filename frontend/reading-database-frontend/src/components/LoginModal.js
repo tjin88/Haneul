@@ -8,7 +8,7 @@ const LoginModal = ({ onClose }) => {
   const [email, setEmail] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [password, setPassword] = useState('');
-  const [profileName, setProfileName] = useState(''); // New state for profile name
+  const [profileName, setProfileName] = useState('');
   const [error, setError] = useState('');
 
   const validatePassword = (password) => {
@@ -17,7 +17,8 @@ const LoginModal = ({ onClose }) => {
   };
 
   const validateProfileName = (name) => {
-    return name.length <= 12; // Ensure profile name does not exceed 12 characters
+    // Ensure profile name does not exceed 12 characters
+    return name.length <= 12; 
   };
 
   const togglePasswordVisibility = () => {

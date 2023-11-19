@@ -46,7 +46,7 @@ const Header = () => {
             <button onClick={logout} className="login-button">Logout</button>
             {/* Profile Button */}
             <button className="profile-button">
-              <p>{profileName}</p>
+              {/* <p>{profileName}</p> */}
               <img src={user.image || ManColour} alt="Profile" />
             </button>
           </div>
