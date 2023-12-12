@@ -1,14 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 import './AddBookToTracker.scss';
 
-const AddBookToTracker = ({ onBookAdded, onClose }) => {
+const AddBookToTracker = ({ onBookAdded, onClose, givenBookTitle }) => {
     const [bookTitle, setBookTitle] = useState('');
     const [readingStatus, setReadingStatus] = useState('');
     const [userTags, setUserTags] = useState('');
     const [latestReadChapter, setLatestReadChapter] = useState('');
     const { user } = useAuth();
+
+    // Only update bookTitle when givenBookTitle changes
+    useEffect(() => {
+        if (givenBookTitle) {
+            setBookTitle(givenBookTitle);
+        }
+    }, [givenBookTitle]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -30,8 +37,10 @@ const AddBookToTracker = ({ onBookAdded, onClose }) => {
                     latest_read_chapter: latestReadChapter,
                 });
                 
-                // Update the tracking list in parent component
-                onBookAdded();
+                // Update the tracking list in parent component --> If provided*
+                if (onBookAdded) {
+                    onBookAdded();
+                }
     
                 // Reset the input fields
                 setBookTitle('');
@@ -54,20 +63,27 @@ const AddBookToTracker = ({ onBookAdded, onClose }) => {
             <div className="modalContent">
                 <button className='closeButton' onClick={onClose}>X</button>
                 <form onSubmit={handleSubmit}>
-                    <input 
+                    {givenBookTitle 
+                        ? <p className='givenBookTitle'>{givenBookTitle}</p>
+                        : <input 
+                            className='formInput'
+                            type="text" 
+                            value={bookTitle} 
+                            onChange={(e) => setBookTitle(e.target.value)} 
+                            placeholder="Book Title" 
+                          />
+                    }
+                    <select
                         className='formInput'
-                        type="text" 
-                        value={bookTitle} 
-                        onChange={(e) => setBookTitle(e.target.value)} 
-                        placeholder="Book Title" 
-                    />
-                    <input 
-                        className='formInput'
-                        type="text" 
-                        value={readingStatus} 
-                        onChange={(e) => setReadingStatus(e.target.value)} 
-                        placeholder="Reading Status" 
-                    />
+                        value={readingStatus}
+                        onChange={(e) => setReadingStatus(e.target.value)}
+                    >
+                        <option value="Reading">Reading</option>
+                        <option value="Plan-to-Read">Plan-to-Read</option>
+                        <option value="On-Hold">On-Hold</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Dropped">Dropped</option>
+                    </select>
                     <input 
                         className='formInput'
                         type="text" 

@@ -1,4 +1,7 @@
 ## How to run:
+1. Run Django App
+2. Run Scraper
+3. Run Frontend
 
 ### AsuraScans scraper
 cd server

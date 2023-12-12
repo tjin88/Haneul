@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useParams } from 'react-router-dom';
 import { useGoogleOneTapLogin } from '@react-oauth/google';
 import Header from './components/Header'; 
 import Footer from './components/Footer'; 
@@ -8,6 +8,7 @@ import HomeLogged from './pages/HomeLogged';
 import HomeUnlogged from './pages/HomeUnlogged'; 
 import Browse from './pages/Browse'; 
 import NotFound from './pages/NotFound';
+import BookDetailsWrapper from './components/BookDetailsWrapper';
 import { AuthProvider } from './components/AuthContext';
 import TrackerPage from './pages/TrackerPage';
 
@@ -56,6 +57,7 @@ const App = () => {
             <Route path="/home" element={<HomeLogged books={books} lightMode={lightMode} />} />
             <Route path="/browse" element={<Browse books={books} lightMode={lightMode} />} />
             <Route path="/track" element={<TrackerPage lightMode={lightMode} />} />
+            <Route path="/:bookTitle" element={<BookDetailsWrapper books={books} />} />
             <Route path="*" element={<NotFound lightMode={lightMode} />} />
           </Routes>
         <Footer/>

@@ -3,6 +3,43 @@
     overflow-y: auto;
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    margin: 20px;
+    background: #fff;
+  }
+  
+  .tableHeader {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 20px;
+    border-bottom: 1px solid #ccc;
+    background: #f9f9f9;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    
+    .headerText {
+      font-size: 16px;
+      color: #333;
+    }
+  
+    .refreshButton,
+    .addButton {
+      padding: 5px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+  
+    .refreshButton {
+      background: #eee;
+      color: #333;
+    }
+  
+    .addButton {
+      background: #0b79ee;
+      color: white;
+      margin-left: 10px;
+    }
   }
   
   .trackerTable {
@@ -31,5 +68,72 @@
     tr:hover {
       background-color: #d0e4ff;
     }
+  
+    .status {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 5px;
+      color: #fff;
+      font-size: 0.8em;
+      text-align: center;
+      width: 80px;
+  
+      &.reading {
+        background: #4caf50;
+      }
+  
+      &.plan-to-read {
+        background: #f9a825;
+      }
+  
+      &.completed {
+        background: #2196f3;
+      }
+
+      &.on-hold {
+        background: #ff77f1;
+      }
+  
+      &.dropped {
+        background: #ef3c3c;
+      }
+    }
   }
+  
+
+
+// .trackerTableContainer {
+//     max-height: 400px;
+//     overflow-y: auto;
+//     border-radius: 10px;
+//     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+//   }
+  
+//   .trackerTable {
+//     width: 100%;
+//     border-collapse: collapse;
+//     border-radius: 10px;
+  
+//     th, td {
+//       border: 1px solid #55a5fb;
+//       padding: 8px;
+//       text-align: left;
+//     }
+  
+//     th {
+//       background-color: #0b79ee;
+//       color: white;
+//       position: sticky;
+//       top: 0;
+//       z-index: 10;
+//     }
+  
+//     tr:nth-child(even) {
+//       background-color: #f1f7ff;
+//     }
+  
+//     tr:hover {
+//       background-color: #d0e4ff;
+//     }
+//   }
   

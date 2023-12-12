@@ -33,7 +33,7 @@ const TrackerPage = () => {
 
   const handleCloseModal = () => {
     setShowModal(false);
-};
+  };
 
   return (
     <div className='trackerPage'>
