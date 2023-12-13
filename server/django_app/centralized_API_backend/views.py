@@ -38,6 +38,13 @@ class MangaUpdateView(views.APIView):
         except Manga.DoesNotExist:
             return Response({'message': 'Manga not found'}, status=status.HTTP_404_NOT_FOUND)
 
+class MangaSearchView(views.APIView):
+    def get(self, request):
+        title_query = request.GET.get('title', '')
+        mangas = Manga.objects.filter(title__icontains=title_query)
+        serializer = MangaSerializer(mangas, many=True)
+        return Response(serializer.data)
+
 @method_decorator(csrf_exempt, name='dispatch')
 @api_view(['POST'])
 def register_view(request):

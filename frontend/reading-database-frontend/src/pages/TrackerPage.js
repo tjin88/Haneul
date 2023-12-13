@@ -10,11 +10,13 @@ const TrackerPage = () => {
   const [showModal, setShowModal] = useState(false);
   const { user } = useAuth();
 
+  const API_ENDPOINT = 'http://127.0.0.1:8000';
+
   const fetchTrackingList = async () => {
     if (user) {
       try {
           const encodedEmail = encodeURIComponent(user.username);
-          const response = await axios.get(`http://127.0.0.1:8000/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list`);
+          const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list`);
           setTrackingList(response.data.reading_list);
       } catch (error) {
         console.error('Error fetching tracking list:', error);

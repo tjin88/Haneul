@@ -11,35 +11,39 @@ import NotFound from './pages/NotFound';
 import BookDetailsWrapper from './components/BookDetailsWrapper';
 import { AuthProvider } from './components/AuthContext';
 import TrackerPage from './pages/TrackerPage';
+import { useAuth } from './components/AuthContext';
 
 const App = () => {
   const [books, setBooks] = useState([]);
-  const [user, setUser] = useState(null);
+  // const [user, setUser] = useState(null);
   const [lightMode, setLightMode] = useState(true);
+  const { user } = useAuth();
 
-  useGoogleOneTapLogin({
-    onSuccess: tokenResponse => {
-      axios.get(`https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${tokenResponse.credential}`)
-        .then(response => {
-          const profile = response.data;
-          setUser({
-            id: profile.sub,
-            email: profile.email,
-            fullName: profile.name,
-            givenName: profile.given_name,
-            profileImage: profile.picture
-          });
-          console.log(`Sucessfully logged in. User: ${user}`)
-        })
-        .catch(error => console.error('Error fetching Google profile:', error));
-    },
-    onError: error => console.error('Google login failed:', error)
-  });
+  const API_ENDPOINT = 'http://127.0.0.1:8000';
+
+  // useGoogleOneTapLogin({
+  //   onSuccess: tokenResponse => {
+  //     axios.get(`https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${tokenResponse.credential}`)
+  //       .then(response => {
+  //         const profile = response.data;
+  //         setUser({
+  //           id: profile.sub,
+  //           email: profile.email,
+  //           fullName: profile.name,
+  //           givenName: profile.given_name,
+  //           profileImage: profile.picture
+  //         });
+  //         console.log(`Sucessfully logged in. User: ${user}`)
+  //       })
+  //       .catch(error => console.error('Error fetching Google profile:', error));
+  //   },
+  //   onError: error => console.error('Google login failed:', error)
+  // });
 
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        const response = await axios.get('http://127.0.0.1:8000/centralized_API_backend/api/manga/');
+        const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/manga/`);
         setBooks(response.data);
       } catch (error) {
         console.error('Error fetching books:', error);
@@ -51,10 +55,10 @@ const App = () => {
   return (
     <AuthProvider>
       <Router>
-        <Header user={user}/>
+        <Header/>
           <Routes>
-            <Route exact path="/" element={<HomeUnlogged books={books} lightMode={lightMode} />} />
-            <Route path="/home" element={<HomeLogged books={books} lightMode={lightMode} />} />
+            {!user && <Route exact path="/" element={<HomeUnlogged books={books} lightMode={lightMode} />} />}
+            {user && <Route path="/" element={<HomeLogged books={books} lightMode={lightMode} />} />}
             <Route path="/browse" element={<Browse books={books} lightMode={lightMode} />} />
             <Route path="/track" element={<TrackerPage lightMode={lightMode} />} />
             <Route path="/:bookTitle" element={<BookDetailsWrapper books={books} />} />

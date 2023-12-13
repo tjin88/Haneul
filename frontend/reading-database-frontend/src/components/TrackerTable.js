@@ -5,9 +5,13 @@ const TrackerTable = ({ books }) => {
   return (
     <div className="trackerTableContainer">
       <div className="tableHeader">
-        <span className="headerText">Showing 1 to {books.length} of {books.length} results</span>
-        <button className="refreshButton">Refresh</button>
-        <button className="addButton">+ Add Manga</button>
+        {
+          books.length === 0 
+            ? <span className="headerText">No Books Found! Please add books to your tracker.</span>
+            : <span className="headerText">Showing 1 to {books.length} of {books.length} results</span>
+        }
+        <button className="refreshButton">Refresh (To Be Implemented)</button>
+        <button className="addButton">+ Add Book (To Be Implemented)</button>
       </div>
       <table className='trackerTable'>
         <thead>

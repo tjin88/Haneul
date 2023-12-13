@@ -7,25 +7,7 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
-  /*
-  // TODO: Add tokenization for authenticating users**
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-  }
-
-  const csrftoken = getCookie('csrftoken');
-  */
+  const API_ENDPOINT = 'http://127.0.0.1:8000';
 
   // Function to load user data from localStorage
   const loadUserFromLocalStorage = () => {
@@ -42,10 +24,9 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/centralized_API_backend/api/login/', {
+      const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/login/`, {
         method: 'POST',
         headers: {
-        //   'X-CSRFToken': csrftoken,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password }),
@@ -66,10 +47,9 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (email, password, profileName ) => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/centralized_API_backend/api/register/', {
+      const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/register/`, {
         method: 'POST',
         headers: {
-        //   'X-CSRFToken': csrftoken, // Replace with your CSRF token
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password, profileName }),
@@ -97,13 +77,14 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
-    // localStorage.removeItem('token');
   };
-  
 
-  return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = { 
+    user, 
+    login, 
+    register, 
+    logout 
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
