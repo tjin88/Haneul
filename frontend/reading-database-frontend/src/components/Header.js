@@ -4,10 +4,11 @@ import ManBlackWhite from '../assets/ManBlackWhite.png';
 import { useAuth } from './AuthContext';
 import LoginModal from './LoginModal';
 import ManColour from '../assets/ManColour.png';
+import Sun from '../assets/Sun.png';
+import Moon from '../assets/Moon.png';
 
-const Header = () => {
-  const { user, login, register, logout } = useAuth();
-  // const [userInfo, setUserInfo] = useState([]);
+const Header = ({ isLightMode, setLightMode }) => {
+  const { user, login, logout } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [profileName, setProfileName] = useState("");
@@ -41,23 +42,29 @@ const Header = () => {
         </a>
       </div>
 
-      {user 
-        ? (
-          <div className="top-bar">
-            <button onClick={logout} className="login-button">Logout</button>
-            {/* Profile Button */}
-            <button className="profile-button">
-              {/* <p>{profileName}</p> */}
-              <img src={user.image || ManColour} alt="Profile" />
-            </button>
-          </div>
-        ) : (
-          <div className="top-bar">
-            <button onClick={() => {setShowModal(true); setIsLoggingIn(false)}} className="login-button">Register</button>
-            <button onClick={() => {setShowModal(true); setIsLoggingIn(true)}} className="login-button">Login</button>
-          </div>
-        )
-      }
+      <div className="top-bar">
+        {user 
+          ? (
+            <>
+              <button onClick={logout} className="login-button">Logout</button>
+              {/* Profile Button */}
+              <button className="profile-button">
+                {/* <p>{profileName}</p> */}
+                <img src={user.image || ManColour} alt="Profile" />
+              </button>
+              </>
+          ) : (
+            <>
+              <button onClick={() => {setShowModal(true); setIsLoggingIn(false)}} className="login-button">Register</button>
+              <button onClick={() => {setShowModal(true); setIsLoggingIn(true)}} className="login-button">Login</button>
+            </>
+          )
+        }
+        {isLightMode 
+          ? <img className="sunMoon" src={Moon} alt="Moon" onClick={() => setLightMode(!isLightMode)} />
+          : <img className="sunMoon" src={Sun} alt="Sun" onClick={() => setLightMode(!isLightMode)} />
+        }
+      </div>
       {showModal && <LoginModal onClose={() => setShowModal(false)} user={user} login={login} isLoggingIn={isLoggingIn} />}
     </header>
   );

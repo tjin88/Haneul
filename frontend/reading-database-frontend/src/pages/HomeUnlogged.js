@@ -17,11 +17,10 @@ const HomeUnlogged = ({ books, lightMode }) => {
 
   return (
     <div className="home">
-        {
-            lightMode 
-                ? <img className="banner" src={BannerBoyBook} alt="Home banner with a character reading"/>
-                // ? <img className="banner" src={BannerDark} alt="Home banner with a character reading"/>
-                : <img className="banner" src={BannerSunset} alt="Home banner with a character reading"/>
+        {lightMode 
+          ? <img className="banner" src={BannerBoyBook} alt="Home banner with a character reading"/>
+          // ? <img className="banner" src={BannerDark} alt="Home banner with a character reading"/>
+          : <img className="banner" src={BannerSunset} alt="Home banner with a character reading"/>
         }
         <main>
             {isBooksArray && <BookCarousel books={sortedBooksByRating.slice(0, 20)} />}

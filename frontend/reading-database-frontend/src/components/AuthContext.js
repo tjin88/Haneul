@@ -62,6 +62,7 @@ export const AuthProvider = ({ children }) => {
       };
   
       setUser(user);
+      setIsLoggedIn(true);
       localStorage.setItem('token', data.token);
     } catch (err) {
       console.error('Login error:', err);
@@ -94,8 +95,9 @@ export const AuthProvider = ({ children }) => {
         username: decodedToken.username,
         profileName: decodedToken.profileName
       };
-      
+
       setUser(user);
+      setIsLoggedIn(true);
       localStorage.setItem('token', data.token);
     } catch (err) {
       console.error('Registration error:', err);
@@ -106,6 +108,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setUser(null);
+    setIsLoggedIn(false);
     localStorage.removeItem('token');
   };
 

@@ -50,12 +50,20 @@ const App = () => {
     fetchBooks();
   }, []);
 
+  // const Content = () => {
+  //   return (
+  //     <>
+  //       {!isLoggedIn && <HomeUnlogged books={books} lightMode={lightMode} />}
+  //       {isLoggedIn && <HomeLogged books={books} lightMode={lightMode} />}
+  //     </>
+  //   );
+  // };
+
   return (
       <Router>
-        <Header/>
+        <Header isLightMode={lightMode} setLightMode={setLightMode}/>
           <Routes>
-            {!isLoggedIn && <Route exact path="/" element={<HomeUnlogged books={books} lightMode={lightMode} />} />}
-            {isLoggedIn && <Route path="/" element={<HomeLogged books={books} lightMode={lightMode} />} />}
+            <Route path="/" element={isLoggedIn ? <HomeLogged books={books} lightMode={lightMode} /> : <HomeUnlogged books={books} lightMode={lightMode} />} />
             <Route path="/browse" element={<Browse books={books} lightMode={lightMode} />} />
             <Route path="/track" element={<TrackerPage lightMode={lightMode} />} />
             <Route path="/:bookTitle" element={<BookDetailsWrapper books={books} />} />
