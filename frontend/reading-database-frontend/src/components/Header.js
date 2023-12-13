@@ -9,6 +9,7 @@ const Header = () => {
   const { user, login, register, logout } = useAuth();
   // const [userInfo, setUserInfo] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [profileName, setProfileName] = useState("");
 
   const loadUserFromLocalStorage = () => {
@@ -52,11 +53,12 @@ const Header = () => {
           </div>
         ) : (
           <div className="top-bar">
-            <button onClick={() => setShowModal(true)} className="login-button">Login</button>
+            <button onClick={() => {setShowModal(true); setIsLoggingIn(false)}} className="login-button">Register</button>
+            <button onClick={() => {setShowModal(true); setIsLoggingIn(true)}} className="login-button">Login</button>
           </div>
         )
       }
-      {showModal && <LoginModal onClose={() => setShowModal(false)} user={user} login={login} />}
+      {showModal && <LoginModal onClose={() => setShowModal(false)} user={user} login={login} isLoggingIn={isLoggingIn} />}
     </header>
   );
 };

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+// import jwtDecode from 'jwt-decode';
 
 const AuthContext = createContext();
 
@@ -6,14 +7,31 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const API_ENDPOINT = 'http://127.0.0.1:8000';
 
+  const parseJwt = (token) => {
+    var base64Url = token.split('.')[1];
+    var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+
+    return JSON.parse(jsonPayload);
+  }
+
   // Function to load user data from localStorage
   const loadUserFromLocalStorage = () => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+      const decodedToken = parseJwt(storedToken);
+      const user = {
+        username: decodedToken.username,
+        profileName: decodedToken.profileName
+      };
+  
+      setUser(user);
     }
   };
 
@@ -37,8 +55,14 @@ export const AuthProvider = ({ children }) => {
       }
   
       const data = await response.json();
-      setUser({ ...data.user });
-      localStorage.setItem('user', JSON.stringify(data.user));
+      const decodedToken = parseJwt(data.token);
+      const user = {
+        username: decodedToken.username,
+        profileName: decodedToken.profileName
+      };
+  
+      setUser(user);
+      localStorage.setItem('token', data.token);
     } catch (err) {
       console.error('Login error:', err);
       throw err;
@@ -65,8 +89,14 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      setUser({ ...data.user });
-      localStorage.setItem('user', JSON.stringify(data.user));
+      const decodedToken = parseJwt(data.token);
+      const user = {
+        username: decodedToken.username,
+        profileName: decodedToken.profileName
+      };
+      
+      setUser(user);
+      localStorage.setItem('token', data.token);
     } catch (err) {
       console.error('Registration error:', err);
       throw err;
@@ -76,10 +106,11 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('user');
+    localStorage.removeItem('token');
   };
 
   const value = { 
+    isLoggedIn,
     user, 
     login, 
     register, 

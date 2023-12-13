@@ -16,15 +16,18 @@ import os
 from dotenv import load_dotenv
 from urllib.parse import quote_plus
 
+load_dotenv()  # Load environment variables from .env file
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('DJANGO_SECRET_KEY')
+
+JWT_TOKEN = quote_plus(os.getenv('JWT_TOKEN'))
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # TODO: Change this to False for production
@@ -90,8 +93,6 @@ WSGI_APPLICATION = "django_app.wsgi.application"
 #     }
 # }
 
-load_dotenv()  # Load environment variables from .env file
-
 username = quote_plus(os.getenv('USERNAME'))
 password = quote_plus(os.getenv('PASSWORD'))
 cluster = os.getenv('CLUSTER')
@@ -102,7 +103,7 @@ DATABASES = {
         'NAME': 'SCRAPED_MANGA_AND_LIGHTNOVEL_DATABASE',
         'ENFORCE_SCHEMA': False,
         'CLIENT': {
-            'host': f"mongodb+srv://{username}:{password}@{os.getenv('CLUSTER')}/?retryWrites=true&w=majority"
+            'host': f"mongodb+srv://{username}:{password}@{cluster}/?retryWrites=true&w=majority"
         }
     }
 }

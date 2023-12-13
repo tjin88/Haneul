@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { useAuth } from './AuthContext';
 import './LoginModal.scss';
 
-const LoginModal = ({ onClose }) => {
+const LoginModal = ({ onClose, isLoggingIn }) => {
   const { login, register } = useAuth();
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(isLoggingIn);
   const [email, setEmail] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [password, setPassword] = useState('');

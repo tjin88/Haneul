@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { BrowserRouter as Router, Route, Routes, useParams } from 'react-router-dom';
-import { useGoogleOneTapLogin } from '@react-oauth/google';
+// import { useGoogleOneTapLogin } from '@react-oauth/google';
 import Header from './components/Header'; 
 import Footer from './components/Footer'; 
 import HomeLogged from './pages/HomeLogged'; 
@@ -9,15 +9,13 @@ import HomeUnlogged from './pages/HomeUnlogged';
 import Browse from './pages/Browse'; 
 import NotFound from './pages/NotFound';
 import BookDetailsWrapper from './components/BookDetailsWrapper';
-import { AuthProvider } from './components/AuthContext';
 import TrackerPage from './pages/TrackerPage';
 import { useAuth } from './components/AuthContext';
 
 const App = () => {
   const [books, setBooks] = useState([]);
-  // const [user, setUser] = useState(null);
   const [lightMode, setLightMode] = useState(true);
-  const { user } = useAuth();
+  const { isLoggedIn } = useAuth();
 
   const API_ENDPOINT = 'http://127.0.0.1:8000';
 
@@ -53,12 +51,11 @@ const App = () => {
   }, []);
 
   return (
-    <AuthProvider>
       <Router>
         <Header/>
           <Routes>
-            {!user && <Route exact path="/" element={<HomeUnlogged books={books} lightMode={lightMode} />} />}
-            {user && <Route path="/" element={<HomeLogged books={books} lightMode={lightMode} />} />}
+            {!isLoggedIn && <Route exact path="/" element={<HomeUnlogged books={books} lightMode={lightMode} />} />}
+            {isLoggedIn && <Route path="/" element={<HomeLogged books={books} lightMode={lightMode} />} />}
             <Route path="/browse" element={<Browse books={books} lightMode={lightMode} />} />
             <Route path="/track" element={<TrackerPage lightMode={lightMode} />} />
             <Route path="/:bookTitle" element={<BookDetailsWrapper books={books} />} />
@@ -66,7 +63,6 @@ const App = () => {
           </Routes>
         <Footer/>
       </Router>
-    </AuthProvider>
   );
 };
 

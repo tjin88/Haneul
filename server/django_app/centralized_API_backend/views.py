@@ -12,6 +12,9 @@ from django.utils.decorators import method_decorator
 from .models import Profile
 from rest_framework.permissions import IsAuthenticated
 from django.http import JsonResponse
+import jwt
+from datetime import datetime, timedelta
+from django.conf import settings
 
 class MangaCreateView(views.APIView):
     def post(self, request):
@@ -59,8 +62,19 @@ def register_view(request):
     except User.DoesNotExist:
         # User does not exist, so we can create a new user
         user = User.objects.create_user(username=username, email=username, password=password, first_name=profileName)
-        return Response({"message": "User created successfully", "user": {"username": user.username, "profileName": user.first_name}}, status=status.HTTP_201_CREATED)
+        payload = {
+            'username': user.username,
+            'profileName': user.first_name,
+            'exp': datetime.utcnow() + timedelta(days=2)  # Set token to expire in 2 days
+        }
+        
+        jwt_token = jwt.encode(payload, settings.JWT_TOKEN, algorithm='HS256')
 
+        return Response({
+            "message": "User created successfully",
+            "token": jwt_token
+        }, status=status.HTTP_201_CREATED)
+    
     # This line should never be reached
     return Response({"error": "An unexpected error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -73,8 +87,18 @@ def login_view(request):
     user = authenticate(request, username=username, password=password)
 
     if user is not None:
-        login(request, user)
-        return Response({"message": "Login successful", "user": {"username": user.username, "profileName": user.first_name}}, status=status.HTTP_200_OK)
+        payload = {
+            'username': user.username,
+            'profileName': user.first_name,
+            'exp': datetime.utcnow() + timedelta(days=2)  # Set token to expire in 2 days
+        }
+        
+        jwt_token = jwt.encode(payload, settings.JWT_TOKEN, algorithm='HS256')
+
+        return Response({
+            "message": "Login successful",
+            "token": jwt_token
+        }, status=status.HTTP_200_OK)
     else:
         return Response({"message": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
     
