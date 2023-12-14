@@ -111,13 +111,13 @@ def scrape_book_details(book_url):
             if b_element and span_element:
                 category = b_element.get_text().strip()
                 value = span_element.get_text().strip()
-                if 'Released' in category:
+                if 'Released' in category and value != '-':
                     details['released_by'] = value
-                elif 'Serialization' in category:
+                elif 'Serialization' in category and value != '-':
                     details['serialization'] = value
-                elif 'Artist' in category:
+                elif 'Artist' in category and value != '-':
                     details['artist'] = value
-                elif 'Author' in category:
+                elif 'Author' in category and value != '-':
                     details['author'] = value
 
         # Extracting followers count

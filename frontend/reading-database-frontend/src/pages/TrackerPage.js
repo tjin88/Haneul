@@ -32,7 +32,11 @@ const TrackerPage = () => {
 
   return (
     <div className='trackerPage'>
-      <h1>{user.profileName}'s Tracking List</h1>
+      {/* <h1>{user.profileName}'s Tracking List</h1> */}
+      {user && user.profileName 
+        ? <h1>{user.profileName}'s Tracking List</h1>
+        : <h1>User's Tracking List</h1>
+      }
       <TrackerTable books={trackingList} fetchTrackingList={fetchTrackingList} onBookEdited={handleBookChanged} />
     </div>
   );
