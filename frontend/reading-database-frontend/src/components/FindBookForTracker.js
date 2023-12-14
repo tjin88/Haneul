@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-// import AddBookToTracker from './AddBookToTracker';
 import './FindBookForTracker.scss';
 
 const FindBookForTracker = ({ onBookSelect, onClose }) => {

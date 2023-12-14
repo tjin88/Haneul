@@ -8,18 +8,69 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
     const [readingStatus, setReadingStatus] = useState('');
     const [userTags, setUserTags] = useState('');
     const [latestReadChapter, setLatestReadChapter] = useState('');
+    const [trackingList, setTrackingList] = useState([]);
+    const [isEditting, setIsEditting] = useState(false);
+    const [bookDetails, setBookDetails] = useState(null);
+    // const [loadingChapters, setLoadingChapters] = useState(false);
     const { user } = useAuth();
 
     const API_ENDPOINT = 'http://127.0.0.1:8000';
 
-    const chaptersArray = givenBook ? Object.keys(givenBook.chapters) : [];
+    const fetchBookDetails = async (title) => {
+        try {
+            const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/mangas/search`, {
+                params: { title: title }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching book details:', error);
+            return null;
+        }
+    };
 
-    // Only used when book title is given (direct from book page)
+    const fetchTrackingList = async () => {
+        if (user) {
+          try {
+              const encodedEmail = encodeURIComponent(user.username);
+              const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list`);
+              setTrackingList(response.data.reading_list);
+          } catch (error) {
+            console.error('Error fetching tracking list:', error);
+          }
+        }
+    };
+
+    useEffect(() => {
+        fetchTrackingList();
+    }, [user]);
+
     useEffect(() => {
         if (givenBook) {
             setBookTitle(givenBook.title);
+            const loadBookDetails = async () => {
+                if (givenBook && (!givenBook.chapters || !givenBook.genres)) {
+                    const book = await fetchBookDetails(givenBook.title);
+                    if (book && book[0]) {
+                        setBookDetails(book[0]);
+                    } else {
+                        console.error("Error setting book!");
+                    }
+                } else {
+                    setBookDetails(givenBook);
+                }
+            };
+            loadBookDetails();
+
+            const bookInList = trackingList.find(book => book.title === givenBook.title);
+
+            if (bookInList) {
+                setReadingStatus(bookInList.reading_status);
+                setUserTags(bookInList.user_tag);
+                setLatestReadChapter(bookInList.latest_read_chapter);
+                setIsEditting(true);
+            }
         }
-    }, [givenBook]);
+    }, [givenBook, trackingList]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -37,7 +88,7 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                     reading_status: readingStatus,
                     user_tag: userTags,
                     latest_read_chapter: latestReadChapter,
-                    chapter_link: givenBook.chapters[latestReadChapter],
+                    chapter_link: bookDetails.chapters[latestReadChapter],
                 });
                 
                 // Update the tracking list in parent component --> If provided*
@@ -66,20 +117,20 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                 <button className='backButton' onClick={sendBack}>BACK</button>
                 <button className='closeButton' onClick={onClose}>X</button>
                 <form onSubmit={handleSubmit}>
-                    {givenBook 
+                    {bookDetails
                         ? <div className="searchResultItem">
-                            <img src={givenBook.image_url} alt={givenBook.title} />
+                            <img src={bookDetails.image_url} alt={bookDetails.title} />
                             <div className="book-details">
-                            <div className="book-title">{givenBook.title}</div>
-                            <div className="book-chapters">{givenBook.newest_chapter} chapters</div>
+                            <div className="book-title">{bookDetails.title}</div>
+                            <div className="book-chapters">{bookDetails.newest_chapter} chapters</div>
                             <div className="book-genres">
-                                {givenBook.genres.map((genre, index) => (
+                                {bookDetails.genres && bookDetails.genres.map((genre, index) => (
                                 <span key={index} className="genre">{genre}</span>
                                 ))}
                             </div>
                             </div>
                         </div>
-                        : <p className='givenBookTitle'>ERROR: Please refresh the page and try again</p>
+                        : <p className='givenBookTitle'>Loading Book Details ...</p>
                     }
                     <select
                         className='formInput'
@@ -100,17 +151,17 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                         onChange={(e) => setUserTags(e.target.value)} 
                         placeholder="User Tag (optional)" 
                     />
-                    <select
+                    {bookDetails && bookDetails.chapters && <select
                         className='formInput'
                         value={latestReadChapter}
                         onChange={(e) => setLatestReadChapter(e.target.value)}
                     >   
                         <option value="" disabled>Latest Read Chapter</option>
-                        {chaptersArray.map((chapter, index) => (
+                        {Object.keys(bookDetails.chapters).map((chapter, index) => (
                             <option key={index} value={chapter}>Chapter {chapter}</option>
                         ))}
-                    </select>
-                    <button className="formButton" type="submit">Add Book</button>
+                    </select>}
+                    <button className="formButton" type="submit">{isEditting ? "Edit" : "Add"} Book</button>
                 </form>
             </div>
         </div>

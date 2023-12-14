@@ -111,14 +111,11 @@ def update_reading_list(request):
     # if not user or user.is_anonymous:
     #     return Response({"error": "User not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
-    print("request.data")
-    print(request.data)
-
     try:
         user = User.objects.get(email=email)
         profile = Profile.objects.get(user=user)
 
-        new_book = {
+        curr_book = {
             'title': data.get('title'),
             'reading_status': data.get('reading_status'),
             'user_tag': data.get('user_tag'),
@@ -127,11 +124,14 @@ def update_reading_list(request):
         }
 
         # Check if the book is already in the reading list
-        if any(book['title'] == new_book['title'] for book in profile.reading_list):
-            return Response({"error": "Book already in reading list"}, status=status.HTTP_400_BAD_REQUEST)
+        for book in profile.reading_list:
+            if book['title'] == curr_book['title']:
+                book.update(curr_book)
+                profile.save()
+                return Response({"message": "Book updated in reading list successfully"}, status=status.HTTP_200_OK)
 
         # Add the new book to the reading list
-        profile.reading_list.append(new_book)
+        profile.reading_list.append(curr_book)
         profile.save()
 
         return Response({"message": "Book added to reading list successfully"})

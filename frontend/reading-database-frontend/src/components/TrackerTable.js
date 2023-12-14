@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
+import AddBookToTracker from './AddBookToTracker';
 import './TrackerTable.scss';
 
-const TrackerTable = ({ books, fetchTrackingList }) => {
+const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedBookForEdit, setSelectedBookForEdit] = useState(null);
+  
   const { user } = useAuth();
 
   const API_ENDPOINT = 'http://127.0.0.1:8000';
@@ -39,6 +43,16 @@ const TrackerTable = ({ books, fetchTrackingList }) => {
     }
   };
 
+  const handleEditBook = (book) => {
+    setSelectedBookForEdit(book);
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setSelectedBookForEdit(null);
+    setShowEditModal(false);
+  };
+
   return (
     <div className="trackerTableContainer">
       <div className="tableHeader">
@@ -69,13 +83,21 @@ const TrackerTable = ({ books, fetchTrackingList }) => {
               <td>{book.user_tag}</td>
               <td>
                 <button onClick={() => updateToMaxChapter(book.title)}>Max</button>
-                {/* EDIT icon */}
+                <button onClick={() => handleEditBook(book)}>Edit</button>
                 <button onClick={() => deleteBook(book.title)}>Delete</button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      {showEditModal && selectedBookForEdit && (
+        <AddBookToTracker
+          onBookAdded={onBookEdited}
+          onClose={handleCloseEditModal}
+          sendBack={() => setShowEditModal(false)}
+          givenBook={selectedBookForEdit}
+        />
+      )}
     </div>
   );
 };

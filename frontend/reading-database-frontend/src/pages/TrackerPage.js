@@ -30,8 +30,7 @@ const TrackerPage = () => {
     fetchTrackingList();
   }, [user]);
 
-  // Refetch the tracking list
-  const handleBookAdded = () => {
+  const handleBookChanged = () => {
     fetchTrackingList(); 
   };
 
@@ -51,17 +50,17 @@ const TrackerPage = () => {
   return (
     <div className='trackerPage'>
       <h1>My Tracking List</h1>
-        <button className='addButton' onClick={() => setShowModal(true)}>Add Book</button>
-        {showModal && !selectedBook && <FindBookForTracker onBookSelect={handleBookSelect} onClose={handleCloseModal} />}
-        {showModal && selectedBook && 
-          <AddBookToTracker
-            onBookAdded={handleBookAdded}
-            onClose={handleCloseModal}
-            sendBack={handleSendBack}
-            givenBook={selectedBook}
-          />
-        }
-        <TrackerTable books={trackingList} fetchTrackingList={fetchTrackingList} />
+      <button className='addButton' onClick={() => setShowModal(true)}>Add Book</button>
+      {showModal && !selectedBook && <FindBookForTracker onBookSelect={handleBookSelect} onClose={handleCloseModal} />}
+      {showModal && selectedBook && 
+        <AddBookToTracker
+          onBookAdded={handleBookChanged}
+          onClose={handleCloseModal}
+          sendBack={handleSendBack}
+          givenBook={selectedBook}
+        />
+      }
+      <TrackerTable books={trackingList} fetchTrackingList={fetchTrackingList} onBookEdited={handleBookChanged} />
     </div>
   );
 };
