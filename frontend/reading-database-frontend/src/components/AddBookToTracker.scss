@@ -56,3 +56,63 @@
   font-size: 20px;
   color: #333;
 }
+
+.searchResultItem {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.2s;
+  cursor: pointer;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: #f7f7f7;
+  }
+
+  img {
+    width: 50px;
+    height: 75px; // Adjust the size as needed
+    object-fit: cover;
+    margin: 10px;
+    border-radius: 4px;
+  }
+
+  .book-details {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 10px;
+
+    .book-title {
+      font-weight: bold;
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .book-chapters {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 3px;
+    }
+
+    .book-genres {
+      font-size: 12px;
+      color: #666;
+      display: flex;
+      flex-wrap: wrap;
+
+      .genre {
+        background-color: #e7f5ff;
+        margin-right: 5px;
+        margin-bottom: 3px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-weight: normal;
+      }
+    }
+  }
+}

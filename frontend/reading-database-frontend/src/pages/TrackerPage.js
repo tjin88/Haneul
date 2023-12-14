@@ -36,6 +36,7 @@ const TrackerPage = () => {
   };
 
   const handleCloseModal = () => {
+    setSelectedBook(null);
     setShowModal(false);
   };
 
@@ -43,19 +44,23 @@ const TrackerPage = () => {
     setSelectedBook(book);
   };
 
+  const handleSendBack = () => {
+    setSelectedBook(null);
+  };
+
   return (
     <div className='trackerPage'>
       <h1>My Tracking List</h1>
         <button className='addButton' onClick={() => setShowModal(true)}>Add Book</button>
-        {/* {showModal && <FindBookForTracker onClose={handleCloseModal} onBookAdded={handleBookAdded} />} */}
         {showModal && !selectedBook && <FindBookForTracker onBookSelect={handleBookSelect} onClose={handleCloseModal} />}
-        {showModal && selectedBook && (
+        {showModal && selectedBook && 
           <AddBookToTracker
             onBookAdded={handleBookAdded}
             onClose={handleCloseModal}
-            givenBookTitle={selectedBook.title}
+            sendBack={handleSendBack}
+            givenBook={selectedBook}
           />
-        )}
+        }
         <TrackerTable books={trackingList} />
     </div>
   );

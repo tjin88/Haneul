@@ -3,83 +3,41 @@ import axios from 'axios';
 import { useAuth } from './AuthContext';
 import './AddBookToTracker.scss';
 
-const AddBookToTracker = ({ onBookAdded, onClose, givenBookTitle }) => {
+const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
     const [bookTitle, setBookTitle] = useState('');
-    const [searchResults, setSearchResults] = useState([]);
-    // const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const [readingStatus, setReadingStatus] = useState('');
     const [userTags, setUserTags] = useState('');
     const [latestReadChapter, setLatestReadChapter] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
     const { user } = useAuth();
 
     const API_ENDPOINT = 'http://127.0.0.1:8000';
 
+    const chaptersArray = givenBook ? Object.keys(givenBook.chapters) : [];
+
     // Only used when book title is given (direct from book page)
     useEffect(() => {
-        if (givenBookTitle) {
-            setBookTitle(givenBookTitle);
+        if (givenBook) {
+            setBookTitle(givenBook.title);
         }
-    }, [givenBookTitle]);
-
-    useEffect(() => {
-        // Implementing a debounce function to reduce # of API calls
-        const delayDebounceFn = setTimeout(() => {
-            if (bookTitle) {
-                searchBooks(bookTitle);
-            } else {
-                setSearchResults([]);
-            }
-        }, 300);
-
-        return () => clearTimeout(delayDebounceFn);
-    }, [bookTitle]);
-
-    const searchBooks = async (title) => {
-        setLoading(true);
-        setError('');
-        try {
-            const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/mangas/search`, {
-                params: { title: title }
-            });
-
-            // TODO: Could handle this differently (maybe most popular books?)
-            // setSearchResults(response.data.slice(0, 5));
-            setSearchResults(response.data);
-            if (response.data.length === 0) {
-                setError('No results found');
-            }
-        } catch (error) {
-            setError('Failed to fetch results');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSelectBook = (selectedBook) => {
-        setBookTitle(selectedBook);
-        setSearchResults([]);
-    };
+    }, [givenBook]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
     
-        if (!bookTitle || !readingStatus || !userTags || !latestReadChapter) {
+        if (!bookTitle || !readingStatus || !latestReadChapter) {
             alert('Please fill in all fields');
             return;
         }
     
         if (user) {
             try {
-                console.log("current user's email:")
-                console.log(user.username)
                 await axios.put(`${API_ENDPOINT}/centralized_API_backend/api/profiles/update_reading_list/`, {
                     username: user.username,
                     title: bookTitle,
                     reading_status: readingStatus,
                     user_tag: userTags,
                     latest_read_chapter: latestReadChapter,
+                    chapter_link: givenBook.chapters[latestReadChapter],
                 });
                 
                 // Update the tracking list in parent component --> If provided*
@@ -105,10 +63,22 @@ const AddBookToTracker = ({ onBookAdded, onClose, givenBookTitle }) => {
     return (
         <div className="modalBackdrop">
             <div className="modalContent">
+                <button className='backButton' onClick={sendBack}>BACK</button>
                 <button className='closeButton' onClick={onClose}>X</button>
                 <form onSubmit={handleSubmit}>
-                    {givenBookTitle 
-                        ? <p className='givenBookTitle'>{givenBookTitle}</p>
+                    {givenBook 
+                        ? <div className="searchResultItem">
+                            <img src={givenBook.image_url} alt={givenBook.title} />
+                            <div className="book-details">
+                            <div className="book-title">{givenBook.title}</div>
+                            <div className="book-chapters">{givenBook.newest_chapter} chapters</div>
+                            <div className="book-genres">
+                                {givenBook.genres.map((genre, index) => (
+                                <span key={index} className="genre">{genre}</span>
+                                ))}
+                            </div>
+                            </div>
+                        </div>
                         : <p className='givenBookTitle'>ERROR: Please refresh the page and try again</p>
                     }
                     <select
@@ -128,26 +98,20 @@ const AddBookToTracker = ({ onBookAdded, onClose, givenBookTitle }) => {
                         type="text" 
                         value={userTags} 
                         onChange={(e) => setUserTags(e.target.value)} 
-                        placeholder="User Tags" 
+                        placeholder="User Tag (optional)" 
                     />
-                    <input 
+                    <select
                         className='formInput'
-                        type="text" 
-                        value={latestReadChapter} 
-                        onChange={(e) => setLatestReadChapter(e.target.value)} 
-                        placeholder="Latest Read Chapter" 
-                    />
+                        value={latestReadChapter}
+                        onChange={(e) => setLatestReadChapter(e.target.value)}
+                    >   
+                        <option value="" disabled>Latest Read Chapter</option>
+                        {chaptersArray.map((chapter, index) => (
+                            <option key={index} value={chapter}>Chapter {chapter}</option>
+                        ))}
+                    </select>
                     <button className="formButton" type="submit">Add Book</button>
                 </form>
-                {/* {isDropdownVisible && (
-                    <div className="searchResultsDropdown">
-                        {searchResults.map(book => (
-                            <div key={book.id} onClick={() => handleSelectBook(book.title)}>
-                                {book.title}
-                            </div>
-                        ))}
-                    </div>
-                )} */}
             </div>
         </div>
     );

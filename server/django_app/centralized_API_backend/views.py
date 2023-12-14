@@ -112,6 +112,9 @@ def update_reading_list(request):
     # if not user or user.is_anonymous:
     #     return Response({"error": "User not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
+    print("request.data")
+    print(request.data)
+
     try:
         user = User.objects.get(email=email)
         profile = Profile.objects.get(user=user)
@@ -121,6 +124,7 @@ def update_reading_list(request):
             'reading_status': data.get('reading_status'),
             'user_tag': data.get('user_tag'),
             'latest_read_chapter': data.get('latest_read_chapter'),
+            'chapter_link': data.get('chapter_link'),
         }
 
         # Check if the book is already in the reading list

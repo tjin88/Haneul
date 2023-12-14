@@ -25,8 +25,8 @@ const TrackerTable = ({ books }) => {
         <tbody>
           {books.map((book, index) => (
             <tr key={index}>
-              <td>{book.title}</td>
-              <td>{book.latest_read_chapter}</td>
+              <td><a href={book.title} target="_blank" rel="noopener noreferrer">{book.title}</a></td>
+              <td><a href={book.chapter_link} target="_blank" rel="noopener noreferrer">{book.latest_read_chapter}</a></td>
               <td><span className={`status ${book.reading_status.toLowerCase()}`}>{book.reading_status}</span></td>
               <td>{book.user_tag}</td>
             </tr>
