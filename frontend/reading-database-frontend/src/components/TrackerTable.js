@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 import AddBookToTracker from './AddBookToTracker';
+import FindBookForTracker from './FindBookForTracker';
 import './TrackerTable.scss';
 
 const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
@@ -48,9 +49,22 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
     setShowEditModal(true);
   };
 
+  const handleAddBook = () => {
+    setSelectedBookForEdit(null);
+    setShowEditModal(true);
+  };
+
+  const handleSelectBook = (book) => {
+    setSelectedBookForEdit(book);
+  };
+
   const handleCloseEditModal = () => {
     setSelectedBookForEdit(null);
     setShowEditModal(false);
+  };
+
+  const handleSendBack = () => {
+    setSelectedBookForEdit(null);
   };
 
   return (
@@ -62,7 +76,7 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
             : <span className="headerText">Showing 1 to {books.length} of {books.length} results</span>
         }
         <button className="refreshButton" onClick={() => fetchTrackingList()}>Refresh</button>
-        <button className="addButton">+ Add Book (To Be Implemented)</button>
+        <button className="addButton" onClick={() => handleAddBook()}>+ Add Book</button>
       </div>
       <table className='trackerTable'>
         <thead>
@@ -90,11 +104,12 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
           ))}
         </tbody>
       </table>
+      {showEditModal && !selectedBookForEdit && <FindBookForTracker onBookSelect={handleSelectBook} onClose={handleCloseEditModal} />}
       {showEditModal && selectedBookForEdit && (
         <AddBookToTracker
           onBookAdded={onBookEdited}
           onClose={handleCloseEditModal}
-          sendBack={() => setShowEditModal(false)}
+          sendBack={handleSendBack}
           givenBook={selectedBookForEdit}
         />
       )}

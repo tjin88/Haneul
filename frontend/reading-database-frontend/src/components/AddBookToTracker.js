@@ -11,7 +11,6 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
     const [trackingList, setTrackingList] = useState([]);
     const [isEditting, setIsEditting] = useState(false);
     const [bookDetails, setBookDetails] = useState(null);
-    // const [loadingChapters, setLoadingChapters] = useState(false);
     const { user } = useAuth();
 
     const API_ENDPOINT = 'http://127.0.0.1:8000';
@@ -91,12 +90,10 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                     chapter_link: bookDetails.chapters[latestReadChapter],
                 });
                 
-                // Update the tracking list in parent component --> If provided*
                 if (onBookAdded) {
                     onBookAdded();
                 }
     
-                // Reset the input fields
                 setBookTitle('');
                 setReadingStatus('');
                 setUserTags('');
