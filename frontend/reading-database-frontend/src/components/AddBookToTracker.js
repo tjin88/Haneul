@@ -45,7 +45,8 @@ const AddBookToTracker = ({ onBookAdded, onClose, givenBookTitle }) => {
             });
 
             // TODO: Could handle this differently (maybe most popular books?)
-            setSearchResults(response.data.slice(0, 5));
+            // setSearchResults(response.data.slice(0, 5));
+            setSearchResults(response.data);
             if (response.data.length === 0) {
                 setError('No results found');
             }
@@ -108,27 +109,7 @@ const AddBookToTracker = ({ onBookAdded, onClose, givenBookTitle }) => {
                 <form onSubmit={handleSubmit}>
                     {givenBookTitle 
                         ? <p className='givenBookTitle'>{givenBookTitle}</p>
-                        : 
-                        <div>
-                            <input 
-                                className='formInput'
-                                type="text" 
-                                value={bookTitle} 
-                                onChange={(e) => { setBookTitle(e.target.value) }} 
-                                autoComplete="off"
-                                placeholder="Book Title" 
-                                // onBlur={() => setTimeout(() => setIsDropdownVisible(false), 100)} // Hide dropdown when input is not focused
-                            />
-                            <div className="searchResults">
-                                {loading && <div>Loading...</div>}
-                                {error && <div>{error}</div>}
-                                {!loading && searchResults.map((book) => (
-                                    <div key={book.id} onClick={() => handleSelectBook(book.title)}>
-                                        {book.title}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        : <p className='givenBookTitle'>ERROR: Please refresh the page and try again</p>
                     }
                     <select
                         className='formInput'

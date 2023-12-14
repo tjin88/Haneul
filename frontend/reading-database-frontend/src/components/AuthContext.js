@@ -30,7 +30,8 @@ export const AuthProvider = ({ children }) => {
         username: decodedToken.username,
         profileName: decodedToken.profileName
       };
-  
+      
+      setIsLoggedIn(true);
       setUser(user);
     }
   };
@@ -110,6 +111,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setIsLoggedIn(false);
     localStorage.removeItem('token');
+    console.log('Logged out!')
   };
 
   const value = { 
