@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework import status, views
 from rest_framework.response import Response
-from .models import Manga
+from .models import Manga, Profile
 from .serializers import MangaSerializer
 from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
@@ -9,7 +9,6 @@ from django.contrib.auth.models import User
 import json
 from rest_framework.decorators import api_view
 from django.utils.decorators import method_decorator
-from .models import Profile
 from rest_framework.permissions import IsAuthenticated
 from django.http import JsonResponse
 import jwt
@@ -158,3 +157,64 @@ class UserProfileReadingListView(views.APIView):
             return response
         except (User.DoesNotExist, Profile.DoesNotExist):
             return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['DELETE'])
+def delete_book_from_reading_list(request):
+    data = request.data
+    email = data.get('username')
+    title_to_delete = data.get('title')
+
+    try:
+        user = User.objects.get(email=email)
+        profile = Profile.objects.get(user=user)
+
+        profile.reading_list = [book for book in profile.reading_list if book['title'] != title_to_delete]
+        profile.save()
+
+        return Response({"message": "Book removed from reading list successfully"}, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        print("User not found")
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Profile.DoesNotExist:
+        print("Profile not found")
+        return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['PUT'])
+def update_to_max_chapter(request):
+    data = request.data
+    email = data.get('username')
+    title = data.get('title')
+
+    try:
+        user = User.objects.get(email=email)
+        profile = Profile.objects.get(user=user)
+
+        print(f"title: {title}")
+
+        manga = Manga.objects.get(title=title)
+        print(f"manga: {manga}")
+
+        latest_chapter = manga.get_latest_chapter()
+        chapter_link = manga.get_chapter_link(latest_chapter)
+
+        for book in profile.reading_list:
+            if book['title'] == title:
+                book['latest_read_chapter'] = latest_chapter
+                book['chapter_link'] = chapter_link
+                break
+
+        profile.save()
+        return Response({"message": "Updated to latest chapter successfully"}, status=status.HTTP_200_OK)
+    except Manga.DoesNotExist:
+        print("Manga not found")
+        return Response({"error": "Manga not found"}, status=status.HTTP_404_NOT_FOUND)
+    except User.DoesNotExist:
+        print("User not found")
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Profile.DoesNotExist:
+        print("Profile not found")
+        return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

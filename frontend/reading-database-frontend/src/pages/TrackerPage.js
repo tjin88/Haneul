@@ -61,7 +61,7 @@ const TrackerPage = () => {
             givenBook={selectedBook}
           />
         }
-        <TrackerTable books={trackingList} />
+        <TrackerTable books={trackingList} fetchTrackingList={fetchTrackingList} />
     </div>
   );
 };

@@ -23,10 +23,18 @@ class Manga(models.Model):
     def __str__(self):
         return self.title
 
+    def get_latest_chapter(self):
+        return next(iter(self.chapters), None) if self.chapters else None
+
+
+    def get_chapter_link(self, chapter):
+        return self.chapters.get(chapter, None)
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     reading_list = models.JSONField(default=list)
 
     def __str__(self):
         return self.user.username
+
 # Add more models below if needed
