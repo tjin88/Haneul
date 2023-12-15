@@ -35,18 +35,23 @@ cd server
 source myenv/bin/activate
 pip freeze > requirements.txt
 
+# Notes:
+- Currently scraping using standalone python scripts.
+- Testing with the light novel scraping to see if the scripts are better suited within the Django app
+    - (Dec 14: I think this will be a better solution, but I want to double check before porting over the manga scraping)
+
 # Next steps:
 
-## Immediate:
+## Immediate (Done most, still need to host and add scheduled scraping**)
 1. Database Setup (MongoDB)
-2. Scheduled Scraping (APScheduler)
+2. Scheduled Scraping (Cron*)
     - Likely will scrape once every hour, 3 hours, or 6 hours (depends on the typical release schedule of publisher)
 3. Backend API (Flask or Django)
     - This API layer will be used for security between the database and the frontend
 4. Deployment and Running (AWS, Azure, GCP)
 5. Frontend (React)
 
-## Short-term
+## Short-term (Done all except tokenization!)
 - Create a frontend that will display the image, title, and chapter information for each book
     - Bookmarking function
     - User's current chapter information
@@ -59,6 +64,7 @@ and you can see the book's details (Total chapters, synopsis, genres, book type,
 
 ## Long-term
 - Add AWS or other cloud hosting to run every x minutes/hours
+    - Planning on using Cron at the moment
 - Look into how to solve the problem where the book is both a light novel and manga. Planning to use a primary key of a combination of book_title and book_type
 - Look at how to solve the problem where the novel has mutliple names
     - Look into finding/creating a database with all novel/manga, along with their alt names?

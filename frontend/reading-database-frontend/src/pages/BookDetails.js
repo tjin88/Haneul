@@ -28,7 +28,7 @@ const BookDetails = ({ bookDetails }) => {
           ))}
         </div>
         <div className="book-info">
-          <p className="type"><strong>Type:</strong> {bookDetails.manga_type}</p>
+          <p className="type"><strong>Type:</strong> {bookDetails.novel_type}</p>
           <p className="users-tracking"><strong>Followers:</strong> {bookDetails.followers}</p>
           <p className="chapters-available"><strong>Chapters Available:</strong> {Object.keys(bookDetails.chapters).length}</p>
         </div>

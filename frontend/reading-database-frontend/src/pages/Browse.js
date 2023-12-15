@@ -20,9 +20,9 @@ const Browse = ({ books, lightMode }) => {
     (genreFilter ? book.genres.includes(genreFilter) : true)
   );
 
-  // If a specific manga_type is selected, filter the books to only that type
+  // If a specific novel_type is selected, filter the books to only that type
   if (['manga', 'manhua', 'manhwa'].includes(sortType)) {
-    filteredBooks = filteredBooks.filter(book => book.manga_type === sortType.charAt(0).toUpperCase() + sortType.slice(1));
+    filteredBooks = filteredBooks.filter(book => book.novel_type === sortType.charAt(0).toUpperCase() + sortType.slice(1));
   }
 
   // Sort filteredBooks based on the selected sortType

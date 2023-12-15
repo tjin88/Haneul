@@ -89,7 +89,7 @@ def scrape_book_details(book_url):
             'image_url': get_text_or_default(soup, ('img', {'class': 'wp-post-image'}), attribute='src'),
             'rating': get_text_or_default(soup, ('div', {'itemprop': 'ratingValue'})),
             'status': 'Not Available',  # Placeholder for status
-            'manga_type': 'Not Available',  # Placeholder for manga_type
+            'novel_type': 'Manhwa',  # Placeholder for novel_type
             'followers': 'Not Available',  # Placeholder for followers
             'chapters': {},  # Placeholder for chapters
         }
@@ -101,7 +101,7 @@ def scrape_book_details(book_url):
             if 'Status' in text:
                 details['status'] = text.replace('Status', '').strip()
             elif 'Type' in text:
-                details['manga_type'] = text.replace('Type', '').strip()
+                details['novel_type'] = text.replace('Type', '').strip()
         
         # Extracting released_by, serialization, and posted_by
         fmed_elements = soup.find_all('div', class_='fmed')
@@ -346,7 +346,7 @@ if __name__ == "__main__":
                 'image_url': details.get('image_url'),
                 'rating': details.get('rating'),
                 'status': details.get('status'),
-                'manga_type': details.get('manga_type'),
+                'novel_type': details.get('novel_type'),
                 'followers': details.get('followers'),
                 'chapters': details.get('chapters')
             }

@@ -16,9 +16,9 @@ const Home = ({ books, lightMode }) => {
   // Ensure books is an array before calling .filter and .sort
   const isBooksArray = Array.isArray(books);
 
-  const mangaBooks = isBooksArray ? books.filter(book => book.manga_type === "Manga") : [];
-  const manhuaBooks = isBooksArray ? books.filter(book => book.manga_type === "Manhua") : [];
-  const manhwaBooks = isBooksArray ? books.filter(book => book.manga_type === "Manhwa") : [];
+  const mangaBooks = isBooksArray ? books.filter(book => book.novel_type === "Manga") : [];
+  const manhuaBooks = isBooksArray ? books.filter(book => book.novel_type === "Manhua") : [];
+  const manhwaBooks = isBooksArray ? books.filter(book => book.novel_type === "Manhwa") : [];
   const recentlyUpdatedBooks = isBooksArray ? books.sort((a, b) => new Date(b.updated_on) - new Date(a.updated_on)) : [];
 
   // Make a copy of the books array and sort it by rating

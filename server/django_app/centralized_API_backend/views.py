@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from rest_framework import status, views
 from rest_framework.response import Response
-from .models import Manga, Profile
-from .serializers import MangaSerializer
+from .models import Manga, Profile, LightNovel
+from .serializers import MangaSerializer, LightNovelSerializer
 from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
@@ -121,6 +121,7 @@ def update_reading_list(request):
             'user_tag': data.get('user_tag'),
             'latest_read_chapter': data.get('latest_read_chapter'),
             'chapter_link': data.get('chapter_link'),
+            'novel_type': data.get('novel_type'),
         }
 
         # Check if the book is already in the reading list
@@ -186,18 +187,19 @@ def update_to_max_chapter(request):
     data = request.data
     email = data.get('username')
     title = data.get('title')
+    novel_type = data.get('novel_type')
 
     try:
         user = User.objects.get(email=email)
         profile = Profile.objects.get(user=user)
 
-        print(f"title: {title}")
+        if (novel_type == 'Light Novel'):
+            novel = LightNovel.objects.get(title=title)
+        else:
+            novel = Manga.objects.get(title=title)
 
-        manga = Manga.objects.get(title=title)
-        print(f"manga: {manga}")
-
-        latest_chapter = manga.get_latest_chapter()
-        chapter_link = manga.get_chapter_link(latest_chapter)
+        latest_chapter = novel.get_latest_chapter()
+        chapter_link = novel.get_chapter_link(latest_chapter)
 
         for book in profile.reading_list:
             if book['title'] == title:
@@ -210,6 +212,9 @@ def update_to_max_chapter(request):
     except Manga.DoesNotExist:
         print("Manga not found")
         return Response({"error": "Manga not found"}, status=status.HTTP_404_NOT_FOUND)
+    except LightNovel.DoesNotExist:
+        print("LightNovel not found")
+        return Response({"error": "Manga not found"}, status=status.HTTP_404_NOT_FOUND)
     except User.DoesNotExist:
         print("User not found")
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -218,3 +223,36 @@ def update_to_max_chapter(request):
         return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class LightNovelCreateView(views.APIView):
+    def post(self, request):
+        serializer = LightNovelSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request):
+        mangas = LightNovel.objects.all()  # Retrieve all manga records from the database
+        serializer = LightNovelSerializer(mangas, many=True)  # Serialize the data
+        return Response(serializer.data)  # Return the serialized data in the response
+
+class LightNovelUpdateView(views.APIView):
+    def put(self, request, title):
+        try:
+            manga = LightNovel.objects.get(title=title)
+            serializer = MangaSerializer(manga, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except LightNovel.DoesNotExist:
+            return Response({'message': 'Manga not found'}, status=status.HTTP_404_NOT_FOUND)
+
+class LightNovelSearchView(views.APIView):
+    def get(self, request):
+        title_query = request.GET.get('title', '')
+        mangas = LightNovel.objects.filter(title__icontains=title_query)
+        serializer = LightNovelSerializer(mangas, many=True)
+        return Response(serializer.data)

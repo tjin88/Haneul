@@ -12,8 +12,6 @@ options.headless = True
 
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
-time_to_wait = 5
-
 def scrape_main_page(url):
     """
     Scrapes the main listing page for book URLs using Selenium.
@@ -25,29 +23,17 @@ def scrape_main_page(url):
     list: A list of tuples containing book titles and their URLs.
     """
     driver.get(url)
-    time.sleep(time_to_wait)  # adjust as necessary for page loading
+    time.sleep(5)  # adjust as necessary for page loading
 
     books = []
+    book_elements = driver.find_elements(By.CLASS_NAME, 'novel-item')
+    for element in book_elements:
+        title_element = element.find_element(By.CLASS_NAME, 'novel-title')
+        title = title_element.text.strip()
+        book_url = title_element.find_element(By.TAG_NAME, 'a').get_attribute('href')
+        books.append((title, book_url))
 
-    while True:
-        # Scrape the current page
-        book_elements = driver.find_elements(By.CLASS_NAME, 'novel-item')
-        for element in book_elements:
-            title_element = element.find_element(By.CLASS_NAME, 'novel-title')
-            title = title_element.text.strip()
-            book_url = title_element.find_element(By.TAG_NAME, 'a').get_attribute('href')
-            books.append((title, book_url))
-
-        # If there are more books to add, add them to the list. If not, return all books.
-        try:
-            next_page_element = driver.find_element(By.CLASS_NAME, 'PagedList-skipToNext')
-            next_page_url = next_page_element.find_element(By.TAG_NAME, 'a').get_attribute('href')
-            driver.get(next_page_url)
-            time.sleep(time_to_wait)  # adjust as necessary for page loading
-        except NoSuchElementException:
-           return books
-
-
+    return books
 
 def scrape_book_details(title, book_url):
     """
@@ -61,7 +47,7 @@ def scrape_book_details(title, book_url):
     dict: A dictionary containing key details of the book.
     """
     driver.get(book_url)
-    time.sleep(time_to_wait)  # adjusted for page loading
+    time.sleep(5)  # adjusted for page loading
 
     synopsis = driver.find_element(By.CSS_SELECTOR, '.summary .content').text.strip()
     author = driver.find_element(By.CSS_SELECTOR, '.author').text.replace('Author:', '').strip()
@@ -81,7 +67,7 @@ def scrape_book_details(title, book_url):
     # Navigate to the chapters page
     chapters_url = f'{book_url}/chapters'
     driver.get(chapters_url)
-    time.sleep(time_to_wait)  # adjusted for page loading
+    time.sleep(5)  # adjusted for page loading
 
     chapters = {}
     chapter_elements = driver.find_elements(By.CSS_SELECTOR, 'ul.chapter-list a')

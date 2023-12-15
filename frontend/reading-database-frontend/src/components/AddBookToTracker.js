@@ -88,6 +88,7 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                     user_tag: userTags,
                     latest_read_chapter: latestReadChapter,
                     chapter_link: bookDetails.chapters[latestReadChapter],
+                    novel_type: givenBook.novel_type,
                 });
                 
                 if (onBookAdded) {

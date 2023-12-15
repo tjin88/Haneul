@@ -13,11 +13,12 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
 
   const API_ENDPOINT = 'http://127.0.0.1:8000';
 
-  const updateToMaxChapter = async (bookTitle) => {
+  const updateToMaxChapter = async (bookTitle, type) => {
     try {
       const response = await axios.put(`${API_ENDPOINT}/centralized_API_backend/api/update-to-max-chapter/`, {
         username: user.username,
         title: bookTitle,
+        novel_type: type
       });
 
       if (response.status === 200) {
@@ -96,7 +97,7 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
               <td><span className={`status ${book.reading_status.toLowerCase()}`}>{book.reading_status}</span></td>
               <td>{book.user_tag}</td>
               <td>
-                <button onClick={() => updateToMaxChapter(book.title)}>Max</button>
+                <button onClick={() => updateToMaxChapter(book.title, book.novel_type)}>Max</button>
                 <button onClick={() => handleEditBook(book)}>Edit</button>
                 <button onClick={() => deleteBook(book.title)}>Delete</button>
               </td>
