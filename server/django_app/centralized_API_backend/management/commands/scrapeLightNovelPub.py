@@ -20,44 +20,74 @@ from centralized_API_backend.models import LightNovel
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_app/django_app/settings')
 django.setup()
 
+# TODO: Change all print statements to log statements
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-class Command(BaseCommand):
-    help = 'Scrapes light novels from LightNovelPub and updates the database.'
-
-    def handle(self, *args, **kwargs):
-        scraper = LightNovelScraper()
-        scraper.scrape_light_novel_pub()
-        self.stdout.write(self.style.SUCCESS('Successfully executed scrapeLightNovelPub'))
 
 class LightNovelScraper:
     def __init__(self):
         options = Options()
         options.headless = True
         self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        self.time_to_wait = 5
+        self.TIME_TO_WAIT = 3
 
     def scrape_light_novel_pub(self):
         base_url = 'https://lightnovelpub.vip'
         main_url = f'{base_url}/browse/genre-all-25060123/order-updated/status-all'
+
+        success = 0
+        skipped = 0
         try:
             books = self.scrape_main_page(main_url)
-            success = 0
+            
             for title, url in books:
                 try:
+                    self.navigate_to_url(url)
+
+                    existing_book = LightNovel.objects.filter(title=title).first()
+
+                    # Skip updating if the book has not changed
+                    if existing_book:
+                        newest_chapter = self.scrape_newest_chapter(url)
+                        if newest_chapter == existing_book.newest_chapter:
+                            skipped += 1
+                            logger.info(f"Book {success+skipped}/{len(books)} - {'Skipped'}: {title}")
+                            continue  
+
                     details = self.scrape_book_details(title, url)
                     lightNovel, created = LightNovel.objects.update_or_create(
                         title=details['title'],
                         defaults=details
                     )
-                    print(f"{'Created' if created else 'Updated'}: {lightNovel.title}")
+
                     success += 1
+                    logger.info(f"Book {success+skipped}/{len(books)} - {'Created' if created else 'Updated'}: {lightNovel.title}")
+                except WebDriverException as e:
+                    logger.error(f"WebDriverException encountered for {title} at {url}: {e}")
                 except Exception as e:
-                    print(f"Error processing book '{title}': {e}")
+                    logger.error(f"Unexpected error while processing book '{title}': {e}")
         finally:
-            print(f"{success}/{len(books)} books were successfully updated in the database")
+            logger.info(f"Success: {success}/{len(books)}\nSkipped: {skipped}/{len(books)}\nErrors: {len(books)-success-skipped}/{len(books)}")
             self.driver.quit()
+    
+    def scrape_newest_chapter(self, book_url):
+        """
+        Scrapes only the newest chapter of a book.
+
+        Args:
+        book_url (str): URL of the book's detail page.
+
+        Returns:
+        str: The newest chapter of the book.
+        """
+        try:
+            # self.navigate_to_url(book_url)
+            return self.get_element_text(By.CSS_SELECTOR, 'nav.content-nav p.latest', 'Chapter not available')
+        except NoSuchElementException as e:
+            logger.error(f"Element not found in {book_url}: {e}")
+        except Exception as e:
+            logger.error(f"Error scraping newest chapter from {book_url}: {e}")
+            return None
 
     def scrape_main_page(self, url):
         """
@@ -80,6 +110,13 @@ class LightNovelScraper:
                 title = title_element.text.strip()
                 book_url = title_element.find_element(By.TAG_NAME, 'a').get_attribute('href')
                 books.append((title, book_url))
+            
+            # Testing purposes**
+            # return books
+
+            # TODO: Later, change this to only x pages --> x = how many pages of books were updated since last scraped
+            # Maybe scrape the bottom of each book --> if = "2 days ago", stop scraping? 
+            # This accounts for if errors with previous scrape?
 
             # If there are more books to add, add them to the list. If not, return all books.
             try:
@@ -101,7 +138,7 @@ class LightNovelScraper:
         dict: A dictionary containing key details of the book.
         """
         try:
-            self.navigate_to_url(book_url)
+            # self.navigate_to_url(book_url)
 
             synopsis = self.get_element_text(By.CSS_SELECTOR, '.summary .content')
             author = self.get_element_text(By.CSS_SELECTOR, '.author', 'Author not available').replace('Author:', '').strip()
@@ -110,7 +147,7 @@ class LightNovelScraper:
             genres = [genre.text.strip() for genre in self.driver.find_elements(By.CSS_SELECTOR, 'div.categories a')]
             image_url = self.get_element_attribute(By.CSS_SELECTOR, 'figure.cover img', 'src')
             rating = self.get_element_text(By.CSS_SELECTOR, 'div.rating-star strong')
-            status = self.get_element_text(By.CSS_SELECTOR, 'div.header-stats strong.ongoing')
+            status = self.get_element_text(By.CSS_SELECTOR, 'div.header-stats span:nth-of-type(4) strong')
             followers = self.get_element_text(By.CSS_SELECTOR, 'div.header-stats span:nth-of-type(3) strong')
 
             timezone_aware_updated_on = self.parse_relative_date(updated_on)
@@ -140,20 +177,20 @@ class LightNovelScraper:
 
             return book_details
         except NoSuchElementException as e:
-            print(f"Element not found in {book_url}: {e}")
+            logger.error(f"Element not found in {book_url}: {e}")
         except WebDriverException as e:
-            print(f"WebDriverException encountered for {title} at {book_url}: {e}")
+            logger.error(f"WebDriverException encountered for {title} at {book_url}: {e}")
         except Exception as e:
-            print(f"Unexpected error while processing {title}: {e}")
+            logger.error(f"Unexpected error while processing {title}: {e}")
     
     def navigate_to_url(self, url):
         try:
             self.driver.get(url)
-            time.sleep(self.time_to_wait)  # Adjusted for page loading
+            time.sleep(self.TIME_TO_WAIT)  # Adjusted for page loading
         except WebDriverException as e:
             logger.error(f"Error navigating to URL {url}: {e}")
+            raise
 
-    
     def wait_for_element(self, by, value, timeout=10):
         """
         Waits for a specific element to be present on the page.
@@ -167,15 +204,12 @@ class LightNovelScraper:
         WebElement: The found element, or None if not found within the timeout.
         """
         try:
-            element = WebDriverWait(self.driver, timeout).until(
+            return WebDriverWait(self.driver, timeout).until(
                 EC.presence_of_element_located((by, value))
             )
-            return element
-        except TimeoutException:
-            print(f"Timeout waiting for element: {value}")
-        except WebDriverException as e:
-            print(f"WebDriverException encountered: {e}")
-        return None
+        except (TimeoutException, WebDriverException) as e:
+            logger.error(f"Error waiting for element {value}: {e}")
+            raise
     
     def get_element_text(self, by, value, default_text='Not Available'):
         """
@@ -189,8 +223,12 @@ class LightNovelScraper:
         Returns:
         str: The text of the found element or default text if not found.
         """
-        element = self.wait_for_element(by, value)
-        return element.text.strip() if element else default_text
+        try:
+            element = self.wait_for_element(by, value)
+            return element.text.strip() if element else default_text
+        except (TimeoutException, WebDriverException):
+            logger.warning(f"Element {value} not found, using default value.")
+            return default_text
     
     def get_element_attribute(self, by, value, attribute, default_value=None):
         """
@@ -205,8 +243,12 @@ class LightNovelScraper:
         Returns:
         str: The value of the attribute or default value if not found.
         """
-        element = self.wait_for_element(by, value)
-        return element.get_attribute(attribute) if element and element.get_attribute(attribute) else default_value
+        try:
+            element = self.wait_for_element(by, value)
+            return element.get_attribute(attribute) if element and element.get_attribute(attribute) else default_value
+        except (TimeoutException, WebDriverException):
+            logger.warning(f"Element {value} not found, using default value.")
+            return default_value        
 
     def extract_chapters(self, chapters_url):
         self.navigate_to_url(chapters_url)
@@ -238,3 +280,41 @@ class LightNovelScraper:
             return today - datetime.timedelta(days=years * 365)  # Best approximation I could think of ...
         else:
             return today
+
+class Command(BaseCommand):
+    help = 'Scrapes light novels from LightNovelPub and updates the database.'
+
+    def handle(self, *args, **kwargs):
+        start_time = datetime.datetime.now()
+        scraper = LightNovelScraper()
+        try:
+            scraper.scrape_light_novel_pub()
+
+            duration = datetime.datetime.now() - start_time
+            formatted_duration = self.format_duration(duration)
+
+            logger.info(f"Successfully executed scrapeLightNovelPub in {formatted_duration} ")
+            self.stdout.write(self.style.SUCCESS('Successfully executed scrapeLightNovelPub'))
+        except Exception as e:
+            logger.error(f"An error occurred during scraping: {e}")
+            raise CommandError(f"Scraping failed due to an error: {e}")
+    
+    @staticmethod
+    def format_duration(duration):
+        """
+        Formats a datetime.timedelta object into a readable string.
+
+        Args:
+        duration (datetime.timedelta): The duration to format.
+
+        Returns:
+        str: A string representing the duration in a readable format.
+        """
+        seconds = duration.total_seconds()
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        seconds = int(seconds % 60)
+        return f"{hours}h {minutes}m {seconds}s"
+
+if __name__ == "__main__":
+    Command().handle()
