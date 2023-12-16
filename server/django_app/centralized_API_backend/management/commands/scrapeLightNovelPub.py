@@ -20,8 +20,11 @@ from centralized_API_backend.models import LightNovel
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_app/django_app/settings')
 django.setup()
 
-# TODO: Change all print statements to log statements
-logging.basicConfig(level=logging.INFO)
+# Setting up the logging config
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(levelname)s] %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 class LightNovelScraper:
@@ -39,8 +42,17 @@ class LightNovelScraper:
         skipped = 0
         try:
             books = self.scrape_main_page(main_url)
-            
-            for title, url in books:
+
+            # In 9 hours, 165 books were updated.
+            # Push while updating
+            # After the database is set-up successfully:
+            # Once "skipped", we are caught up with the database. Stop pushing code
+
+            # TODO: Just to complete the database, *****
+            # Push only books from start onwards
+            start = 0 # 1175
+
+            for title, url in books[start:]:
                 try:
                     self.navigate_to_url(url)
 
@@ -51,7 +63,7 @@ class LightNovelScraper:
                         newest_chapter = self.scrape_newest_chapter(url)
                         if newest_chapter == existing_book.newest_chapter:
                             skipped += 1
-                            logger.info(f"Book {success+skipped}/{len(books)} - {'Skipped'}: {title}")
+                            logger.info(f"Book {start+success+skipped}/{len(books)} - {'Skipped'}: {title}")
                             continue  
 
                     details = self.scrape_book_details(title, url)
@@ -61,13 +73,13 @@ class LightNovelScraper:
                     )
 
                     success += 1
-                    logger.info(f"Book {success+skipped}/{len(books)} - {'Created' if created else 'Updated'}: {lightNovel.title}")
+                    logger.info(f"Book {start+success+skipped}/{len(books)} - {'Created' if created else 'Updated'}: {lightNovel.title}")
                 except WebDriverException as e:
                     logger.error(f"WebDriverException encountered for {title} at {url}: {e}")
                 except Exception as e:
                     logger.error(f"Unexpected error while processing book '{title}': {e}")
         finally:
-            logger.info(f"Success: {success}/{len(books)}\nSkipped: {skipped}/{len(books)}\nErrors: {len(books)-success-skipped}/{len(books)}")
+            logger.info(f"Success: {success}/{len(books)}\nSkipped: {start+skipped}/{len(books)}\nErrors: {len(books)-success-skipped-start}/{len(books)}")
             self.driver.quit()
     
     def scrape_newest_chapter(self, book_url):
