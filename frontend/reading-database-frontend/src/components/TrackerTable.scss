@@ -1,140 +1,133 @@
 .trackerTableContainer {
-    max-height: 400px;
-    overflow-y: auto;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-    margin: 20px;
-    background: #fff;
+  max-height: 600px;
+  overflow-y: auto;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  margin: 20px;
+  background: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.tableHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 2px solid #e8e8e8;
+  background: linear-gradient(145deg, #f5f7fa, #c3cfe2);
+  color: #333;
+
+  .headerText {
+    font-size: 18px;
+    font-weight: bold;
   }
-  
-  .tableHeader {
-    display: flex;
-    justify-content: space-between;
+
+  .refreshButton,
+  .addButton {
     padding: 10px 20px;
-    border-bottom: 1px solid #ccc;
-    background: #f9f9f9;
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-    
-    .headerText {
-      font-size: 16px;
-      color: #333;
-    }
-  
-    .refreshButton,
-    .addButton {
-      padding: 5px 15px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-  
-    .refreshButton {
-      background: #eee;
-      color: #333;
-    }
-  
-    .addButton {
-      background: #0b79ee;
-      color: white;
-      margin-left: 10px;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+  }
+
+  .refreshButton {
+    background: #e7e7e7;
+    &:hover {
+      background: #d4d4d4;
     }
   }
-  
-  .trackerTable {
-    // margin: 5px;
-    width: 100%;
-    border-collapse: collapse;
-    border-radius: 10px;
-  
-    th, td {
-      border: 1px solid #55a5fb;
-      padding: 8px;
-      text-align: left;
-    }
-  
-    th {
-      background-color: #0b79ee;
-      color: white;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-  
-    tr:nth-child(even) {
-      background-color: #f1f7ff;
-    }
-  
-    tr:hover {
-      background-color: #d0e4ff;
-    }
-  
-    .status {
-      display: inline-block;
-      padding: 5px 10px;
-      border-radius: 5px;
-      color: #fff;
-      font-size: 0.8em;
-      text-align: center;
-      width: 80px;
-  
-      &.reading {
-        background: #4caf50;
-      }
-  
-      &.plan-to-read {
-        background: #f9a825;
-      }
-  
-      &.completed {
-        background: #2196f3;
-      }
 
-      &.on-hold {
-        background: #ff77f1;
-      }
-  
-      &.dropped {
-        background: #ef3c3c;
-      }
+  .addButton {
+    background: #4caf50;
+    color: white;
+    &:hover {
+      background: #45a049;
     }
   }
-  
+}
 
+.trackerTable {
+  width: 100%;
+  border-collapse: collapse;
 
-// .trackerTableContainer {
-//     max-height: 400px;
-//     overflow-y: auto;
-//     border-radius: 10px;
-//     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-//   }
-  
-//   .trackerTable {
-//     width: 100%;
-//     border-collapse: collapse;
-//     border-radius: 10px;
-  
-//     th, td {
-//       border: 1px solid #55a5fb;
-//       padding: 8px;
-//       text-align: left;
-//     }
-  
-//     th {
-//       background-color: #0b79ee;
-//       color: white;
-//       position: sticky;
-//       top: 0;
-//       z-index: 10;
-//     }
-  
-//     tr:nth-child(even) {
-//       background-color: #f1f7ff;
-//     }
-  
-//     tr:hover {
-//       background-color: #d0e4ff;
-//     }
-//   }
-  
+  th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #e8e8e8;
+  }
+
+  th {
+    background-color: #0b79ee;
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  tr {
+    transition: background-color 0.3s;
+  }
+
+  tr:nth-child(even) {
+    background-color: #f8f8f8;
+  }
+
+  tr:hover {
+    background-color: #d0e4ff;
+  }
+
+  a {
+    color: #0b79ee;
+    text-decoration: none;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .status {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 15px;
+    color: #fff;
+    font-size: 14px;
+    text-align: center;
+
+    &.reading {
+      background: #4caf50;
+    }
+
+    &.plan-to-read {
+      background: #f9a825;
+    }
+
+    &.completed {
+      background: #2196f3;
+    }
+
+    &.on-hold {
+      background: #e91e63;
+    }
+
+    &.dropped {
+      background: #f44336;
+    }
+  }
+}
+
+button {
+  background: #eee;
+  border: none;
+  padding: 8px 15px;
+  margin-right: 10px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  &:last-child {
+    margin-right: 0;
+  }
+  &:hover {
+    background: #d4d4d4;
+  }
+}

@@ -14,11 +14,15 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
     const { user } = useAuth();
 
     const API_ENDPOINT = 'http://127.0.0.1:8000';
-
-    const fetchBookDetails = async (title) => {
+    
+    // TODO: Ideally this should not be "manga" but all the novels (from AsuraScans and LightNovelPub)
+    const fetchBookDetails = async (title, source) => {
         try {
-            const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/mangas/search`, {
-                params: { title: title }
+            const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/search`, {
+                params: { 
+                    title: title,
+                    novel_source: source
+                }
             });
             return response.data;
         } catch (error) {
@@ -46,9 +50,11 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
     useEffect(() => {
         if (givenBook) {
             setBookTitle(givenBook.title);
+
+            // TODO: Update the givenBook to have chapters and genres --> No need to do excess API calls
             const loadBookDetails = async () => {
                 if (givenBook && (!givenBook.chapters || !givenBook.genres)) {
-                    const book = await fetchBookDetails(givenBook.title);
+                    const book = await fetchBookDetails(givenBook.title, givenBook.novel_source);
                     if (book && book[0]) {
                         setBookDetails(book[0]);
                     } else {
@@ -88,7 +94,7 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                     user_tag: userTags,
                     latest_read_chapter: latestReadChapter,
                     chapter_link: bookDetails.chapters[latestReadChapter],
-                    novel_type: givenBook.novel_type,
+                    novel_source: givenBook.novel_source,
                 });
                 
                 if (onBookAdded) {
@@ -120,7 +126,9 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                             <img src={bookDetails.image_url} alt={bookDetails.title} />
                             <div className="book-details">
                             <div className="book-title">{bookDetails.title}</div>
-                            <div className="book-chapters">{bookDetails.newest_chapter} chapters</div>
+                            <div className="book-chapters">
+                                {bookDetails.novel_source !== "Light Novel Pub" && "Chapter"} {bookDetails.newest_chapter}
+                            </div>
                             <div className="book-genres">
                                 {bookDetails.genres && bookDetails.genres.map((genre, index) => (
                                 <span key={index} className="genre">{genre}</span>

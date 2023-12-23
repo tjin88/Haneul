@@ -27,15 +27,21 @@ const FindBookForTracker = ({ onBookSelect, onClose }) => {
         setLoading(true);
         setError('');
         try {
-            const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/mangas/search`, {
+            // TODO: Ideally this should not be "manga" but all the novels (from AsuraScans and LightNovelPub)
+            const mangaResponse = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/search`, {
                 params: { title: title }
             });
+            // const lightNovelResponse = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/lightnovel/search`, {
+            //     params: { title: title }
+            // });
 
             // TODO: Could handle this differently (maybe most popular books?)
             // setSearchResults(response.data.slice(0, 5));
-            setSearchResults(response.data);
-            if (response.data.length === 0) {
-                setError('No results found');
+            setSearchResults(mangaResponse.data);
+            // setSearchResults(...lightNovelResponse.data);
+            // if (mangaResponse.data.length === 0 && lightNovelResponse.data.length === 0) {
+            if (mangaResponse.data.length === 0) {
+                    setError('No results found');
             }
         } catch (error) {
             setError('Failed to fetch results');
@@ -71,7 +77,10 @@ const FindBookForTracker = ({ onBookSelect, onClose }) => {
                                 <img src={book.image_url} alt={book.title} />
                                 <div className="book-details">
                                 <div className="book-title">{book.title}</div>
-                                <div className="book-chapters">{book.newest_chapter} chapters</div>
+                                <div className="book-chapters">
+                                    {book.novel_source !== "Light Novel Pub" && "Chapter"} {book.newest_chapter}
+                                </div>
+                                <div className="book-chapters">Source: {book.novel_source}</div>
                                 <div className="book-genres">
                                     {book.genres.map((genre, index) => (
                                     <span key={index} className="genre">{genre}</span>

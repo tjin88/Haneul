@@ -1,4 +1,5 @@
 import React from 'react';
+import Welcome from '../components/Welcome.js';
 import BookCarousel from '../components/BookCarousel.js';
 import TopTenBooks from '../components/TopTenBooks.js';
 import Statistic from '../components/Statistic.js';
@@ -19,6 +20,7 @@ const Home = ({ books, lightMode }) => {
   const mangaBooks = isBooksArray ? books.filter(book => book.novel_type === "Manga") : [];
   const manhuaBooks = isBooksArray ? books.filter(book => book.novel_type === "Manhua") : [];
   const manhwaBooks = isBooksArray ? books.filter(book => book.novel_type === "Manhwa") : [];
+  const lightNovelBooks = isBooksArray ? books.filter(book => book.novel_type === "Light Novel") : [];
   const recentlyUpdatedBooks = isBooksArray ? books.sort((a, b) => new Date(b.updated_on) - new Date(a.updated_on)) : [];
 
   // Make a copy of the books array and sort it by rating
@@ -35,11 +37,13 @@ const Home = ({ books, lightMode }) => {
       }
       <main>
         {isBooksArray && <BookCarousel books={sortedBooksByRating.slice(0, 20)} />}
+        {!isLoggedIn && <Welcome />}
         {!isLoggedIn && <Statistic label="Total Number of Books" value={isBooksArray ? books.length : 0} />}
         {isLoggedIn && <TopTenBooks title={"Recently Updated"} books={recentlyUpdatedBooks} />}
         {isLoggedIn && <TopTenBooks title={"Most Popular Manhwa This Month"} books={manhwaBooks} />}
         {isLoggedIn && <TopTenBooks title={"Most Popular Manhua This Month"} books={manhuaBooks} />}
         {isLoggedIn && <TopTenBooks title={"Most Popular Manga This Month"} books={mangaBooks} />}
+        {isLoggedIn && <TopTenBooks title={"Most Popular Light Novels This Month"} books={lightNovelBooks} />}
         {isLoggedIn && <TopTenBooks title={"Most Popular Series"} books={sortedBooksByRating} />}
       </main>
     </div>

@@ -18,7 +18,9 @@ const App = () => {
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/manga/`);
+        // TODO: Ideally this should not be "manga" but all the novels (from AsuraScans and LightNovelPub)
+        // const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/manga/`);
+        const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/`);
         setBooks(response.data);
       } catch (error) {
         console.error('Error fetching books:', error);

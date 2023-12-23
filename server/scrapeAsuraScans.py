@@ -90,6 +90,7 @@ def scrape_book_details(book_url):
             'rating': get_text_or_default(soup, ('div', {'itemprop': 'ratingValue'})),
             'status': 'Not Available',  # Placeholder for status
             'novel_type': 'Manhwa',  # Placeholder for novel_type
+            'novel_source': 'AsuraScans',  # This is always true
             'followers': 'Not Available',  # Placeholder for followers
             'chapters': {},  # Placeholder for chapters
         }
@@ -211,6 +212,7 @@ def get_existing_data(api_url):
 def format_existing_data_to_dict(existing_data_list):
     """
     Converts a list of book dictionaries into a dictionary of dictionaries indexed by the book title.
+    This function also removes any Light Novels from being placed in the returned dictionary.
 
     Parameters:
     existing_data_list (list): A list of dictionaries where each dictionary contains details of a book.
@@ -221,7 +223,8 @@ def format_existing_data_to_dict(existing_data_list):
     formatted_data = {}
     for book in existing_data_list:
         title = book.get('title')
-        if title:
+        novel_source = book.get('novel_source')
+        if title and novel_source == "AsuraScans":
             formatted_data[title] = book
     return formatted_data
 
@@ -244,7 +247,7 @@ def is_data_new(existing_data, new_data):
         return True  # New book, not in existing data
 
     for key, value in new_data.items():
-        if key == 'id' or key == 'followers':
+        if key in ['id', 'followers']:
             continue  # Skip 'id' and 'followers' fields (No need to update followers every time)
         
         if key in ['posted_on', 'updated_on']:
@@ -288,11 +291,19 @@ def send_book_data(api_url, book_data, existing_data):
         try:
             headers = {'Content-Type': 'application/json'}
             book_title = book_data['title']
+            novel_source = book_data['novel_source']
+            if book_data['novel_source'] != 'AsuraScans':
+                print(f'[ERROR] NOVEL SOURCE IS INVALID')
+                # TODO: Throw some error here*
+
+            # request_url = f"{api_url}{encode_title(book_title)}/{novel_source}"  # URL encoding for the book title
             request_url = f"{api_url}{encode_title(book_title)}/"  # URL encoding for the book title
 
             # Choose POST or PUT based on whether the book exists
-            response = requests.post(api_url, json=book_data, headers=headers) if book_title not in existing_data \
-                       else requests.put(request_url, json=book_data, headers=headers)
+            if book_title not in existing_data or (book_title in existing_data and existing_data[book_title].get('novel_source') != 'AsuraScans'):
+                response = requests.post(api_url, json=book_data, headers=headers)
+            else:
+                response = requests.put(request_url, json=book_data, headers=headers)
 
             if response.status_code in [200, 201]:
                 print(f"Book '{book_title}' successfully pushed to the database.")
@@ -330,16 +341,18 @@ if __name__ == "__main__":
         total_books = len(books)
 
         # Process each scraped book
+        # TODO: Removed artist, released_by, serialization, posted_by, and posted_on fields
+        #       to match novels from light novel pub
         for title, details in books.items():
             book_data = {
                 'title': details.get('title'),
                 'synopsis': details.get('synopsis'),
                 'author': details.get('author'),
-                'artist': details.get('artist'),
-                'released_by': details.get('released_by'),
-                'serialization': details.get('serialization'),
-                'posted_by': details.get('posted_by'),
-                'posted_on': details.get('posted_on'),
+                # 'artist': details.get('artist'),
+                # 'released_by': details.get('released_by'),
+                # 'serialization': details.get('serialization'),
+                # 'posted_by': details.get('posted_by'),
+                # 'posted_on': details.get('posted_on'),
                 'updated_on': details.get('updated_on'),
                 'newest_chapter': details.get('newest_chapter'),
                 'genres': details.get('genres', []),
@@ -347,6 +360,7 @@ if __name__ == "__main__":
                 'rating': details.get('rating'),
                 'status': details.get('status'),
                 'novel_type': details.get('novel_type'),
+                'novel_source': details.get('novel_source'),
                 'followers': details.get('followers'),
                 'chapters': details.get('chapters')
             }

@@ -4,8 +4,12 @@ import re
 import os
 import django
 import logging
+import traceback
+from logging.handlers import RotatingFileHandler
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
+from django.db import IntegrityError
+from django.core.exceptions import ValidationError
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
@@ -20,12 +24,39 @@ from centralized_API_backend.models import LightNovel
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_app/django_app/settings')
 django.setup()
 
-# Setting up the logging config
+def get_next_log_file_name(base_dir, base_filename):
+    counter = 0
+    while True:
+        if counter == 0:
+            log_file_name = f"{base_filename}.txt"
+        else:
+            log_file_name = f"{base_filename}_{counter}.txt"
+        
+        full_path = os.path.join(base_dir, log_file_name)
+        if not os.path.exists(full_path):
+            return full_path
+        
+        counter += 1
+
+# Setting up the logging configuration
+log_directory = "../out"
+log_base_filename = "scrapeLightNovelPub"
+log_file_path = get_next_log_file_name(log_directory, log_base_filename)
+
+# Ensure the log directory exists
+os.makedirs(log_directory, exist_ok=True)
+
+# Setting up the logging config, storing as a file and outputting to console
 logging.basicConfig(
     level=logging.INFO,
-    format="[%(levelname)s] %(message)s"
+    format="[%(levelname)s] %(asctime)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[
+        RotatingFileHandler(log_file_path, maxBytes=10485760, backupCount=5),  # 10MB per file, max 5 files of size 10 MB
+        logging.StreamHandler()
+    ]
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("LightNovelScraper")
 
 class LightNovelScraper:
     def __init__(self):
@@ -56,7 +87,8 @@ class LightNovelScraper:
         base_url = 'https://lightnovelpub.vip'
         main_url = f'{base_url}/browse/genre-all-25060123/order-updated/status-all'
 
-        success = 0
+        updated = 0
+        created = 0
         skipped = 0
         errors = 0
         books = []
@@ -67,39 +99,51 @@ class LightNovelScraper:
                 try:
                     self.navigate_to_url(url)
 
+                    # Query based on both title and novel_source
                     existing_book = LightNovel.objects.filter(title=title).first()
 
-                    # Skip updating if the book has not changed
                     if existing_book:
                         newest_chapter = self.scrape_newest_chapter(url)
                         if newest_chapter == existing_book.newest_chapter:
+                            # Skip updating if the book has not changed
                             skipped += 1
-                            logger.info(f"Book {success+skipped}/{len(books)} - {'Skipped'}: {title}")
+                            logger.info(f"Book {updated+created+skipped+errors}/{len(books)} - {'Skipped'}: {title}")
+                            # TODO: Uncomment after migrating Manga/LightNovel --> Novel
                             if skipped >= 5:
                                 break
                             continue
-                        else:
-                            skipped = 0
-
+                        
+                    # Get all details for the book
                     details = self.scrape_book_details(title, url)
+
+                    # Attempt to update an existing book or create a new one
                     lightNovel, created = LightNovel.objects.update_or_create(
                         title=details['title'],
+                        novel_source=details['novel_source'],
                         defaults=details
                     )
-
-                    success += 1
-                    logger.info(f"Book {success+errors}/{len(books)} - {'Created' if created else 'Updated'}: {lightNovel.title}")
+                    updated += 0 if created else 1
+                    created += 1 if created else 0
+                    logger.info(f"Book {updated+created+skipped+errors}/{len(books)} - {'Created' if created else 'Updated'}: {title}")
                 except WebDriverException as e:
                     logger.error(f"WebDriverException encountered for {title} at {url}: {e}")
                     errors += 1
+                except IntegrityError as e:
+                    logger.error(f"Database integrity error for {title}: {e}")
+                    errors += 1
+                except ValidationError as e:
+                    logger.error(f"Validation error for {title}: {e}")
+                    errors += 1
                 except Exception as e:
                     logger.error(f"Unexpected error while processing book '{title}': {e}")
+                    logger.error("Exception traceback: " + traceback.format_exc())
                     errors += 1
         finally:
             if len(books) != 0:
-                logger.info(f"Success: {success}/{len(books)}\nSkipped: {len(books)-success-errors}/{len(books)}\nErrors: {errors}/{len(books)}")
+                logger.info(f"Created: {created}/{len(books)}, Updated: {updated}/{len(books)}, Errors: {errors}/{len(books)}, Skipped: {skipped}/{len(books)}")
             else:
                 logger.info(f"No books were updated. The database is already up-to-date :)")
+            logger.info(f"Please see {log_file_path} for the full log details.")
             self.driver.quit()
 
     def scrape_main_page(self, url):
@@ -136,7 +180,8 @@ class LightNovelScraper:
                 books.append((title, book_url))
 
             # If there are more books to add, add them to the list. If not, return all books.
-            next_page_element = self.wait_for_element(By.CLASS_NAME, 'PagedList-skipToNext')
+            next_page_element = self.wait_for_element(By.CLASS_NAME, 'PagedList-skipToNext', timeout=5)
+
             if next_page_element:
                 next_page_url = self.get_element_attribute(By.TAG_NAME, 'a', 'href', default_value=None, element=next_page_element)
                 self.navigate_to_url(next_page_url)
@@ -175,7 +220,8 @@ class LightNovelScraper:
         try:
             return self.get_element_text(By.CSS_SELECTOR, 'nav.content-nav p.latest', 'Chapter not available')
         except NoSuchElementException as e:
-            logger.error(f"Element not found in {book_url}: {e}")
+            logger.warning(f"Element not found in {book_url}: {e}")
+            return None
         except Exception as e:
             logger.error(f"Error scraping newest chapter from {book_url}: {e}")
             return None
@@ -195,6 +241,7 @@ class LightNovelScraper:
             synopsis = self.get_element_text(By.CSS_SELECTOR, '.summary .content')
             author = self.get_element_text(By.CSS_SELECTOR, '.author', 'Author not available').replace('Author:', '').strip()
             updated_on = self.get_element_text(By.CSS_SELECTOR, 'nav.content-nav p.update')
+            # the below line is throwing the issue***
             newest_chapter = self.get_element_text(By.CSS_SELECTOR, 'nav.content-nav p.latest')
             genres = [genre.text.strip() for genre in self.wait_for_elements(By.CSS_SELECTOR, 'div.categories a')]
             image_url = self.get_element_attribute(By.CSS_SELECTOR, 'figure.cover img', 'src')
@@ -223,6 +270,7 @@ class LightNovelScraper:
                 'rating': rating,
                 'status': status,
                 'novel_type': 'Light Novel',
+                'novel_source': 'Light Novel Pub',
                 'followers': followers,
                 'chapters': chapters
             }
@@ -287,8 +335,12 @@ class LightNovelScraper:
                 EC.presence_of_element_located((by, value))
             )
         except (TimeoutException, WebDriverException) as e:
-            logger.error(f"Error waiting for element {value}: {e}")
-            raise
+            if value != "PagedList-skipToNext":
+                logger.error(f"Error waiting for element {value}: {e}")
+                raise
+            else:
+                logger.info(f"Starting process to update books")
+                return None
     
     def get_element_text(self, by, value, default_text='Not Available', element=None):
         """

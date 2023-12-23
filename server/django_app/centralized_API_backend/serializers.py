@@ -10,9 +10,8 @@ class MangaSerializer(serializers.ModelSerializer):
         #     'title', 'synopsis', 'author', 'artist', 'released_by', 
         #     'serialization', 'posted_by', 'posted_on', 'updated_on', 
         #     'newest_chapter', 'genres', 'image_url', 'rating', 
-        #     'status', 'novel_type', 'followers', 'chapters'
+        #     'status', 'novel_source', 'followers', 'chapters'
         # ]
-
 
 class LightNovelSerializer(serializers.ModelSerializer):
     class Meta:

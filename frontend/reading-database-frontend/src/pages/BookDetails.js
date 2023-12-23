@@ -18,7 +18,7 @@ const BookDetails = ({ bookDetails }) => {
       <div className="book-cover">
         <img src={bookDetails.image_url} alt={bookDetails.title} />
         <button className="add-dashboard-button" onClick={() => setShowModal(true)}>Add to your Dashboard</button>
-        {showModal && <AddBookToTracker givenBookTitle={bookDetails.title} onClose={handleCloseModal} />}
+        {showModal && <AddBookToTracker givenBook={bookDetails} sendBack={handleCloseModal} onClose={handleCloseModal} />}
       </div>
       <div className="book-content">
         <h1 className="book-title">{bookDetails.title}</h1>
@@ -28,7 +28,7 @@ const BookDetails = ({ bookDetails }) => {
           ))}
         </div>
         <div className="book-info">
-          <p className="type"><strong>Type:</strong> {bookDetails.novel_type}</p>
+          <p className="type"><strong>Source:</strong> {bookDetails.novel_source}</p>
           <p className="users-tracking"><strong>Followers:</strong> {bookDetails.followers}</p>
           <p className="chapters-available"><strong>Chapters Available:</strong> {Object.keys(bookDetails.chapters).length}</p>
         </div>

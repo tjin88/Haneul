@@ -1,15 +1,16 @@
 from django.db import models
+import uuid
 from django.contrib.auth.models import User
 
 class Manga(models.Model):
     title = models.CharField(max_length=255, primary_key=True)
     synopsis = models.TextField()
     author = models.CharField(max_length=100, blank=True, null=True)
-    artist = models.CharField(max_length=100, blank=True, null=True)
-    released_by = models.CharField(max_length=100, blank=True, null=True)
-    serialization = models.CharField(max_length=100, blank=True, null=True)
-    posted_by = models.CharField(max_length=100, blank=True, null=True)
-    posted_on = models.DateTimeField()
+    # artist = models.CharField(max_length=100, blank=True, null=True)
+    # released_by = models.CharField(max_length=100, blank=True, null=True)
+    # serialization = models.CharField(max_length=100, blank=True, null=True)
+    # posted_by = models.CharField(max_length=100, blank=True, null=True)
+    # posted_on = models.DateTimeField()
     updated_on = models.DateTimeField()
     newest_chapter = models.CharField(max_length=100)
     genres = models.JSONField()
@@ -17,6 +18,7 @@ class Manga(models.Model):
     rating = models.DecimalField(max_digits=4, decimal_places=2)
     status = models.CharField(max_length=50)
     novel_type = models.CharField(max_length=50)  # 'type' is a reserved keyword in Python
+    novel_source = models.CharField(max_length=50, default='AsuraScans')
     followers = models.CharField(max_length=100)
     chapters = models.JSONField(default=dict)
 
@@ -45,6 +47,7 @@ class LightNovel(models.Model):
     rating = models.DecimalField(max_digits=4, decimal_places=2)
     status = models.CharField(max_length=50)
     novel_type = models.CharField(max_length=50)  # 'type' is a reserved keyword in Python
+    novel_source = models.CharField(max_length=50, default='Light Novel Pub')
     followers = models.CharField(max_length=100)
     chapters = models.JSONField(default=dict)
 

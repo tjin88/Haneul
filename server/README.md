@@ -9,6 +9,12 @@ python -m venv myenv --> only on first run
 source myenv/bin/activate
 python3 scraper.py
 
+### AsuraScans scraper
+cd server
+python -m venv myenv --> only on first run
+source myenv/bin/activate
+python manage.py scrapeLightNovelPub
+
 ### Django App API Endpoints
 cd server
 source myenv/bin/activate
@@ -36,9 +42,7 @@ source myenv/bin/activate
 pip freeze > requirements.txt
 
 # Notes:
-- Currently scraping using standalone python scripts.
-- Testing with the light novel scraping to see if the scripts are better suited within the Django app
-    - (Dec 14: I think this will be a better solution, but I want to double check before porting over the manga scraping)
+- Currently scraping manga using standalone python scripts --> Port over to Django app!
 
 # Next steps:
 
