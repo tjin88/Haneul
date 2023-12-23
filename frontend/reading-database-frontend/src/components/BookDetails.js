@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import AddBookToTracker from '../components/AddBookToTracker';
+import AddBookToTracker from './AddBookToTracker';
 import './BookDetails.scss';
 
 const BookDetails = ({ bookDetails }) => {

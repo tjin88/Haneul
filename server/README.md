@@ -28,13 +28,13 @@ cd django_app
 python manage.py makemigrations
 python manage.py migrate
 
-### To clear "GET /centralized_API_backend/api/manga/" directory
+### To clear "GET /centralized_API_backend/api/asurascans/" directory
 cd server
 source myenv/bin/activate
 cd django_app
 python manage.py shell
-from centralized_API_backend.models import Manga
-Manga.objects.all().delete()
+from centralized_API_backend.models import AsuraScans
+AsuraScans.objects.all().delete()
 
 ### Update the requirements.txt
 cd server

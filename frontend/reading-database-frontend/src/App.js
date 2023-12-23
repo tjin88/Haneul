@@ -6,7 +6,7 @@ import Footer from './components/Footer';
 import Home from './pages/Home'; 
 import Browse from './pages/Browse'; 
 import NotFound from './pages/NotFound';
-import BookDetailsWrapper from './components/BookDetailsWrapper';
+import BookDetailsWrapper from './pages/BookDetailsWrapper';
 import TrackerPage from './pages/TrackerPage';
 
 const App = () => {
@@ -18,8 +18,6 @@ const App = () => {
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        // TODO: Ideally this should not be "manga" but all the novels (from AsuraScans and LightNovelPub)
-        // const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/manga/`);
         const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/`);
         setBooks(response.data);
       } catch (error) {

@@ -1,4 +1,4 @@
 from django.contrib import admin
-from .models import Manga
+from .models import AsuraScans
 
-admin.site.register(Manga)
+admin.site.register(AsuraScans)

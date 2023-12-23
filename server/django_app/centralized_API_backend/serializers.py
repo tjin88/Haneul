@@ -1,9 +1,9 @@
 from rest_framework import serializers
-from .models import Manga, LightNovel
+from .models import AsuraScans, LightNovelPub
 
-class MangaSerializer(serializers.ModelSerializer):
+class AsuraScansSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Manga
+        model = AsuraScans
         fields = '__all__'  # Rather than individually adding all fields, use all fields from models.py
 
         # fields = [
@@ -13,8 +13,8 @@ class MangaSerializer(serializers.ModelSerializer):
         #     'status', 'novel_source', 'followers', 'chapters'
         # ]
 
-class LightNovelSerializer(serializers.ModelSerializer):
+class LightNovelPubSerializer(serializers.ModelSerializer):
     class Meta:
-        model = LightNovel
+        model = LightNovelPub
         fields = '__all__'
 

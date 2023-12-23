@@ -27,20 +27,16 @@ const FindBookForTracker = ({ onBookSelect, onClose }) => {
         setLoading(true);
         setError('');
         try {
-            // TODO: Ideally this should not be "manga" but all the novels (from AsuraScans and LightNovelPub)
-            const mangaResponse = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/search`, {
-                params: { title: title }
+            const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/search`, {
+                params: { 
+                    title: title,
+                    novel_source: 'All'
+                }
             });
-            // const lightNovelResponse = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/lightnovel/search`, {
-            //     params: { title: title }
-            // });
-
             // TODO: Could handle this differently (maybe most popular books?)
             // setSearchResults(response.data.slice(0, 5));
-            setSearchResults(mangaResponse.data);
-            // setSearchResults(...lightNovelResponse.data);
-            // if (mangaResponse.data.length === 0 && lightNovelResponse.data.length === 0) {
-            if (mangaResponse.data.length === 0) {
+            setSearchResults(response.data);
+            if (response.data.length === 0) {
                     setError('No results found');
             }
         } catch (error) {

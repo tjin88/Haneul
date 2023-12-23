@@ -29,12 +29,13 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
     }
   };
 
-  const deleteBook = async (bookTitle) => {
+  const deleteBook = async (bookTitle, source) => {
     try {
       const response = await axios.delete(`${API_ENDPOINT}/centralized_API_backend/api/delete-book-from-reading-list/`, {
         data: {
           username: user.username,
-          title: bookTitle
+          title: bookTitle,
+          novel_source: source
         },
       });
       if (response.status === 200) {
@@ -101,7 +102,7 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
               <td>
                 <button onClick={() => updateToMaxChapter(book.title, book.novel_source)}>Max</button>
                 <button onClick={() => handleEditBook(book)}>Edit</button>
-                <button onClick={() => deleteBook(book.title)}>Delete</button>
+                <button onClick={() => deleteBook(book.title, book.novel_source)}>Delete</button>
               </td>
             </tr>
           ))}

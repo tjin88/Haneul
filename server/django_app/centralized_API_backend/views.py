@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from rest_framework import status, views
 from rest_framework.response import Response
-from .models import Manga, Profile, LightNovel
-from .serializers import MangaSerializer, LightNovelSerializer
+from .models import AsuraScans, Profile, LightNovelPub
+from .serializers import AsuraScansSerializer, LightNovelPubSerializer
 from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
@@ -20,11 +20,11 @@ from django.conf import settings
 # TODO: Implement the below function to get ALL books (from AsuraScans AND LightNovelPub)
 class AllNovelGetView(views.APIView):
     def get(self, request):
-        mangas = Manga.objects.all()
-        mangaSerializer = MangaSerializer(mangas, many=True)
+        mangas = AsuraScans.objects.all()
+        mangaSerializer = AsuraScansSerializer(mangas, many=True)
 
-        lightNovels = LightNovel.objects.all()
-        lightNovelSerializer = LightNovelSerializer(lightNovels, many=True)
+        lightNovels = LightNovelPub.objects.all()
+        lightNovelSerializer = LightNovelPubSerializer(lightNovels, many=True)
 
         serializer = mangaSerializer.data + lightNovelSerializer.data
         return Response(serializer)
@@ -32,54 +32,58 @@ class AllNovelGetView(views.APIView):
 class AllNovelSearchView(views.APIView):
     def get(self, request):
         title_query = request.GET.get('title', '')
-        novel_source = request.GET.get('novel_source', '')
-        if novel_source == 'AsuraScans':
-            mangas = Manga.objects.filter(title__icontains=title_query)
-            mangaSerializer = MangaSerializer(mangas, many=True)
+        novel_source = request.GET.get('novel_source')
+        print(f'novel_source: {novel_source}')
+        if novel_source == 'All':
+            mangas = AsuraScans.objects.filter(title__icontains=title_query)
+            mangaSerializer = AsuraScansSerializer(mangas, many=True)
+            lightNovels = LightNovelPub.objects.filter(title__icontains=title_query)
+            lightNovelSerializer = LightNovelPubSerializer(lightNovels, many=True)
+            serializer = mangaSerializer.data + lightNovelSerializer.data
+        elif novel_source == 'AsuraScans':
+            mangas = AsuraScans.objects.filter(title__icontains=title_query)
+            mangaSerializer = AsuraScansSerializer(mangas, many=True)
             serializer = mangaSerializer.data
         elif novel_source == 'Light Novel Pub':
-            lightNovels = LightNovel.objects.filter(title__icontains=title_query)
-            lightNovelSerializer = LightNovelSerializer(lightNovels, many=True)
+            lightNovels = LightNovelPub.objects.filter(title__icontains=title_query)
+            lightNovelSerializer = LightNovelPubSerializer(lightNovels, many=True)
             serializer = lightNovelSerializer.data
         else:
-            mangas = Manga.objects.filter(title__icontains=title_query)
-            mangaSerializer = MangaSerializer(mangas, many=True)
-            lightNovels = LightNovel.objects.filter(title__icontains=title_query)
-            lightNovelSerializer = LightNovelSerializer(lightNovels, many=True)
-            serializer = mangaSerializer.data + lightNovelSerializer.data
+            # TODO: *throw some error here*
+            pass
 
         return Response(serializer)
 
-class MangaCreateView(views.APIView):
+class AsuraScansCreateView(views.APIView):
     def post(self, request):
-        serializer = MangaSerializer(data=request.data)
+        serializer = AsuraScansSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def get(self, request):
-        mangas = Manga.objects.all()
-        serializer = MangaSerializer(mangas, many=True)
+        mangas = AsuraScans.objects.all()
+        serializer = AsuraScansSerializer(mangas, many=True)
         return Response(serializer.data)
 
-class MangaUpdateView(views.APIView):
+class AsuraScansUpdateView(views.APIView):
     def put(self, request, title):
         try:
-            manga = Manga.objects.get(title=title)
-            serializer = MangaSerializer(manga, data=request.data)
+            manga = AsuraScans.objects.get(title=title)
+            serializer = AsuraScansSerializer(manga, data=request.data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Manga.DoesNotExist:
-            return Response({'message': 'Manga not found'}, status=status.HTTP_404_NOT_FOUND)
+        except AsuraScans.DoesNotExist:
+            return Response({'message': 'AsuraScans not found'}, status=status.HTTP_404_NOT_FOUND)
 
-class MangaSearchView(views.APIView):
+class AsuraScansSearchView(views.APIView):
     def get(self, request):
         title_query = request.GET.get('title', '')
-        mangas = Manga.objects.filter(title__icontains=title_query)
-        serializer = MangaSerializer(mangas, many=True)
+        mangas = AsuraScans.objects.filter(title__icontains=title_query)
+        serializer = AsuraScansSerializer(mangas, many=True)
         return Response(serializer.data)
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -206,7 +210,7 @@ def delete_book_from_reading_list(request):
         user = User.objects.get(email=email)
         profile = Profile.objects.get(user=user)
 
-        profile.reading_list = [book for book in profile.reading_list if book['title'] != title_to_delete and book['novel_source'] != source]
+        profile.reading_list = [book for book in profile.reading_list if book['title'] != title_to_delete or (book['title'] == title_to_delete and book['novel_source'] != source)]
         profile.save()
 
         return Response({"message": "Book removed from reading list successfully"}, status=status.HTTP_200_OK)
@@ -231,9 +235,9 @@ def update_to_max_chapter(request):
         profile = Profile.objects.get(user=user)
 
         if (novel_source == 'Light Novel Pub'):
-            novel = LightNovel.objects.get(title=title)
+            novel = LightNovelPub.objects.get(title=title)
         elif (novel_source == 'AsuraScans'):
-            novel = Manga.objects.get(title=title)
+            novel = AsuraScans.objects.get(title=title)
 
         latest_chapter = novel.get_latest_chapter()
         chapter_link = novel.get_chapter_link(latest_chapter)
@@ -246,11 +250,11 @@ def update_to_max_chapter(request):
 
         profile.save()
         return Response({"message": "Updated to latest chapter successfully"}, status=status.HTTP_200_OK)
-    except Manga.DoesNotExist:
-        print("Manga not found")
-        return Response({"error": "Manga not found"}, status=status.HTTP_404_NOT_FOUND)
-    except LightNovel.DoesNotExist:
-        print("LightNovel not found")
+    except AsuraScans.DoesNotExist:
+        print("AsuraScans not found")
+        return Response({"error": "AsuraScans not found"}, status=status.HTTP_404_NOT_FOUND)
+    except LightNovelPub.DoesNotExist:
+        print("LightNovelPub not found")
         return Response({"error": "Light Novel not found"}, status=status.HTTP_404_NOT_FOUND)
     except User.DoesNotExist:
         print("User not found")
@@ -261,34 +265,34 @@ def update_to_max_chapter(request):
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class LightNovelCreateView(views.APIView):
+class LightNovelPubCreateView(views.APIView):
     def post(self, request):
-        serializer = LightNovelSerializer(data=request.data)
+        serializer = LightNovelPubSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def get(self, request):
-        lightNovels = LightNovel.objects.all()
-        serializer = LightNovelSerializer(lightNovels, many=True)
+        lightNovels = LightNovelPub.objects.all()
+        serializer = LightNovelPubSerializer(lightNovels, many=True)
         return Response(serializer.data)
 
-class LightNovelUpdateView(views.APIView):
+class LightNovelPubUpdateView(views.APIView):
     def put(self, request, title):
         try:
-            manga = LightNovel.objects.get(title=title)
-            serializer = LightNovelSerializer(manga, data=request.data)
+            manga = LightNovelPub.objects.get(title=title)
+            serializer = LightNovelPubSerializer(manga, data=request.data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except LightNovel.DoesNotExist:
+        except LightNovelPub.DoesNotExist:
             return Response({'message': 'Light Novel not found'}, status=status.HTTP_404_NOT_FOUND)
 
-class LightNovelSearchView(views.APIView):
+class LightNovelPubSearchView(views.APIView):
     def get(self, request):
         title_query = request.GET.get('title', '')
-        lightNovel = LightNovel.objects.filter(title__icontains=title_query)
-        serializer = LightNovelSerializer(lightNovel, many=True)
+        lightNovel = LightNovelPub.objects.filter(title__icontains=title_query)
+        serializer = LightNovelPubSerializer(lightNovel, many=True)
         return Response(serializer.data)

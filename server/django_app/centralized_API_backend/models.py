@@ -1,8 +1,9 @@
 from django.db import models
 import uuid
+import re
 from django.contrib.auth.models import User
 
-class Manga(models.Model):
+class AsuraScans(models.Model):
     title = models.CharField(max_length=255, primary_key=True)
     synopsis = models.TextField()
     author = models.CharField(max_length=100, blank=True, null=True)
@@ -25,13 +26,14 @@ class Manga(models.Model):
     def __str__(self):
         return self.title
 
+    # For AsuraScans, the latest chapter is the first chapter in the chapters dict
     def get_latest_chapter(self):
         return next(iter(self.chapters), None) if self.chapters else None
 
     def get_chapter_link(self, chapter):
         return self.chapters.get(chapter, None)
 
-class LightNovel(models.Model):
+class LightNovelPub(models.Model):
     title = models.CharField(max_length=255, primary_key=True)
     synopsis = models.TextField()
     author = models.CharField(max_length=100, blank=True, null=True)
@@ -54,8 +56,20 @@ class LightNovel(models.Model):
     def __str__(self):
         return self.title
 
+    # For LightNovelPub, the latest chapter is the last chapter in the chapters dict
     def get_latest_chapter(self):
-        return next(iter(self.chapters), None) if self.chapters else None
+        if not self.chapters:
+            return None
+
+        def chapter_key(chapter_str):
+            # Extract numerical parts from the chapter string
+            numbers = re.findall(r"\d+\.\d+|\d+", chapter_str)
+            # Convert string numbers to floats for proper comparison
+            return [float(num) for num in numbers]
+
+        # Find the chapter with the maximum numerical value
+        latest_chapter = max(self.chapters.keys(), key=chapter_key)
+        return latest_chapter
 
     def get_chapter_link(self, chapter):
         return self.chapters.get(chapter, None)

@@ -19,7 +19,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
-from centralized_API_backend.models import LightNovel
+from centralized_API_backend.models import LightNovelPub
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_app/django_app/settings')
 django.setup()
@@ -56,12 +56,12 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-logger = logging.getLogger("LightNovelScraper")
+logger = logging.getLogger("LightNovelPubScraper")
 
-class LightNovelScraper:
+class LightNovelPubScraper:
     def __init__(self):
         """
-        Initializes the LightNovelScraper.
+        Initializes the LightNovelPubScraper.
 
         Sets up the Chrome WebDriver with headless options and defines the look-back period for scraping data.
         """
@@ -100,7 +100,7 @@ class LightNovelScraper:
                     self.navigate_to_url(url)
 
                     # Query based on both title and novel_source
-                    existing_book = LightNovel.objects.filter(title=title).first()
+                    existing_book = LightNovelPub.objects.filter(title=title).first()
 
                     if existing_book:
                         newest_chapter = self.scrape_newest_chapter(url)
@@ -108,23 +108,25 @@ class LightNovelScraper:
                             # Skip updating if the book has not changed
                             skipped += 1
                             logger.info(f"Book {updated+created+skipped+errors}/{len(books)} - {'Skipped'}: {title}")
-                            # TODO: Uncomment after migrating Manga/LightNovel --> Novel
-                            if skipped >= 5:
-                                break
+                            # TODO: Uncomment after migrating LightNovel --> LightNovelPub
+                            # if skipped >= 5:
+                            #     break
                             continue
                         
                     # Get all details for the book
                     details = self.scrape_book_details(title, url)
 
                     # Attempt to update an existing book or create a new one
-                    lightNovel, created = LightNovel.objects.update_or_create(
+                    book_created = LightNovelPub.objects.update_or_create(
                         title=details['title'],
                         novel_source=details['novel_source'],
                         defaults=details
                     )
-                    updated += 0 if created else 1
-                    created += 1 if created else 0
-                    logger.info(f"Book {updated+created+skipped+errors}/{len(books)} - {'Created' if created else 'Updated'}: {title}")
+                    if book_created:
+                        created += 1
+                    else:
+                        updated += 1
+                    logger.info(f"Book {updated+created+skipped+errors}/{len(books)} - {'Created' if book_created else 'Updated'}: {title}")
                 except WebDriverException as e:
                     logger.error(f"WebDriverException encountered for {title} at {url}: {e}")
                     errors += 1
@@ -174,8 +176,9 @@ class LightNovelScraper:
                 # I should only need to check the past 4 hours of books
                 # For my sake, I'm checking the past self.LAST_SCRAPPED_DATE days of books
                 # (Currently that is 5 days, but it is subject to change)
-                if not self.is_recent_update(update_info):
-                    return books
+                # TODO: Uncomment once the LightNovelPub collection is fully working
+                # if not self.is_recent_update(update_info):
+                #     return books
                 
                 books.append((title, book_url))
 
@@ -201,7 +204,7 @@ class LightNovelScraper:
         if 'DAYS AGO' in update_info:
             days_ago = int(update_info.split(' ')[0])
             return days_ago <= self.LAST_SCRAPPED_DATE
-        elif 'YESTERDAY' in update_info:
+        elif any(string in update_info for string in ['No update info', 'HOURS AGO', 'YESTERDAY']):
             return True
         
         # ** Assuming we scrape at least once per month **
@@ -453,7 +456,7 @@ class Command(BaseCommand):
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
         start_time = datetime.datetime.now()
-        scraper = LightNovelScraper()
+        scraper = LightNovelPubScraper()
         try:
             scraper.scrape_light_novel_pub()
 

@@ -15,7 +15,6 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
 
     const API_ENDPOINT = 'http://127.0.0.1:8000';
     
-    // TODO: Ideally this should not be "manga" but all the novels (from AsuraScans and LightNovelPub)
     const fetchBookDetails = async (title, source) => {
         try {
             const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/search`, {
@@ -66,7 +65,7 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
             };
             loadBookDetails();
 
-            const bookInList = trackingList.find(book => book.title === givenBook.title);
+            const bookInList = trackingList.find(book => book.title === givenBook.title && book.novel_source === givenBook.novel_source);
 
             if (bookInList) {
                 setReadingStatus(bookInList.reading_status);
@@ -94,6 +93,7 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                     user_tag: userTags,
                     latest_read_chapter: latestReadChapter,
                     chapter_link: bookDetails.chapters[latestReadChapter],
+                    novel_type: givenBook.novel_type,
                     novel_source: givenBook.novel_source,
                 });
                 
