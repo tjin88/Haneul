@@ -85,10 +85,11 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
           <tr>
             <th>Title</th>
             <th>Source</th>
-            <th>Latest Read Chapter</th>
+            <th>Last Read Chapter</th>
+            <th>Latest Chapter</th>
             <th>Reading Status</th>
             <th>User Tag</th>
-            <th>Edit</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -97,6 +98,7 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
               <td><a href={book.title} target="_blank" rel="noopener noreferrer">{book.title}</a></td>
               <td>{book.novel_source}</td>
               <td><a href={book.chapter_link} target="_blank" rel="noopener noreferrer">{book.latest_read_chapter}</a></td>
+              <td><a href={book.chapter_link} target="_blank" rel="noopener noreferrer">{book.newest_chapter}</a></td>
               <td><span className={`status ${book.reading_status.toLowerCase()}`}>{book.reading_status}</span></td>
               <td>{book.user_tag}</td>
               <td>

@@ -39,7 +39,7 @@ def get_next_log_file_name(base_dir, base_filename):
         counter += 1
 
 # Setting up the logging configuration
-log_directory = "../out"
+log_directory = "../out/LightNovelPub"
 log_base_filename = "scrapeLightNovelPub"
 log_file_path = get_next_log_file_name(log_directory, log_base_filename)
 
@@ -68,7 +68,7 @@ class LightNovelPubScraper:
         options = Options()
         options.headless = True
         self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        self.LAST_SCRAPPED_DATE = 5 # Looks at the past x days of released books
+        self.LAST_SCRAPPED_DATE = 3 # Looks at the past x days of released books
 
     def scrape_light_novel_pub(self):
         """
@@ -89,7 +89,9 @@ class LightNovelPubScraper:
 
         updated = 0
         created = 0
-        skipped = 0
+        inital_skipped = 0
+        post_update_skipped = 0
+        ever_updated = False
         errors = 0
         books = []
         try:
@@ -99,50 +101,53 @@ class LightNovelPubScraper:
                 try:
                     self.navigate_to_url(url)
 
-                    # Query based on both title and novel_source
+                    # Query based on title only*
                     existing_book = LightNovelPub.objects.filter(title=title).first()
 
                     if existing_book:
                         newest_chapter = self.scrape_newest_chapter(url)
                         if newest_chapter == existing_book.newest_chapter:
                             # Skip updating if the book has not changed
-                            skipped += 1
-                            logger.info(f"Book {updated+created+skipped+errors}/{len(books)} - {'Skipped'}: {title}")
-                            # TODO: Uncomment after migrating LightNovel --> LightNovelPub
-                            # if skipped >= 5:
-                            #     break
+                            inital_skipped += 1 if not ever_updated else 0
+                            post_update_skipped += 1 if ever_updated else 0
+                            logger.info(f"Book {updated+created+inital_skipped+post_update_skipped+errors}/{len(books)} - {'Skipped'}: {title}")
+                            
+                            if post_update_skipped >= 5:
+                                break
                             continue
                         
                     # Get all details for the book
                     details = self.scrape_book_details(title, url)
 
                     # Attempt to update an existing book or create a new one
-                    book_created = LightNovelPub.objects.update_or_create(
+                    lightnovel, book_created = LightNovelPub.objects.update_or_create(
                         title=details['title'],
                         novel_source=details['novel_source'],
                         defaults=details
                     )
                     if book_created:
                         created += 1
+                        ever_updated = True
                     else:
                         updated += 1
-                    logger.info(f"Book {updated+created+skipped+errors}/{len(books)} - {'Created' if book_created else 'Updated'}: {title}")
+                        ever_updated = True
+                    logger.info(f"Book {updated+created+inital_skipped+post_update_skipped+errors}/{len(books)} - {'Created' if book_created else 'Updated'}: {title}")
                 except WebDriverException as e:
-                    logger.error(f"WebDriverException encountered for {title} at {url}: {e}")
+                    logger.error(f"Book {updated+created+inital_skipped+post_update_skipped+errors}/{len(books)} - WebDriverException encountered for {title} at {url}: {e}")
                     errors += 1
                 except IntegrityError as e:
-                    logger.error(f"Database integrity error for {title}: {e}")
+                    logger.error(f"Book {updated+created+inital_skipped+post_update_skipped+errors}/{len(books)} - Database integrity error for {title}: {e}")
                     errors += 1
                 except ValidationError as e:
-                    logger.error(f"Validation error for {title}: {e}")
+                    logger.error(f"Book {updated+created+inital_skipped+post_update_skipped+errors}/{len(books)} - Validation error for {title}: {e}")
                     errors += 1
                 except Exception as e:
-                    logger.error(f"Unexpected error while processing book '{title}': {e}")
+                    logger.error(f"Book {updated+created+inital_skipped+post_update_skipped+errors}/{len(books)} - Unexpected error while processing book '{title}': {e}")
                     logger.error("Exception traceback: " + traceback.format_exc())
                     errors += 1
         finally:
             if len(books) != 0:
-                logger.info(f"Created: {created}/{len(books)}, Updated: {updated}/{len(books)}, Errors: {errors}/{len(books)}, Skipped: {skipped}/{len(books)}")
+                logger.info(f"Created: {created}/{len(books)}, Updated: {updated}/{len(books)}, Errors: {errors}/{len(books)}, Skipped: {inital_skipped+post_update_skipped}/{len(books)}")
             else:
                 logger.info(f"No books were updated. The database is already up-to-date :)")
             logger.info(f"Please see {log_file_path} for the full log details.")
@@ -175,10 +180,9 @@ class LightNovelPubScraper:
                 # Since this script will be executed ~every 4 hours, 
                 # I should only need to check the past 4 hours of books
                 # For my sake, I'm checking the past self.LAST_SCRAPPED_DATE days of books
-                # (Currently that is 5 days, but it is subject to change)
-                # TODO: Uncomment once the LightNovelPub collection is fully working
-                # if not self.is_recent_update(update_info):
-                #     return books
+                # (Currently that is 3 days, but it is subject to change)
+                if not self.is_recent_update(update_info):
+                    return books
                 
                 books.append((title, book_url))
 
@@ -342,7 +346,8 @@ class LightNovelPubScraper:
                 logger.error(f"Error waiting for element {value}: {e}")
                 raise
             else:
-                logger.info(f"Starting process to update books")
+                # logger.info(f"Starting process to update books")
+                # Time to update books!
                 return None
     
     def get_element_text(self, by, value, default_text='Not Available', element=None):
@@ -400,12 +405,32 @@ class LightNovelPubScraper:
         """
         self.navigate_to_url(chapters_url)
 
-        chapters = {}
-        chapter_elements = self.wait_for_elements(By.CSS_SELECTOR, 'ul.chapter-list a')
-        for chapter in chapter_elements:
-            chapter_title, chapter_link = self.process_chapter_element(chapter)
-            chapters[chapter_title] = chapter_link
-        return chapters
+        book_chapters = {}
+        try:
+            while True:
+                chapter_elements = self.wait_for_elements(By.CSS_SELECTOR, 'ul.chapter-list a')
+
+                for chapter in chapter_elements:                
+                    chapter_title, chapter_link = self.process_chapter_element(chapter)
+                    # logger.info(f"Extracted: {chapter_title} - {chapter_link}")
+                    book_chapters[chapter_title] = chapter_link
+                
+                # If there are more books to add, add them to the list. If not, return all books.
+                next_page_element = self.wait_for_element(By.CLASS_NAME, 'PagedList-skipToNext', timeout=5)
+                
+                # logger.info(f"book_chapters: {book_chapters}")
+
+                if next_page_element:
+                    next_page_url = self.get_element_attribute(By.TAG_NAME, 'a', 'href', default_value=None, element=next_page_element)
+                    self.navigate_to_url(next_page_url)
+                else:
+                    # No more pages found. Push to database
+                    break
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
+
+        logger.info(f'Returning {len(book_chapters)} chapters!')
+        return book_chapters
 
     def process_chapter_element(self, chapter_element):
         """
@@ -417,10 +442,42 @@ class LightNovelPubScraper:
         Returns:
             tuple: A tuple containing the chapter title and link.
         """
-        parts = chapter_element.text.strip().split('\n')
-        chapter_title = f'{parts[0]} - {parts[1]}'
-        chapter_link = chapter_element.get_attribute('href')
-        return chapter_title, chapter_link
+        try:
+            number = self.get_element_text(By.CLASS_NAME, 'chapter-no', default_text='', element=chapter_element)
+            title = self.get_element_text(By.CLASS_NAME, 'chapter-title', default_text='', element=chapter_element)
+            chapter_title = f'{number} - {title}' if number else title
+            
+            chapter_link = chapter_element.get_attribute('href')
+            return chapter_title, chapter_link
+        except Exception as e:
+            logger.error(f"Error processing chapter element: {e}")
+            return None, None
+
+    # def wait_for_element(self, by, value, timeout=10, element=None):
+    #     """
+    #     Waits for a specific element to be present on the page or within a parent element.
+
+    #     Args:
+    #     by (By): The Selenium By strategy.
+    #     value (str): The value to locate the element.
+    #     timeout (int): Maximum time to wait for the element. Default is 10 seconds.
+    #     element (WebElement, optional): The parent element to search within. Default is None, which means search in the entire page.
+
+    #     Returns:
+    #     WebElement: The found element, or None if not found within the timeout.
+    #     """
+    #     try:
+    #         target = element if element else self.driver
+    #         return WebDriverWait(target, timeout).until(
+    #             EC.presence_of_element_located((by, value))
+    #         )
+    #     except (TimeoutException, WebDriverException) as e:
+    #         if value != "PagedList-skipToNext":
+    #             logger.error(f"Error waiting for element {value}: {e}")
+    #             raise
+    #         else:
+    #             logger.info(f"Starting process to update books")
+    #             return None
     
     @staticmethod
     def parse_relative_date(time_str):
