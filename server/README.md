@@ -7,12 +7,14 @@
 cd server
 python -m venv myenv --> only on first run
 source myenv/bin/activate
-python3 scraper.py
+cd django_app
+python manage.py scrapeAsuraScans
 
 ### AsuraScans scraper
 cd server
 python -m venv myenv --> only on first run
 source myenv/bin/activate
+cd django_app
 python manage.py scrapeLightNovelPub
 
 ### Django App API Endpoints
@@ -47,28 +49,23 @@ pip freeze > requirements.txt
 # Next steps:
 
 ## Immediate (Done most, still need to host and add scheduled scraping**)
-1. Database Setup (MongoDB)
-2. Scheduled Scraping (Cron*)
+1. Scheduled Scraping (Cron*)
     - Likely will scrape once every hour, 3 hours, or 6 hours (depends on the typical release schedule of publisher)
-3. Backend API (Flask or Django)
-    - This API layer will be used for security between the database and the frontend
-4. Deployment and Running (AWS, Azure, GCP)
-5. Frontend (React)
 
 ## Short-term (Done all except tokenization!)
-- Create a frontend that will display the image, title, and chapter information for each book
-    - Bookmarking function
-    - User's current chapter information
-    - Tags function
-    - Reading status
-- Add a page for user settings, where you can change your profile image, password, and email
-- Add a page for each book, where you can add the book to your tracker,
-and you can see the book's details (Total chapters, synopsis, genres, book type, etc.) 
-- Add tokenization to ensure proper CSRF protection. Currently I've bypassed this, which definitely needs to be fixed before deploying
+1. Update frontend to use tokenization, allowing user to stay logged in for x days
+    - This will also make sure proper CSRF protection
+2. Update frontend to have less API calls to it more efficient/fast
+3. Add a page for user settings, where you can change your profile image, password, and email
 
 ## Long-term
+- Look into opening multiple tabs with selenium to reduce the time to scrape all books
+    - scrapeLightNovelPub: 
+        - Currently it takes a minimum of ~17 minutes to scrape all books with NO changes
+        - With changes is usually 45 - 75 minutes. Clearly this needs to be reduced or improved.
+    - scrapeAsuraScans:
+        - Currently it is around 50-60 seconds. No changes needed atm.
 - Add AWS or other cloud hosting to run every x minutes/hours
     - Planning on using Cron at the moment
-- Look into how to solve the problem where the book is both a light novel and manga. Planning to use a primary key of a combination of book_title and book_type
 - Look at how to solve the problem where the novel has mutliple names
     - Look into finding/creating a database with all novel/manga, along with their alt names?

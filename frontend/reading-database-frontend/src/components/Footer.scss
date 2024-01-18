@@ -1,19 +1,29 @@
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
 .footer {
-    width: 100%;
-    padding: 20px 0;
-    background-color: #333;
-    color: #fff; 
-    margin: 50px 0 0 0;
-  
-    .footer-content {
-      max-width: 1200px;
-      margin: 0 auto;
-      text-align: center;
-      font-size: 0.875rem;
-  
-      p {
-        margin: 0; 
-      }
+  width: 100%;
+  padding: 20px 0;
+  background-color: #333;
+  color: #fff;
+  margin-top: auto;
+
+  .footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+    font-size: 0.875rem;
+
+    p {
+      margin: 0;
     }
   }
-  
+}

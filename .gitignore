@@ -14,3 +14,5 @@ server/django_app/db.sqlite3
 server/django_app/centralized_API_backend/migrations/
 
 frontend/reading-database-frontend/src/assets/
+
+server/out
