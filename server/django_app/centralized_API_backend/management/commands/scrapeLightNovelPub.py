@@ -86,6 +86,7 @@ class LightNovelPubScraper:
         # Too little threads = slower scraping time
         self.MAX_THREADS = 3 # max thread count (or number of concurrent windows used for scraping)
 
+        self.continue_scraping = True # Used to skip extra scraping (reduces scraping time)
         self.driver_pool = DriverPool(size=self.MAX_THREADS)
 
     def scrape_book_and_update_db(self, title_url_tuple, book_number, total_books):
@@ -95,19 +96,28 @@ class LightNovelPubScraper:
         Args:
             title_url_tuple (tuple): A tuple containing the title and URL of the book.
         """
+        if not self.continue_scraping:
+            logger.info(f"Book {book_number}/{total_books} was 'cancelled': {title}")
+            return {'status': 'cancelled', 'title': title}
+    
         title, url = title_url_tuple
         try:
             # Get next available driver
             driver = self.driver_pool.get_driver()
 
             driver.get(url)
+            
+            start_time = datetime.datetime.now()
+
             # Check if the book exists in the database
             existing_book = LightNovelPub.objects.filter(title=title).first()
 
             if existing_book:
                 newest_chapter = self.scrape_newest_chapter(url, driver)
                 if newest_chapter == existing_book.newest_chapter:
-                    logger.info(f"Book #{book_number}/{total_books} - 'Skipped': {title}")
+                    duration = datetime.datetime.now() - start_time
+                    formatted_duration = self.format_duration(duration)
+                    logger.info(f"Book {book_number}/{total_books} took {formatted_duration} to be 'skipped': {title}")
                     return {'status': 'skipped', 'title': title}
 
             # Get all details for the book
@@ -122,11 +132,16 @@ class LightNovelPubScraper:
                 defaults=details
             )
 
-            logger.info(f"Book #{book_number}/{total_books} - {'Created' if not existing_book else 'Updated'}: {title}")
+            duration = datetime.datetime.now() - start_time
+            formatted_duration = self.format_duration(duration)
+
+            logger.info(f"Book {book_number}/{total_books} took {formatted_duration} to be {'created' if not existing_book else 'updated'}: {title}")
             return {'status': 'processed', 'title': title}
         except Exception as e:
+            duration = datetime.datetime.now() - start_time
+            formatted_duration = self.format_duration(duration)
             exc_type, exc_value, exc_traceback = sys.exc_info()
-            logger.error(f"Book #{book_number}/{total_books} - Error processing {title}: {e}")
+            logger.error(f"Book {book_number}/{total_books} took {formatted_duration} to encounter an 'error': {title}. Error message: {e}")
             logger.error(f"Exception Type: {exc_type}")
             logger.error(f"Exception Value: {exc_value}")
             logger.error(f"Traceback: {''.join(traceback.format_tb(exc_traceback))}")
@@ -144,13 +159,13 @@ class LightNovelPubScraper:
 
         try:
             # Initialize a new driver for scraping the main page
-            driver = self.create_webdriver_instance()
+            driver = self.driver_pool.get_driver()
 
             books = self.scrape_main_page(main_url, driver=driver)
         finally:
-            driver.quit()
+            self.driver_pool.release_driver(driver)
 
-        results = {'processed': 0, 'skipped': 0, 'error': 0}
+        results = {'processed': 0, 'skipped': 0, 'error': 0, 'cancelled': 0}
         book_number = 0
         total_books = len(books)
         futures = []
@@ -158,6 +173,8 @@ class LightNovelPubScraper:
 
         with ThreadPoolExecutor(max_workers=self.MAX_THREADS) as executor:
             for book in books:
+                if not self.continue_scraping:
+                    break
                 book_number += 1
                 futures.append(executor.submit(self.scrape_book_and_update_db, book, book_number, total_books))
                        
@@ -177,17 +194,19 @@ class LightNovelPubScraper:
                         '''
                         if consecutive_skipped >= 5:
                             logger.info("5 books skipped in a row after processing. Exiting...")
+                            self.continue_scraping = False
+                            executor.shutdown(wait=False)
                             break
                     elif result['status'] == 'processed':
-                        consecutive_skipped = 0
                         results['skipped'] += consecutive_skipped
+                        consecutive_skipped = 0
         
         self.driver_pool.close_all_drivers()
 
         # Edge case where there are < 5 skipped books at the end of the books list
         # Really only useful for logging purposes lol
         results['skipped'] += consecutive_skipped
-        logger.info(f"Books Processed: {results['processed']}, Skipped: {results['skipped']}, Errors: {results['error']}")
+        logger.info(f"Books Processed: {results['processed']}, Skipped: {results['skipped']+results['cancelled']}, Errors: {results['error']}")
         logger.info(f"There should be {total_books} books!")
 
     def scrape_main_page(self, url, driver=None):
@@ -201,7 +220,7 @@ class LightNovelPubScraper:
             driver (webdriver): The WebDriver instance for the thread.
 
         Returns:
-        list: A list of tuples containing book titles and their URLs.
+            list: A list of tuples containing book titles and their URLs.
         """
         self.navigate_to_url(url, driver=driver)
         books = []
@@ -212,9 +231,8 @@ class LightNovelPubScraper:
             for element in book_elements:
                 title = self.get_element_text(By.CLASS_NAME, 'novel-title', default_text='Title not available', element=element, driver=driver)
                 book_url = self.get_element_attribute(By.TAG_NAME, 'a', 'href', default_value=None, element=self.wait_for_element(By.CLASS_NAME, 'novel-title', element=element, driver=driver),  driver=driver)
-                logger.info(f'Appending {title}')
                 books.append((title, book_url))
-
+            
             # If there are more books to add, add them to the list. If not, return all books.
             next_page_element = self.wait_for_element(By.CLASS_NAME, 'PagedList-skipToNext', timeout=5, driver=driver)
 
@@ -444,7 +462,6 @@ class LightNovelPubScraper:
         except Exception as e:
             logger.error(f"An error occurred: {e}")
 
-        logger.info(f'Book {book_title} has {len(book_chapters)} chapters!')
         return book_chapters
 
     def process_chapter_element(self, chapter_element, driver):
@@ -492,19 +509,27 @@ class LightNovelPubScraper:
             return today - datetime.timedelta(days=years * 365)  # Best approximation I could think of ...
         else:
             return today
+    
+    @staticmethod
+    def format_duration(duration):
+        """
+        Formats a duration into a human-readable string.
 
-    def create_webdriver_instance(self):
-        options = Options()
-        # options.add_argument('--disable-gpu')  # According to the documentation, this is becessary for headless mode
-        # options.add_argument('--no-sandbox')  # Used to bypass OS security model
-        # options.add_argument('--disable-dev-shm-usage')  # Used to overcome limited resource problems
-        options.add_argument("--headless")
+        Args:
+            duration (datetime.timedelta): The duration to format.
 
-        # options.add_experimental_option('excludeSwitches', ['enable-logging'])  # Suppresses log messages in console
+        Returns:
+            str: A string representing the duration in hours, minutes, and seconds.
+        """
+        total_duration = duration.total_seconds()
 
-        # Initialize ChromeDriver
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        return driver
+        hours = int(total_duration // 3600)
+        minutes = int((total_duration % 3600) // 60)
+        seconds = int(total_duration % 60)
+        milliseconds = int((total_duration - int(total_duration)) * 1000)
+        
+        return f"{hours}h {minutes}m {seconds}s {milliseconds}ms"
+
 
 class DriverPool:
     def __init__(self, size):
@@ -526,7 +551,7 @@ class DriverPool:
         # options.add_argument('--disable-gpu')  # According to the documentation, this is becessary for headless mode
         # options.add_argument('--no-sandbox')  # Used to bypass OS security model
         # options.add_argument('--disable-dev-shm-usage')  # Used to overcome limited resource problems
-        options.add_argument("--headless")
+        options.add_argument("--headless")  # Make the scraping happen as a background process rather than an active window
 
         # options.add_experimental_option('excludeSwitches', ['enable-logging'])  # Suppresses log messages in console
 
@@ -539,6 +564,7 @@ class DriverPool:
             driver = self.available_drivers.get()
             driver.quit()
 
+
 class Command(BaseCommand):
     help = 'Scrapes light novels from LightNovelPub and updates the database.'
 
@@ -548,6 +574,7 @@ class Command(BaseCommand):
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
+        logger.info("Starting to scrape LightNovelPub")
         start_time = datetime.datetime.now()
         scraper = LightNovelPubScraper()
         try:
