@@ -14,7 +14,7 @@ from dateutil.parser import parse
 from centralized_API_backend.models import AsuraScans
 from django.core.management.base import BaseCommand, CommandError
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import IntegrityError
+from django.db import IntegrityError, DatabaseError
 from django.core.exceptions import ValidationError
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_app/django_app/settings')
@@ -275,9 +275,7 @@ class AsuraScansScraper:
                 if title and book_url and title not in books:
                     # Retry scraping in case of network-related errors
                     books[title] = self.scrape_with_retries(book_url) or 'Details not available'
-
             return books
-
         except (HTTPError, ConnectionError, Timeout, TooManyRedirects, RequestException) as e:
             logger.error(f"Error occurred while fetching the main page: {e}")
         except Exception as e:
@@ -301,6 +299,8 @@ class AsuraScansScraper:
             existing_book_data = AsuraScans.objects.get(title=new_data['title'])
         except AsuraScans.DoesNotExist:
             return True  # New book, not in existing data
+        except DatabaseError:
+            return True
 
         for key, value in new_data.items():
             if key in ['id', 'followers']:
@@ -394,6 +394,9 @@ class AsuraScansScraper:
             except ValidationError as e:
                 logger.error(f"Validation error for {book_title}: {e}")
                 return -1
+            except DatabaseError:
+                logger.error(f"Database error for {book_title}. Please ensure the MongoDB connection is properly established and the computer's IP is connected to the database.")
+                return -1
             except Exception as e:
                 logger.error(f"Unexpected error while processing book '{book_title}': {e}")
                 return -1
@@ -440,6 +443,8 @@ class Command(BaseCommand):
         hours = int(seconds // 3600)
         minutes = int((seconds % 3600) // 60)
         seconds = int(seconds % 60)
+        if hours == 0:
+            return f"{minutes}m {seconds}s"
         return f"{hours}h {minutes}m {seconds}s"
 
 if __name__ == "__main__":

@@ -69,3 +69,10 @@ pip freeze > requirements.txt
     - Planning on using Cron at the moment
 - Look at how to solve the problem where the novel has mutliple names
     - Look into finding/creating a database with all novel/manga, along with their alt names?
+
+
+## Websites to scrape:
+- https://void-scans.com/az-list/
+- https://rizzcomic.com/series
+- https://reset-scans.us/mangas/?m_orderby=latest
+- 

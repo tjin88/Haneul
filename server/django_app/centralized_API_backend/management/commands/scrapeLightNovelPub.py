@@ -10,7 +10,7 @@ import sys
 from logging.handlers import RotatingFileHandler
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
-from django.db import IntegrityError
+from django.db import IntegrityError, DatabaseError
 from django.core.exceptions import ValidationError
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -85,9 +85,11 @@ class LightNovelPubScraper:
         # Too many threads = server ban or system overload 
         # Too little threads = slower scraping time
         self.MAX_THREADS = 3 # max thread count (or number of concurrent windows used for scraping)
-
-        self.continue_scraping = True # Used to skip extra scraping (reduces scraping time)
         self.driver_pool = DriverPool(size=self.MAX_THREADS)
+
+        # Used to skip extra scraping (reduces scraping time)
+        self.continue_scraping = True
+        self.skipped_threshold = 350 
 
     def scrape_book_and_update_db(self, title_url_tuple, book_number, total_books):
         """
@@ -97,7 +99,7 @@ class LightNovelPubScraper:
             title_url_tuple (tuple): A tuple containing the title and URL of the book.
         """
         if not self.continue_scraping:
-            logger.info(f"Book {book_number}/{total_books} was 'cancelled': {title}")
+            logger.info(f"{book_number}/{total_books} was 'cancelled': {title}")
             return {'status': 'cancelled', 'title': title}
     
         title, url = title_url_tuple
@@ -117,7 +119,7 @@ class LightNovelPubScraper:
                 if newest_chapter == existing_book.newest_chapter:
                     duration = datetime.datetime.now() - start_time
                     formatted_duration = self.format_duration(duration)
-                    logger.info(f"Book {book_number}/{total_books} took {formatted_duration} to be 'skipped': {title}")
+                    logger.info(f"{book_number}/{total_books} took {formatted_duration} to 'skip': {title}")
                     return {'status': 'skipped', 'title': title}
 
             # Get all details for the book
@@ -135,13 +137,17 @@ class LightNovelPubScraper:
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
 
-            logger.info(f"Book {book_number}/{total_books} took {formatted_duration} to be {'created' if not existing_book else 'updated'}: {title}")
+            logger.info(f"{book_number}/{total_books} took {formatted_duration} to {'create' if not existing_book else 'update'} {len(details['chapters'])} chapters: {title}")
             return {'status': 'processed', 'title': title}
+        except DatabaseError as e:
+            duration = datetime.datetime.now() - start_time
+            formatted_duration = self.format_duration(duration)
+            logger.error(f"{book_number}/{total_books} took {formatted_duration} to encounter a 'database error': {title}. Please ensure the MongoDB connection is properly established and the computer's IP is connected to the database.")
         except Exception as e:
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
             exc_type, exc_value, exc_traceback = sys.exc_info()
-            logger.error(f"Book {book_number}/{total_books} took {formatted_duration} to encounter an 'error': {title}. Error message: {e}")
+            logger.error(f"{book_number}/{total_books} took {formatted_duration} to encounter an 'error': {title}. Error message: {e}")
             logger.error(f"Exception Type: {exc_type}")
             logger.error(f"Exception Value: {exc_value}")
             logger.error(f"Traceback: {''.join(traceback.format_tb(exc_traceback))}")
@@ -184,7 +190,16 @@ class LightNovelPubScraper:
 
                 if result['status'] == 'error':
                     logger.error(f"Error processing {result['title']}: {result['message']}")
-                elif results['processed'] > 0:
+                elif result['status'] == 'database_error':
+                    # While I agree this is "faulty" code, and is not the best implementation,
+                    # This was done simply for my testing purposes and may not be pushed to prod.
+                    consecutive_skipped += 1
+                    if consecutive_skipped >= 5:
+                            logger.info("5 books encountered a database error in a row. Exiting...")
+                            self.continue_scraping = False
+                            executor.shutdown(wait=False)
+                            break
+                elif results['processed'] > 0 or results['skipped'] > self.skipped_threshold:
                     if result['status'] == 'skipped':
                         consecutive_skipped += 1
 
@@ -206,7 +221,7 @@ class LightNovelPubScraper:
         # Edge case where there are < 5 skipped books at the end of the books list
         # Really only useful for logging purposes lol
         results['skipped'] += consecutive_skipped
-        logger.info(f"Books Processed: {results['processed']}, Skipped: {results['skipped']+results['cancelled']}, Errors: {results['error']}")
+        logger.info(f"Books Processed: {results['processed']}, Skipped: {results['skipped']+results['cancelled']-5+self.MAX_THREADS}, Errors: {results['error']}")
         logger.info(f"There should be {total_books} books!")
 
     def scrape_main_page(self, url, driver=None):
@@ -528,7 +543,9 @@ class LightNovelPubScraper:
         seconds = int(total_duration % 60)
         milliseconds = int((total_duration - int(total_duration)) * 1000)
         
-        return f"{hours}h {minutes}m {seconds}s {milliseconds}ms"
+        if hours == 0:
+            return f"{minutes}m {seconds}s {milliseconds}ms"
+        return f"{hours}h {minutes}m {seconds}s"
 
 
 class DriverPool:
@@ -552,8 +569,6 @@ class DriverPool:
         # options.add_argument('--no-sandbox')  # Used to bypass OS security model
         # options.add_argument('--disable-dev-shm-usage')  # Used to overcome limited resource problems
         options.add_argument("--headless")  # Make the scraping happen as a background process rather than an active window
-
-        # options.add_experimental_option('excludeSwitches', ['enable-logging'])  # Suppresses log messages in console
 
         # Initialize ChromeDriver
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
@@ -604,6 +619,8 @@ class Command(BaseCommand):
         hours = int(seconds // 3600)
         minutes = int((seconds % 3600) // 60)
         seconds = int(seconds % 60)
+        if hours == 0:
+            return f"{minutes}m {seconds}s"
         return f"{hours}h {minutes}m {seconds}s"
 
 if __name__ == "__main__":

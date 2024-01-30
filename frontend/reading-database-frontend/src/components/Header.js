@@ -17,7 +17,7 @@ const Header = ({ isLightMode, setLightMode }) => {
       <div className="left-side">
         <a href="/" className="branding">
           <img src={ManBlackWhite} alt="Logo" className="logo" />
-          <h1 className="title">Manga and Light Novel Tracker</h1>
+          <h1 className="title">Haneul</h1>
         </a>
         {(isLoggedIn || user) && <a href="/browse" className="header_browse_redirect"> <h1 className="browse_redirect">Browse</h1> </a>}
         {(isLoggedIn || user) && <a href="/track" className="header_browse_redirect"> <h1 className="browse_redirect">Track</h1> </a>}

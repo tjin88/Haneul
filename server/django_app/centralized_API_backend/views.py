@@ -15,8 +15,6 @@ import jwt
 from datetime import datetime, timedelta
 from django.conf import settings
 
-# TODO: Change from 'Manga' and 'LightNovel' --> 'AsuraScans' and 'LightNovelPub'
-
 # TODO: Implement the below function to get ALL books (from AsuraScans AND LightNovelPub)
 class AllNovelGetView(views.APIView):
     def get(self, request):
