@@ -14,6 +14,7 @@ from django.http import JsonResponse
 import jwt
 from datetime import datetime, timedelta
 from django.conf import settings
+from django.db.models import Q
 
 # TODO: Implement the below function to get ALL books (from AsuraScans AND LightNovelPub)
 class AllNovelGetView(views.APIView):
@@ -30,27 +31,28 @@ class AllNovelGetView(views.APIView):
 class AllNovelSearchView(views.APIView):
     def get(self, request):
         title_query = request.GET.get('title', '')
-        novel_source = request.GET.get('novel_source')
-        print(f'novel_source: {novel_source}')
-        if novel_source == 'All':
-            mangas = AsuraScans.objects.filter(title__icontains=title_query)
-            mangaSerializer = AsuraScansSerializer(mangas, many=True)
-            lightNovels = LightNovelPub.objects.filter(title__icontains=title_query)
-            lightNovelSerializer = LightNovelPubSerializer(lightNovels, many=True)
-            serializer = mangaSerializer.data + lightNovelSerializer.data
-        elif novel_source == 'AsuraScans':
-            mangas = AsuraScans.objects.filter(title__icontains=title_query)
-            mangaSerializer = AsuraScansSerializer(mangas, many=True)
-            serializer = mangaSerializer.data
-        elif novel_source == 'Light Novel Pub':
-            lightNovels = LightNovelPub.objects.filter(title__icontains=title_query)
-            lightNovelSerializer = LightNovelPubSerializer(lightNovels, many=True)
-            serializer = lightNovelSerializer.data
-        else:
-            # TODO: *throw some error here*
-            pass
+        genre = request.GET.get('genre', '')
+        novel_source = request.GET.get('novel_source', 'All')
 
-        return Response(serializer)
+        conditions = Q()
+        if title_query:
+            conditions &= Q(title__icontains=title_query)
+        if genre:
+            conditions &= Q(genres__icontains=genre)
+        
+        serializer_data = []
+        
+        if novel_source in ['All', 'AsuraScans', 'Manga']:
+            asura_results = AsuraScans.objects.filter(conditions)
+            asura_serializer = AsuraScansSerializer(asura_results, many=True)
+            serializer_data += asura_serializer.data
+        
+        if novel_source in ['All', 'Light Novel Pub', 'Light Novel']:
+            lightnovel_results = LightNovelPub.objects.filter(conditions)
+            lightnovel_serializer = LightNovelPubSerializer(lightnovel_results, many=True)
+            serializer_data += lightnovel_serializer.data
+
+        return Response(serializer_data)
 
 class AsuraScansCreateView(views.APIView):
     def post(self, request):

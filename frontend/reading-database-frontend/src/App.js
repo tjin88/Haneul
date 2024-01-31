@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { BrowserRouter as Router, Route, Routes, useParams } from 'react-router-dom';
 import Header from './components/Header'; 
 import Footer from './components/Footer'; 
@@ -18,8 +17,12 @@ const App = () => {
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/`);
-        setBooks(response.data);
+        const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setBooks(data);
       } catch (error) {
         console.error('Error fetching books:', error);
       }

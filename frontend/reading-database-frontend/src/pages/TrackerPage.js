@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import TrackerTable from '../components/TrackerTable';
 import { useAuth } from '../components/AuthContext';
 import './TrackerPage.scss';
@@ -13,9 +12,13 @@ const TrackerPage = () => {
   const fetchTrackingList = async () => {
     if (user) {
       try {
-          const encodedEmail = encodeURIComponent(user.username);
-          const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list`);
-          setTrackingList(response.data.reading_list);
+        const encodedEmail = encodeURIComponent(user.username);
+        const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setTrackingList(data.reading_list);
       } catch (error) {
         console.error('Error fetching tracking list:', error);
       }

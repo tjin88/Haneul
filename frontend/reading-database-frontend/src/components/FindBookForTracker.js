@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import './FindBookForTracker.scss';
 
 const FindBookForTracker = ({ onBookSelect, onClose }) => {
@@ -27,17 +26,13 @@ const FindBookForTracker = ({ onBookSelect, onClose }) => {
         setLoading(true);
         setError('');
         try {
-            const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/search`, {
-                params: { 
-                    title: title,
-                    novel_source: 'All'
-                }
-            });
+            const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/search?title=${title}`);
+            const data = await response.json();
             // TODO: Could handle this differently (maybe most popular books?)
             // setSearchResults(response.data.slice(0, 5));
-            setSearchResults(response.data);
-            if (response.data.length === 0) {
-                    setError('No results found');
+            setSearchResults(data);
+            if (data.length === 0) {
+                setError('No results found');
             }
         } catch (error) {
             setError('Failed to fetch results');

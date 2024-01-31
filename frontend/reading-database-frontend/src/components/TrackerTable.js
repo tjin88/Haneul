@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useAuth } from './AuthContext';
 import AddBookToTracker from './AddBookToTracker';
 import FindBookForTracker from './FindBookForTracker';
@@ -15,14 +14,22 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
 
   const updateToMaxChapter = async (bookTitle, source) => {
     try {
-      const response = await axios.put(`${API_ENDPOINT}/centralized_API_backend/api/update-to-max-chapter/`, {
-        username: user.username,
-        title: bookTitle,
-        novel_source: source
+      const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/update-to-max-chapter/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: user.username,
+          title: bookTitle,
+          novel_source: source,
+        }),
       });
 
-      if (response.status === 200) {
+      if (response.ok) {
         fetchTrackingList();
+      } else {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
     } catch (error) {
       console.error('Error updating to max chapter:', error);
@@ -31,15 +38,22 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
 
   const deleteBook = async (bookTitle, source) => {
     try {
-      const response = await axios.delete(`${API_ENDPOINT}/centralized_API_backend/api/delete-book-from-reading-list/`, {
-        data: {
+      const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/delete-book-from-reading-list/`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           username: user.username,
           title: bookTitle,
-          novel_source: source
-        },
+          novel_source: source,
+        }),
       });
-      if (response.status === 200) {
+
+      if (response.ok) {
         fetchTrackingList();
+      } else {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
     } catch (error) {
       console.error('Error deleting book:', error);

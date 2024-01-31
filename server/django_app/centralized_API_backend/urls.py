@@ -6,6 +6,8 @@ urlpatterns = [
     path('api/all-novels/', AllNovelGetView.as_view(), name='get_all_novels'),
     path('api/all-novels/search', AllNovelSearchView.as_view(), name='get_all_novels'),
 
+
+
     path('api/asurascans/', AsuraScansCreateView.as_view(), name='create_manga'),
     path('api/asurascans/<str:title>/', AsuraScansUpdateView.as_view(), name='manga-update'),
     # path('api/manga/search', AsuraScansSearchView.as_view(), name='manga-search'),

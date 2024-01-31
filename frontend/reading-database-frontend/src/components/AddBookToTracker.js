@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useAuth } from './AuthContext';
 import './AddBookToTracker.scss';
 
@@ -14,16 +13,14 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
     const { user } = useAuth();
 
     const API_ENDPOINT = 'http://127.0.0.1:8000';
-    
+
     const fetchBookDetails = async (title, source) => {
         try {
-            const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/search`, {
-                params: { 
-                    title: title,
-                    novel_source: source
-                }
-            });
-            return response.data;
+            const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/search?title=${encodeURIComponent(title)}&novel_source=${encodeURIComponent(source)}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
         } catch (error) {
             console.error('Error fetching book details:', error);
             return null;
@@ -34,8 +31,12 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
         if (user) {
           try {
               const encodedEmail = encodeURIComponent(user.username);
-              const response = await axios.get(`${API_ENDPOINT}/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list`);
-              setTrackingList(response.data.reading_list);
+              const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list`);
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              const data = await response.json();
+              setTrackingList(data.reading_list);
           } catch (error) {
             console.error('Error fetching tracking list:', error);
           }
@@ -86,16 +87,26 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
     
         if (user) {
             try {
-                await axios.put(`${API_ENDPOINT}/centralized_API_backend/api/profiles/update_reading_list/`, {
-                    username: user.username,
-                    title: bookTitle,
-                    reading_status: readingStatus,
-                    user_tag: userTags,
-                    latest_read_chapter: latestReadChapter,
-                    chapter_link: bookDetails.chapters[latestReadChapter],
-                    novel_type: givenBook.novel_type,
-                    novel_source: givenBook.novel_source,
+                const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/profiles/update_reading_list/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: user.username,
+                        title: bookTitle,
+                        reading_status: readingStatus,
+                        user_tag: userTags,
+                        latest_read_chapter: latestReadChapter,
+                        chapter_link: bookDetails.chapters[latestReadChapter],
+                        novel_type: givenBook.novel_type,
+                        novel_source: givenBook.novel_source,
+                    }),
                 });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 
                 if (onBookAdded) {
                     onBookAdded();
