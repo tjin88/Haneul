@@ -75,6 +75,20 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
     }
   };
 
+  const deleteAllSelected = async () => {
+    const selectedBooksToDelete = Object.keys(selectedBooks)
+      .filter(title => selectedBooks[title])
+      .map(title => {
+        const book = books.find(book => book.title === title);
+        return { title, source: book.novel_source };
+      });
+
+    // Perform fetch request for each book to delete
+    for (const book of selectedBooksToDelete) {
+      await deleteBook(book.title, book.source);
+    }
+  };
+
   const handleEditBook = (book) => {
     setSelectedBookForEdit(book);
     setShowEditModal(true);
@@ -118,6 +132,7 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
             <button className="addButton" onClick={() => handleAddBook()}>+ Add Book</button>
         </div>
         <button onClick={updateSelectedToMaxChapter}>Update Selected to Max Chapter</button>
+        <button onClick={deleteAllSelected}>Delete All Selected</button>
         <table className='trackerTable'>
             <thead>
             <tr>
@@ -154,15 +169,15 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
                     <td><span className={`status ${book.reading_status.toLowerCase()}`}>{book.reading_status}</span></td>
                     <td>{book.user_tag}</td>
                     <td>
-                        <button onClick={() => updateToMaxChapter(book.title, book.novel_source)}>Max</button>
+                        {/* <button onClick={() => updateToMaxChapter(book.title, book.novel_source)}>Max</button> */}
                         <button onClick={() => handleEditBook(book)}>Edit</button>
-                        <button onClick={() => deleteBook(book.title, book.novel_source)}>Delete</button>
+                        {/* <button onClick={() => deleteBook(book.title, book.novel_source)}>Delete</button> */}
                     </td>
                     </tr>
                 ))}
             </tbody>
         </table>
-        {showEditModal && !selectedBookForEdit && <FindBookForTracker onBookSelect={handleBookSelection} onClose={handleCloseEditModal} />}
+        {showEditModal && !selectedBookForEdit && <FindBookForTracker onBookSelect={(book) => setSelectedBookForEdit(book)} onClose={handleCloseEditModal} />}
         {showEditModal && selectedBookForEdit && (
             <AddBookToTracker
                 onBookAdded={onBookEdited}
