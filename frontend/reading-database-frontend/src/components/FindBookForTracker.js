@@ -7,8 +7,6 @@ const FindBookForTracker = ({ onBookSelect, onClose }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const API_ENDPOINT = 'http://127.0.0.1:8000';
-
     useEffect(() => {
         // Implementing a debounce function to reduce # of API calls
         const delayDebounceFn = setTimeout(() => {
@@ -26,7 +24,7 @@ const FindBookForTracker = ({ onBookSelect, onClose }) => {
         setLoading(true);
         setError('');
         try {
-            const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/search?title=${title}`);
+            const response = await fetch(`/centralized_API_backend/api/all-novels/search?title=${title}`);
             const data = await response.json();
             // TODO: Could handle this differently (maybe most popular books?)
             // setSearchResults(response.data.slice(0, 5));

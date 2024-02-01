@@ -4,7 +4,7 @@ import re
 from django.contrib.auth.models import User
 
 class AsuraScans(models.Model):
-    title = models.CharField(max_length=255, primary_key=True)
+    title = models.CharField(max_length=255, db_index=True, primary_key=True)
     synopsis = models.TextField()
     author = models.CharField(max_length=100, blank=True, null=True)
     # artist = models.CharField(max_length=100, blank=True, null=True)
@@ -34,7 +34,7 @@ class AsuraScans(models.Model):
         return self.chapters.get(chapter, None)
 
 class LightNovelPub(models.Model):
-    title = models.CharField(max_length=255, primary_key=True)
+    title = models.CharField(max_length=255, db_index=True, primary_key=True)
     synopsis = models.TextField()
     author = models.CharField(max_length=100, blank=True, null=True)
     # artist = models.CharField(max_length=100, blank=True, null=True)

@@ -18,7 +18,13 @@ const TrackerPage = () => {
 
   const { user } = useAuth();
 
-  const API_ENDPOINT = 'http://127.0.0.1:8000';
+  const filteredBooks = trackingList.filter(book =>
+    book.title?.toLowerCase().includes(titleQuery.toLowerCase()) 
+    && book.novel_source?.toLowerCase().includes(sourceQuery.toLowerCase()) 
+    && book.novel_type?.toLowerCase().includes(typeQuery.toLowerCase()) 
+    && book.reading_status?.toLowerCase().includes(readingStatusQuery.toLowerCase()) 
+    && book.user_tag?.toLowerCase().includes(userTagQuery.toLowerCase()) 
+  );
 
   const extractUniqueAttributes = (trackingList, attribute) => {
     const allAttributes = trackingList.flatMap(book => book[attribute] || []);
@@ -29,7 +35,7 @@ const TrackerPage = () => {
     if (user) {
       try {
         const encodedEmail = encodeURIComponent(user.username);
-        const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list`);
+        const response = await fetch(`/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -52,14 +58,6 @@ const TrackerPage = () => {
   const handleBookChanged = () => {
     fetchTrackingList();
   };
-
-  const filteredBooks = trackingList.filter(book =>
-    book.title?.toLowerCase().includes(titleQuery.toLowerCase()) 
-    && book.novel_source?.toLowerCase().includes(sourceQuery.toLowerCase()) 
-    && book.novel_type?.toLowerCase().includes(typeQuery.toLowerCase()) 
-    && book.reading_status?.toLowerCase().includes(readingStatusQuery.toLowerCase()) 
-    && book.user_tag?.toLowerCase().includes(userTagQuery.toLowerCase()) 
-  );
 
   return (
     <div className='trackerPage'>

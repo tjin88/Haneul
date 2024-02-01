@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Header from './components/Header'; 
 import Footer from './components/Footer'; 
 import Home from './pages/Home'; 
@@ -10,19 +10,20 @@ import TrackerPage from './pages/TrackerPage';
 
 const App = () => {
   const [books, setBooks] = useState([]);
+  const [totalNumberOfBooks, setTotalNumberOfBooks] = useState(1478);
   const [lightMode, setLightMode] = useState(true);
-
-  const API_ENDPOINT = 'http://127.0.0.1:8000';
 
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/`);
+        // const response = await fetch(`/centralized_API_backend/api/all-novels/`);
+        const response = await fetch(`/centralized_API_backend/api/home-novels/`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        setBooks(data);
+        setBooks(data.books);
+        setTotalNumberOfBooks(data.numberOfBooks);
       } catch (error) {
         console.error('Error fetching books:', error);
       }
@@ -34,7 +35,7 @@ const App = () => {
       <Router>
         <Header isLightMode={lightMode} setLightMode={setLightMode}/>
           <Routes>
-            <Route exact path="/" element={<Home books={books} lightMode={lightMode} />} />
+            <Route exact path="/" element={<Home books={books} totalNumberOfBooks={totalNumberOfBooks} lightMode={lightMode} />} />
             <Route path="/browse" element={<Browse books={books} lightMode={lightMode} />} />
             <Route path="/track" element={<TrackerPage lightMode={lightMode} />} />
             <Route path="/:bookTitle" element={<BookDetailsWrapper books={books} />} />

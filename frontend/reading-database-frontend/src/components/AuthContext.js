@@ -9,8 +9,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const API_ENDPOINT = 'http://127.0.0.1:8000';
-
   const parseJwt = (token) => {
     var base64Url = token.split('.')[1];
     var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -43,7 +41,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/login/`, {
+      const response = await fetch(`/centralized_API_backend/api/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -73,7 +71,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (email, password, profileName ) => {
     try {
-      const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/register/`, {
+      const response = await fetch(`/centralized_API_backend/api/register/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

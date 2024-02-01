@@ -1,4 +1,35 @@
 .banner {
     width: 100vw !important;
     height: auto;
+    padding: 0;
+    margin: 0;
 }
+
+.home {
+    overflow-x: hidden;
+}
+
+.banner-container {
+    width: 100%; // Full width of the container
+    height: 0; // Collapse the height, will be set by padding
+    padding-bottom: calc(716 / 1792 * 100%); // Maintain aspect ratio
+    position: relative; // Relative position for absolute positioning of children
+}
+  
+.banner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%; // Take full width of the container
+    height: auto; // Maintain the aspect ratio of the content
+}
+  
+.hidden {
+    display: none;
+}
+  
+.visible {
+    display: block;
+}
+  
+  

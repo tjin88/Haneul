@@ -1,16 +1,27 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import BookDetails from '../components/BookDetails'; 
 
-const BookDetailsWrapper = ({ books }) => {
+const BookDetailsWrapper = () => {
   const { bookTitle } = useParams();
-  
-  // ** Make sure the book titles are decoded in the URL
-  const decodedTitle = decodeURIComponent(bookTitle);
-  const bookDetails = books.find(book => book.title === decodedTitle);
+  const [bookDetails, setBookDetails] = useState(null);
 
-  // Check if bookDetails is found
+  useEffect(() => {
+    const fetchBookDetails = async () => {
+      try {
+        const response = await fetch(`/centralized_API_backend/api/book-details/${encodeURIComponent(bookTitle)}`);
+        const data = await response.json();
+        setBookDetails(data);
+      } catch (error) {
+        console.error('Error fetching book details:', error);
+      }
+    };
+    fetchBookDetails();
+  }, [bookTitle]);
+
   if (!bookDetails) {
+    return <div>Loading...</div>;
+  } else if (bookDetails?.message === "Book not found") {
     return <div>Book not found</div>;
   }
 

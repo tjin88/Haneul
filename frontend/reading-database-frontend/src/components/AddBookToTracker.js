@@ -12,11 +12,9 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
     const [bookDetails, setBookDetails] = useState(null);
     const { user } = useAuth();
 
-    const API_ENDPOINT = 'http://127.0.0.1:8000';
-
     const fetchBookDetails = async (title, source) => {
         try {
-            const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/search?title=${encodeURIComponent(title)}&novel_source=${encodeURIComponent(source)}`);
+            const response = await fetch(`/centralized_API_backend/api/all-novels/search?title=${encodeURIComponent(title)}&novel_source=${encodeURIComponent(source)}`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -31,7 +29,7 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
         if (user) {
           try {
               const encodedEmail = encodeURIComponent(user.username);
-              const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list`);
+              const response = await fetch(`/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list`);
               if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
               }
@@ -87,7 +85,7 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
     
         if (user) {
             try {
-                const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/profiles/update_reading_list/`, {
+                const response = await fetch(`/centralized_API_backend/api/profiles/update_reading_list/`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',

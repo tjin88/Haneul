@@ -7,13 +7,12 @@ const Browse = ({ lightMode }) => {
   const [genreFilter, setGenreFilter] = useState('');
   const [books, setBooks] = useState([]);
 
-  const API_ENDPOINT = 'http://127.0.0.1:8000';
 
   useEffect(() => {
     const fetchData = async () => {
       const title = encodeURIComponent(searchTerm);
       const genre = encodeURIComponent(genreFilter);
-      const response = await fetch(`${API_ENDPOINT}/centralized_API_backend/api/all-novels/search?title=${title}&genre=${genre}`);
+      const response = await fetch(`/centralized_API_backend/api/all-novels/search?title=${title}&genre=${genre}`);
       const data = await response.json();
       setBooks(data);
     };
