@@ -6,20 +6,26 @@ const Browse = ({ lightMode }) => {
   const [sortType, setSortType] = useState('default');
   const [genreFilter, setGenreFilter] = useState('');
   const [books, setBooks] = useState([]);
-
+  const [isFetching, setIsFetching] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
+      setIsFetching(true);
       const title = encodeURIComponent(searchTerm);
       const genre = encodeURIComponent(genreFilter);
-      const response = await fetch(`/centralized_API_backend/api/all-novels/search?title=${title}&genre=${genre}`);
+      const response = await fetch(`/centralized_API_backend/api/all-novels/browse?title=${title}&genre=${genre}`);
       const data = await response.json();
       setBooks(data);
+      setIsFetching(false);
     };
 
-    if (searchTerm || genreFilter || sortType !== 'default') {
-      fetchData();
-    }
+    const debounceFetchData = setTimeout(() => {
+      if (searchTerm || genreFilter || sortType !== 'default') {
+        fetchData();
+      }
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(debounceFetchData); 
   }, [searchTerm, genreFilter, sortType]);
 
   const handleSearchChange = (e) => {
@@ -34,14 +40,14 @@ const Browse = ({ lightMode }) => {
     <div className="browse">
       <input
         type="text"
-        placeholder="Search by title..."
+        placeholder="Search by title (3 characters minimum)"
         value={searchTerm}
         onChange={handleSearchChange}
         className="search-input"
       />
       <input
         type="text"
-        placeholder="Search by genre..."
+        placeholder="Search by genre (Full genre name)"
         value={genreFilter}
         onChange={handleGenreChange}
         className="search-input"
@@ -57,18 +63,23 @@ const Browse = ({ lightMode }) => {
         <option value="followers">Most Followers</option>
         <option value="chapters">Total Chapters</option>
       </select>
+      {isFetching 
+        ? <div>Loading...</div> 
+        : books.length === 0 
+          ? <div>No books matching the search criteria found!</div> 
+          : null
+      }
       <div className="books-grid">
         {books.map((book, index) => (
-          <div key={index} className="book-item">
+          <a key={index} className="book-item" href={`/${book.title}`}>
             <img src={book.image_url} alt={book.title} />
             <div className="book-info">
               <h3>{book.title}</h3>
-              <p>Chapter: {book.newest_chapter}</p>
-              <p>{book.followers}</p>
+              <p>{book.newest_chapter.includes("Chapter") ? "" : "Chapter "}{book.newest_chapter}</p>
               <p>{book.genres.join(', ')}</p>
-              <p>Rating: {book.rating}</p>
+              {/* <p>{book.status}</p> */}
             </div>
-          </div>
+          </a>
         ))}
       </div>
     </div>

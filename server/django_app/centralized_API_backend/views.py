@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework import status, views
 from rest_framework.response import Response
 from .models import AsuraScans, Profile, LightNovelPub
-from .serializers import AsuraScansSerializer, LightNovelPubSerializer, SimpleNovelSerializer
+from .serializers import AsuraScansSerializer, LightNovelPubSerializer, SimpleNovelSerializer, BrowseNovelSerializer
 from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
@@ -22,7 +22,7 @@ class HomeNovelGetView(views.APIView):
         "Swordmaster’s Youngest Son", "Damn Reincarnation", "My Daughter is the Final Boss",
         "Talent-Swallowing Magician", "Revenge of the Iron-Blooded Sword Hound", "Villain To Kill",
         "The Novel’s Extra (Remake)", "Chronicles Of The Martial God’s Return", "Academy’s Undercover Professor",
-        "Everyone Else is A Returnee", "Heavenly Inquisition Sword", "Logging 10,000 Years into the Future",
+        "Everyone Else is A Returnee", "Heavenly Inquisition Sword", "Solo Bug Player",
         "Nano Machine", "Chronicles of the Demon Faction", "Academy’s Genius Swordmaster"}
 
         light_novel_titles = {"Shadow Slave", "Reverend Insanity", "Super Gene (Web Novel)", "Martial World (Web Novel)"}
@@ -53,6 +53,32 @@ class AllNovelGetView(views.APIView):
         return Response(serializer)
 
 class AllNovelSearchView(views.APIView):
+    def get(self, request):
+        title_query = request.GET.get('title', '')
+        genre = request.GET.get('genre', '')
+        novel_source = request.GET.get('novel_source', 'All')
+
+        conditions = Q()
+        if title_query:
+            conditions &= Q(title__icontains=title_query)
+        if genre:
+            conditions &= Q(genres__icontains=genre)
+        
+        serializer_data = []
+        
+        if novel_source in ['All', 'AsuraScans', 'Manga']:
+            asura_results = AsuraScans.objects.filter(conditions)
+            asura_serializer = AsuraScansSerializer(asura_results, many=True)
+            serializer_data += asura_serializer.data
+        
+        if novel_source in ['All', 'Light Novel Pub', 'Light Novel']:
+            lightnovel_results = LightNovelPub.objects.filter(conditions)
+            lightnovel_serializer = LightNovelPubSerializer(lightnovel_results, many=True)
+            serializer_data += lightnovel_serializer.data
+
+        return Response(serializer_data)
+    
+class AllNovelBrowseView(views.APIView):
     def get(self, request):
         title_query = request.GET.get('title', '')
         genre = request.GET.get('genre', '')
@@ -323,7 +349,6 @@ class LightNovelPubSearchView(views.APIView):
 
 class BookDetailsView(views.APIView):
     def get(self, request, title):
-        print(f"Book title: {title}")
         book = AsuraScans.objects.filter(title=title).first() or LightNovelPub.objects.filter(title=title).first()
         if not book:
             return Response({'message': 'Book not found'}, status=status.HTTP_404_NOT_FOUND)

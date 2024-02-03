@@ -28,3 +28,14 @@ class SimpleNovelSerializer(serializers.ModelSerializer):
         elif isinstance(instance, LightNovelPub):
             self.Meta.model = LightNovelPub
         return super(SimpleNovelSerializer, self).to_representation(instance)
+
+class BrowseNovelSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ['title', 'genres', 'newest_chapter']
+    def to_representation(self, instance):
+        if isinstance(instance, AsuraScans):
+            self.Meta.model = AsuraScans
+        elif isinstance(instance, LightNovelPub):
+            self.Meta.model = LightNovelPub
+        return super(BrowseNovelSerializer, self).to_representation(instance)
+
