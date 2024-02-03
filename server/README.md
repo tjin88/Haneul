@@ -7,19 +7,22 @@
 cd server
 python -m venv myenv --> only on first run
 source myenv/bin/activate
+pip install -r requirements.txt  --> only on first run
 cd django_app
 python manage.py scrapeAsuraScans
 
-### AsuraScans scraper
+### LightNovelPub scraper
 cd server
 python -m venv myenv --> only on first run
 source myenv/bin/activate
+pip install -r requirements.txt  --> only on first run
 cd django_app
 python manage.py scrapeLightNovelPub
 
 ### Django App API Endpoints
 cd server
 source myenv/bin/activate
+pip install -r requirements.txt  --> only on first run
 cd django_app
 python manage.py runserver
 

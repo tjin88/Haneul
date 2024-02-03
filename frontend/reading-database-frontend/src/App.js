@@ -9,36 +9,16 @@ import BookDetailsWrapper from './pages/BookDetailsWrapper';
 import TrackerPage from './pages/TrackerPage';
 
 const App = () => {
-  const [books, setBooks] = useState([]);
-  const [totalNumberOfBooks, setTotalNumberOfBooks] = useState(1478);
   const [lightMode, setLightMode] = useState(true);
-
-  useEffect(() => {
-    const fetchBooks = async () => {
-      try {
-        // const response = await fetch(`/centralized_API_backend/api/all-novels/`);
-        const response = await fetch(`/centralized_API_backend/api/home-novels/`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        setBooks(data.books);
-        setTotalNumberOfBooks(data.numberOfBooks);
-      } catch (error) {
-        console.error('Error fetching books:', error);
-      }
-    };
-    fetchBooks();
-  }, []);
 
   return (
       <Router>
         <Header isLightMode={lightMode} setLightMode={setLightMode}/>
           <Routes>
-            <Route exact path="/" element={<Home books={books} totalNumberOfBooks={totalNumberOfBooks} lightMode={lightMode} />} />
-            <Route path="/browse" element={<Browse books={books} lightMode={lightMode} />} />
+            <Route exact path="/" element={<Home lightMode={lightMode} />} />
+            <Route path="/browse" element={<Browse lightMode={lightMode} />} />
             <Route path="/track" element={<TrackerPage lightMode={lightMode} />} />
-            <Route path="/:bookTitle" element={<BookDetailsWrapper books={books} />} />
+            <Route path="/:bookTitle" element={<BookDetailsWrapper />} />
             <Route path="*" element={<NotFound lightMode={lightMode} />} />
           </Routes>
         <Footer/>

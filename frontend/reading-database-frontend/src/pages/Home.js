@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Welcome from '../components/Welcome.js';
 import BookCarousel from '../components/BookCarousel.js';
 import TopTenBooks from '../components/TopTenBooks.js';
@@ -12,10 +12,32 @@ import BannerSunset from '../assets/BannerSunset.png';
 import { useAuth } from '../components/AuthContext';
 import './Home.scss';
 
-const Home = ({ books, totalNumberOfBooks, lightMode }) => {
+const Home = ({ lightMode }) => {
   const [videoEnded, setVideoEnded] = useState(false);
   const { isLoggedIn } = useAuth();
 
+  const [books, setBooks] = useState([]);
+  const [totalNumberOfBooks, setTotalNumberOfBooks] = useState(1478);
+
+  useEffect(() => {
+    const fetchBooks = async () => {
+      try {
+        // const response = await fetch(`/centralized_API_backend/api/all-novels/`);
+        const response = await fetch(`/centralized_API_backend/api/home-novels/`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setBooks(data.books);
+        setTotalNumberOfBooks(data.numberOfBooks);
+      } catch (error) {
+        console.error('Error fetching books:', error);
+      }
+    };
+    fetchBooks();
+  }, []);
+
+  // TODO: Change to database doing the below calls (send 20 per)
   // Ensure books is an array before calling .filter and .sort
   const isBooksArray = Array.isArray(books);
 
