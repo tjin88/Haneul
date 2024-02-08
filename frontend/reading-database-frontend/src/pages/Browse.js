@@ -20,7 +20,7 @@ const Browse = ({ lightMode }) => {
     };
 
     const debounceFetchData = setTimeout(() => {
-      if (searchTerm || genreFilter || sortType !== 'default') {
+      if ((searchTerm.length >= 3 || genreFilter || sortType !== 'default')) {
         fetchData();
       }
     }, 500); // 500ms delay

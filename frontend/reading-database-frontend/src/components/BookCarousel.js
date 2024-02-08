@@ -19,7 +19,7 @@ const BookCarousel = ({ books }) => {
     autoplay: true,
     autoplaySpeed: 2000,
     pauseOnDotsHover: true,
-    pauseOnHover: true,
+    pauseOnHover: false,
     responsive: [
       {
         breakpoint: 1024,

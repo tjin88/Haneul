@@ -31,10 +31,10 @@ JWT_TOKEN = quote_plus(os.getenv('JWT_TOKEN'))
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # TODO: Change this to False for production
-DEBUG = False
+DEBUG = True
 
 # TODO: Add domain here when deploying
-ALLOWED_HOSTS = ['127.0.0.1', '.vercel.app']
+ALLOWED_HOSTS = ['127.0.0.1']
 
 # Application definition
 
@@ -80,8 +80,7 @@ TEMPLATES = [
     },
 ]
 
-# WSGI_APPLICATION = "django_app.wsgi.application"
-WSGI_APPLICATION = "django_app.wsgi.app"
+WSGI_APPLICATION = "django_app.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
