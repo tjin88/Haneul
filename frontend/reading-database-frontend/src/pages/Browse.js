@@ -3,25 +3,43 @@ import './Browse.scss';
 
 const Browse = ({ lightMode }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortType, setSortType] = useState('default');
+  const [sortType, setSortType] = useState('');
   const [genreFilter, setGenreFilter] = useState('');
   const [books, setBooks] = useState([]);
   const [isFetching, setIsFetching] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
       setIsFetching(true);
       const title = encodeURIComponent(searchTerm);
       const genre = encodeURIComponent(genreFilter);
+
+      // TODO: Add the sortType to the API call ***
+      // const response = await fetch(`/centralized_API_backend/api/all-novels/browse?title=${title}&genre=${genre}&sortType=${sortType}`);
       const response = await fetch(`/centralized_API_backend/api/all-novels/browse?title=${title}&genre=${genre}`);
       const data = await response.json();
+      if (data.length === 0) {
+        setError('No books matching the search criteria found!');
+      } else {
+        setError('');
+      }
       setBooks(data);
       setIsFetching(false);
     };
 
     const debounceFetchData = setTimeout(() => {
-      if ((searchTerm.length >= 3 || genreFilter || sortType !== 'default')) {
+      if ((searchTerm.length >= 3 || genreFilter)) {
+        setError('');
         fetchData();
+      } else if (sortType !== '') {
+        setBooks([]);
+        setError('Please search (with 3 or more characters) or add a genre!');
+      } else if (searchTerm.length > 0 && searchTerm.length < 3) {
+        setBooks([]);
+        setError('Please enter a search with 3 or more characters!');
+      } else {
+        setError('');
       }
     }, 500); // 500ms delay
 
@@ -53,7 +71,7 @@ const Browse = ({ lightMode }) => {
         className="search-input"
       />
       <select onChange={(e) => setSortType(e.target.value)} className="sort-select">
-        <option value="default">Sort by...</option>
+        <option value="">Sort by...</option>
         <option value="manga">Manga</option>
         <option value="manhua">Manhua</option>
         <option value="manhwa">Manhwa</option>
@@ -65,9 +83,7 @@ const Browse = ({ lightMode }) => {
       </select>
       {isFetching 
         ? <div>Loading...</div> 
-        : books.length === 0 
-          ? <div>No books matching the search criteria found!</div> 
-          : null
+        : <p>{error}</p>
       }
       <div className="books-grid">
         {books.map((book, index) => (
@@ -77,7 +93,7 @@ const Browse = ({ lightMode }) => {
               <h3>{book.title}</h3>
               <p>{book.newest_chapter.includes("Chapter") ? "" : "Chapter "}{book.newest_chapter}</p>
               <p>{book.genres.join(', ')}</p>
-              {/* <p>{book.status}</p> */}
+              <p>{book.status}</p>
             </div>
           </a>
         ))}

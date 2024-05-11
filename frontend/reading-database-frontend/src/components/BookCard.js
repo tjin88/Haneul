@@ -3,7 +3,7 @@ import './BookCard.scss';
 
 const BookCard = ({ image_url, title, newest_chapter }) => {
   return (
-    <div className="book-card">
+    <a className="book-card" href={`/${encodeURIComponent(title)}`}>
       <div className="image-container">
         <img src={image_url} alt={title} className="book-image" />
       </div>
@@ -12,7 +12,7 @@ const BookCard = ({ image_url, title, newest_chapter }) => {
         <br />
         <span className="chapters">Chapter {newest_chapter}</span>
       </div>
-    </div>
+    </a>
   );
 };
 

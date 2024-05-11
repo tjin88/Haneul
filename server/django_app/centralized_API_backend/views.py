@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from rest_framework import status, views
 from rest_framework.response import Response
-from .models import AsuraScans, Profile, LightNovelPub
-from .serializers import AsuraScansSerializer, LightNovelPubSerializer, SimpleNovelSerializer, BrowseNovelSerializer
+from .models import AllBooks, Profile
+from .serializers import AsuraScansSerializer, LightNovelPubSerializer, HomeNovelSerializer, BrowseNovelSerializer
 from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
@@ -18,39 +18,45 @@ from django.db.models import Q
 
 class HomeNovelGetView(views.APIView):
     def get(self, request):
-        manga_titles = {"Reaper of the Drifting Moon", "Solo Leveling", "The Strongest Player",
+        carousel_titles = {"Reaper of the Drifting Moon", "Solo Leveling", "The Strongest Player",
         "Swordmaster’s Youngest Son", "Damn Reincarnation", "My Daughter is the Final Boss",
         "Talent-Swallowing Magician", "Revenge of the Iron-Blooded Sword Hound", "Villain To Kill",
         "The Novel’s Extra (Remake)", "Chronicles Of The Martial God’s Return", "Academy’s Undercover Professor",
         "Everyone Else is A Returnee", "Heavenly Inquisition Sword", "Solo Bug Player",
-        "Nano Machine", "Chronicles of the Demon Faction", "Academy’s Genius Swordmaster"}
-
-        light_novel_titles = {"Shadow Slave", "Reverend Insanity", "Super Gene (Web Novel)", "Martial World (Web Novel)"}
-
-        mangas = AsuraScans.objects.filter(title__in=manga_titles)
-        lightNovels = LightNovelPub.objects.filter(title__in=light_novel_titles)
+        "Nano Machine", "Chronicles of the Demon Faction", "Academy’s Genius Swordmaster",
+        "Shadow Slave", "Reverend Insanity", "Super Gene (Web Novel)", "Martial World (Web Novel)"}
         
-        novels = list(mangas) + list(lightNovels)
-        novelSerializer = SimpleNovelSerializer(novels, many=True)
+        carousel_books = AllBooks.objects.filter(title__in=carousel_titles)
+        recently_updated_books = AllBooks.objects.order_by('-updated_on')[:10]
+        manga_books = AllBooks.objects.filter(novel_type="Manga").order_by('-rating')[:10]
+        manhua_books = AllBooks.objects.filter(novel_type="Manhua").order_by('-rating')[:10]
+        manhwa_books = AllBooks.objects.filter(novel_type="Manhwa").order_by('-rating')[:10]
+        light_novel_books = AllBooks.objects.filter(novel_type="Light Novel").order_by('-rating')[:10]
 
-        total_number_of_books = AsuraScans.objects.count() + LightNovelPub.objects.count()
+        total_number_of_manga = AllBooks.objects.filter(novel_type="Manga").count()
+        total_number_of_manhua = AllBooks.objects.filter(novel_type="Manhua").count()
+        total_number_of_manhwa = AllBooks.objects.filter(novel_type="Manhwa").count()
+        total_number_of_light_novels = AllBooks.objects.filter(novel_type="Light Novel").count()
 
         return Response({
-            "books": novelSerializer.data,
-            "numberOfBooks": total_number_of_books
+            "carousel_books": HomeNovelSerializer(carousel_books, many=True).data,
+            "recently_updated_books": HomeNovelSerializer(recently_updated_books, many=True).data,
+            "manga_books": HomeNovelSerializer(manga_books, many=True).data,
+            "manhua_books": HomeNovelSerializer(manhua_books, many=True).data,
+            "manhwa_books": HomeNovelSerializer(manhwa_books, many=True).data,
+            "light_novel_books": HomeNovelSerializer(light_novel_books, many=True).data,
+            "numManga": total_number_of_manga,
+            "numLightNovel": total_number_of_light_novels,
+            "numManhwa": total_number_of_manhwa,
+            "numManhua": total_number_of_manhua
         })
 
-# TODO: Implement the below function to get ALL books (from AsuraScans AND LightNovelPub)
 class AllNovelGetView(views.APIView):
     def get(self, request):
-        mangas = AsuraScans.objects.all()
-        mangaSerializer = AsuraScansSerializer(mangas, many=True)
+        allBooks = AllBooks.objects.all()
+        allBookSerializer = AsuraScansSerializer(allBooks, many=True)
 
-        lightNovels = LightNovelPub.objects.all()
-        lightNovelSerializer = LightNovelPubSerializer(lightNovels, many=True)
-
-        serializer = mangaSerializer.data + lightNovelSerializer.data
-        return Response(serializer)
+        return Response(allBookSerializer.data)
 
 class AllNovelSearchView(views.APIView):
     def get(self, request):
@@ -66,13 +72,14 @@ class AllNovelSearchView(views.APIView):
         
         serializer_data = []
         
+        # TODO: Combine this into one. Atm frontend not even sending novel_source ... (from Browse)
         if novel_source in ['All', 'AsuraScans', 'Manga']:
-            asura_results = AsuraScans.objects.filter(conditions)
+            asura_results = AllBooks.objects.filter(conditions)
             asura_serializer = AsuraScansSerializer(asura_results, many=True)
             serializer_data += asura_serializer.data
         
         if novel_source in ['All', 'Light Novel Pub', 'Light Novel']:
-            lightnovel_results = LightNovelPub.objects.filter(conditions)
+            lightnovel_results = AllBooks.objects.filter(conditions)
             lightnovel_serializer = LightNovelPubSerializer(lightnovel_results, many=True)
             serializer_data += lightnovel_serializer.data
 
@@ -82,6 +89,7 @@ class AllNovelBrowseView(views.APIView):
     def get(self, request):
         title_query = request.GET.get('title', '')
         genre = request.GET.get('genre', '')
+        # sort_type = request.GET.get('sortType', '')
         novel_source = request.GET.get('novel_source', 'All')
 
         conditions = Q()
@@ -89,20 +97,12 @@ class AllNovelBrowseView(views.APIView):
             conditions &= Q(title__icontains=title_query)
         if genre:
             conditions &= Q(genres__icontains=genre)
-        
-        serializer_data = []
-        
-        if novel_source in ['All', 'AsuraScans', 'Manga']:
-            asura_results = AsuraScans.objects.filter(conditions)
-            asura_serializer = AsuraScansSerializer(asura_results, many=True)
-            serializer_data += asura_serializer.data
-        
-        if novel_source in ['All', 'Light Novel Pub', 'Light Novel']:
-            lightnovel_results = LightNovelPub.objects.filter(conditions)
-            lightnovel_serializer = LightNovelPubSerializer(lightnovel_results, many=True)
-            serializer_data += lightnovel_serializer.data
 
-        return Response(serializer_data)
+        # browse_results = AllBooks.objects.filter(conditions).order_by(f'-{sort_type}')
+        browse_results = AllBooks.objects.filter(conditions)
+        browse_serializer = BrowseNovelSerializer(browse_results, many=True)
+
+        return Response(browse_serializer.data)
 
 class AsuraScansCreateView(views.APIView):
     def post(self, request):
@@ -113,26 +113,26 @@ class AsuraScansCreateView(views.APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def get(self, request):
-        mangas = AsuraScans.objects.all()
+        mangas = AllBooks.objects.filter(novel_source='AsuraScans').all()
         serializer = AsuraScansSerializer(mangas, many=True)
         return Response(serializer.data)
 
 class AsuraScansUpdateView(views.APIView):
     def put(self, request, title):
         try:
-            manga = AsuraScans.objects.get(title=title)
+            manga = AllBooks.objects.get(title=title, novel_source='AsuraScans')
             serializer = AsuraScansSerializer(manga, data=request.data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except AsuraScans.DoesNotExist:
+        except AllBooks.DoesNotExist:
             return Response({'message': 'AsuraScans not found'}, status=status.HTTP_404_NOT_FOUND)
 
 class AsuraScansSearchView(views.APIView):
     def get(self, request):
         title_query = request.GET.get('title', '')
-        mangas = AsuraScans.objects.filter(title__icontains=title_query)
+        mangas = AllBooks.objects.filter(title__icontains=title_query, novel_source='AsuraScans')
         serializer = AsuraScansSerializer(mangas, many=True)
         return Response(serializer.data)
 
@@ -200,6 +200,9 @@ def update_reading_list(request):
     # if not user or user.is_anonymous:
     #     return Response({"error": "User not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
+    # TODO: Make 'latest_read_chapter' hold the chapter (key), and have the VALUE be the URL to that chapter.
+    # This way, when there are any issues re: website URL changes, the dashboard won't forward you to a faulty link,
+    # Since the URLs will be updated in the database from each scrape.
     try:
         user = User.objects.get(email=email)
         profile = Profile.objects.get(user=user)
@@ -284,10 +287,11 @@ def update_to_max_chapter(request):
         user = User.objects.get(email=email)
         profile = Profile.objects.get(user=user)
 
-        if (novel_source == 'Light Novel Pub'):
-            novel = LightNovelPub.objects.get(title=title)
-        elif (novel_source == 'AsuraScans'):
-            novel = AsuraScans.objects.get(title=title)
+        novel = AllBooks.objects.get(title=title, novel_source=novel_source)
+        # if (novel_source == 'Light Novel Pub'):
+        #     novel = AllBooks.objects.get(title=title, novel_source='Light Novel Pub')
+        # elif (novel_source == 'AsuraScans'):
+        #     novel = AllBooks.objects.get(title=title, novel_source='AsuraScans')
 
         latest_chapter = novel.get_latest_chapter()
         chapter_link = novel.get_chapter_link(latest_chapter)
@@ -300,12 +304,9 @@ def update_to_max_chapter(request):
 
         profile.save()
         return Response({"message": "Updated to latest chapter successfully"}, status=status.HTTP_200_OK)
-    except AsuraScans.DoesNotExist:
-        print("AsuraScans not found")
-        return Response({"error": "AsuraScans not found"}, status=status.HTTP_404_NOT_FOUND)
-    except LightNovelPub.DoesNotExist:
-        print("LightNovelPub not found")
-        return Response({"error": "Light Novel not found"}, status=status.HTTP_404_NOT_FOUND)
+    except AllBooks.DoesNotExist:
+        print("AllBooks not found")
+        return Response({"error": "AllBooks not found"}, status=status.HTTP_404_NOT_FOUND)
     except User.DoesNotExist:
         print("User not found")
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -324,36 +325,37 @@ class LightNovelPubCreateView(views.APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def get(self, request):
-        lightNovels = LightNovelPub.objects.all()
+        lightNovels = AllBooks.objects.filter(novel_source='Light Novel Pub').all()
         serializer = LightNovelPubSerializer(lightNovels, many=True)
         return Response(serializer.data)
 
 class LightNovelPubUpdateView(views.APIView):
     def put(self, request, title):
         try:
-            manga = LightNovelPub.objects.get(title=title)
-            serializer = LightNovelPubSerializer(manga, data=request.data)
+            lightNovel = AllBooks.objects.get(title=title, novel_source='Light Novel Pub')
+            serializer = LightNovelPubSerializer(lightNovel, data=request.data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except LightNovelPub.DoesNotExist:
+        except AllBooks.DoesNotExist:
             return Response({'message': 'Light Novel not found'}, status=status.HTTP_404_NOT_FOUND)
 
 class LightNovelPubSearchView(views.APIView):
     def get(self, request):
         title_query = request.GET.get('title', '')
-        lightNovel = LightNovelPub.objects.filter(title__icontains=title_query)
+        lightNovel = AllBooks.objects.filter(title__icontains=title_query, novel_source='Light Novel Pub')
         serializer = LightNovelPubSerializer(lightNovel, many=True)
         return Response(serializer.data)
 
+# TODO: Might need to change this to include light novel vs Manga, or source? Not sure
 class BookDetailsView(views.APIView):
     def get(self, request, title):
-        book = AsuraScans.objects.filter(title=title).first() or LightNovelPub.objects.filter(title=title).first()
+        book = AllBooks.objects.filter(title=title).first()
         if not book:
             return Response({'message': 'Book not found'}, status=status.HTTP_404_NOT_FOUND)
         
-        if isinstance(book, AsuraScans):
+        if isinstance(book, AllBooks):
             serializer = AsuraScansSerializer(book)
         else:
             serializer = LightNovelPubSerializer(book)

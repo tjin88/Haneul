@@ -21,7 +21,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
-from centralized_API_backend.models import LightNovelPub
+from centralized_API_backend.models import AllBooks
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
 
@@ -89,7 +89,7 @@ class LightNovelPubScraper:
 
         # Used to skip extra scraping (reduces scraping time)
         self.continue_scraping = True
-        self.skipped_threshold = 350 
+        self.skipped_threshold = 500 
 
     def scrape_book_and_update_db(self, title_url_tuple, book_number, total_books):
         """
@@ -112,7 +112,7 @@ class LightNovelPubScraper:
             start_time = datetime.datetime.now()
 
             # Check if the book exists in the database
-            existing_book = LightNovelPub.objects.filter(title=title).first()
+            existing_book = AllBooks.objects.filter(title=title, novel_source='Light Novel Pub').first()
 
             if existing_book:
                 newest_chapter = self.scrape_newest_chapter(url, driver)
@@ -128,7 +128,7 @@ class LightNovelPubScraper:
             # Attempt to update an existing book or create a new one
             # TODO: Come back to this --> May want to store then push at the end to avoid "concurrency issues" **
             # Look into batching --> bulk create or bulk update
-            LightNovelPub.objects.update_or_create(
+            AllBooks.objects.update_or_create(
                 title=details['title'],
                 novel_source=details['novel_source'],
                 defaults=details
@@ -170,6 +170,8 @@ class LightNovelPubScraper:
             books = self.scrape_main_page(main_url, driver=driver)
         finally:
             self.driver_pool.release_driver(driver)
+
+        logger.info(f"Found {len(books)} books. Starting to scrape details.")
 
         results = {'processed': 0, 'skipped': 0, 'error': 0, 'cancelled': 0}
         book_number = 0
@@ -319,7 +321,7 @@ class LightNovelPubScraper:
                 'newest_chapter': newest_chapter,
                 'genres': genres,
                 'image_url': image_url,
-                'rating': rating,
+                'rating': float(rating) * 2.0,
                 'status': status,
                 'novel_type': 'Light Novel',
                 'novel_source': 'Light Novel Pub',

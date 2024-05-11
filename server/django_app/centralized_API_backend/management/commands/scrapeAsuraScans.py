@@ -11,7 +11,7 @@ from logging.handlers import RotatingFileHandler
 from bs4 import BeautifulSoup
 from requests.exceptions import RequestException, HTTPError, ConnectionError, Timeout, TooManyRedirects
 from dateutil.parser import parse
-from centralized_API_backend.models import AsuraScans
+from centralized_API_backend.models import AllBooks
 from django.core.management.base import BaseCommand, CommandError
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, DatabaseError
@@ -57,7 +57,7 @@ logger = logging.getLogger("LightNovelPubScraper")
 class AsuraScansScraper:
     def scrape_asura_scans(self):
         # Define URLs for scraping and API endpoint
-        url = 'https://asuratoon.com/manga/list-mode/'
+        url = 'https://asuracomic.net/manga/list-mode/'
 
         # Retrieve existing data from the API
         # existing_data = format_existing_data_to_dict(get_existing_data(api_url))
@@ -296,8 +296,8 @@ class AsuraScansScraper:
         """
         # Retrieve the existing book data by title, if it exists
         try:
-            existing_book_data = AsuraScans.objects.get(title=new_data['title'])
-        except AsuraScans.DoesNotExist:
+            existing_book_data = AllBooks.objects.get(title=new_data['title'], novel_source=new_data['novel_source'])
+        except AllBooks.DoesNotExist:
             return True  # New book, not in existing data
         except DatabaseError:
             return True
@@ -377,7 +377,7 @@ class AsuraScansScraper:
                     logger.error(f'[ERROR] NOVEL SOURCE IS INVALID')
                     # TODO: Throw some error here*
 
-                AsuraScans.objects.update_or_create(
+                AllBooks.objects.update_or_create(
                     title=book_data['title'],
                     novel_source=book_data['novel_source'],
                     defaults=book_data
@@ -406,7 +406,7 @@ class AsuraScansScraper:
 
 
 class Command(BaseCommand):
-    help = 'Scrapes light novels from LightNovelPub and updates the database.'
+    help = 'Scrapes light novels from AsuraScans and updates the database.'
 
     def handle(self, *args, **kwargs):
         """
