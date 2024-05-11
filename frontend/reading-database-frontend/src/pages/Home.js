@@ -16,8 +16,21 @@ const Home = ({ lightMode }) => {
   const [videoEnded, setVideoEnded] = useState(false);
   const { isLoggedIn } = useAuth();
 
-  const [books, setBooks] = useState([]);
-  const [totalNumberOfBooks, setTotalNumberOfBooks] = useState(1478);
+  const [books, setBooks] = useState({
+    carousel: [],
+    recentlyUpdated: [],
+    manhwa: [],
+    manhua: [],
+    manga: [],
+    lightNovel: [],
+  });
+  const [numBooks, setNumBooks] = useState({
+    manga: 0,
+    manhua: 0,
+    manhwa: 0,
+    lightNovel: 0,
+    total: 0
+  });
 
   useEffect(() => {
     const fetchBooks = async () => {
@@ -28,8 +41,21 @@ const Home = ({ lightMode }) => {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        setBooks(data.books);
-        setTotalNumberOfBooks(data.numberOfBooks);
+        setBooks({
+          carousel: data.carousel_books,
+          recentlyUpdated: data.recently_updated_books,
+          manga: data.manga_books,
+          manhua: data.manhua_books,
+          manhwa: data.manhwa_books,
+          lightNovel: data.light_novel_books,
+        });
+        setNumBooks({
+          lightNovel: data.numLightNovel,
+          manhwa: data.numManhwa,
+          manhua: data.numManhua,
+          manga: data.numManga,
+          total: data.numLightNovel+data.numManhwa+data.numManhua+data.numManga
+        });
       } catch (error) {
         console.error('Error fetching books:', error);
       }
@@ -37,18 +63,18 @@ const Home = ({ lightMode }) => {
     fetchBooks();
   }, []);
 
-  // TODO: Change to database doing the below calls (send 20 per)
-  // Ensure books is an array before calling .filter and .sort
-  const isBooksArray = Array.isArray(books);
+  // // TODO: Change to database doing the below calls (send 20 per)
+  // // Ensure books is an array before calling .filter and .sort
+  // const isBooksArray = Array.isArray(books);
 
-  const mangaBooks = isBooksArray ? books.filter(book => book.novel_type === "Manga") : [];
-  const manhuaBooks = isBooksArray ? books.filter(book => book.novel_type === "Manhua") : [];
-  const manhwaBooks = isBooksArray ? books.filter(book => book.novel_type === "Manhwa") : [];
-  const lightNovelBooks = isBooksArray ? books.filter(book => book.novel_type === "Light Novel") : [];
-  const recentlyUpdatedBooks = isBooksArray ? books.sort((a, b) => new Date(b.updated_on) - new Date(a.updated_on)) : [];
+  // const mangaBooks = isBooksArray ? books.filter(book => book.novel_type === "Manga") : [];
+  // const manhuaBooks = isBooksArray ? books.filter(book => book.novel_type === "Manhua") : [];
+  // const manhwaBooks = isBooksArray ? books.filter(book => book.novel_type === "Manhwa") : [];
+  // const lightNovelBooks = isBooksArray ? books.filter(book => book.novel_type === "Light Novel") : [];
+  // const recentlyUpdatedBooks = isBooksArray ? books.sort((a, b) => new Date(b.updated_on) - new Date(a.updated_on)) : [];
 
-  // Make a copy of the books array and sort it by rating
-  const sortedBooksByRating = isBooksArray ? [...books].sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating)) : [];
+  // // Make a copy of the books array and sort it by rating
+  // const sortedBooksByRating = isBooksArray ? [...books].sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating)) : [];
 
   const handleVideoEnd = () => {
     setVideoEnded(true);
@@ -73,7 +99,7 @@ const Home = ({ lightMode }) => {
           className={`banner ${videoEnded ? 'visible' : 'hidden'}`}
           src={lightMode ? BannerBoyBook : BannerSunset}
           alt="Home banner with a character reading"
-        />
+        />https://asuracomic.net/manga/list-mode/
       </div>
     );
   };  
@@ -82,15 +108,16 @@ const Home = ({ lightMode }) => {
     <div className="home">
       {renderBanner()}
       <main>
-        {isBooksArray && <BookCarousel books={sortedBooksByRating.slice(0, 20)} />}
+        {books && <BookCarousel books={books.carousel} />}
         {!isLoggedIn && <Welcome />}
-        {!isLoggedIn && <Statistic label="Total Number of Books" value={totalNumberOfBooks} />}
-        {isLoggedIn && <TopTenBooks title={"Recently Updated"} books={recentlyUpdatedBooks} />}
-        {isLoggedIn && <TopTenBooks title={"Most Popular Manhwa This Month"} books={manhwaBooks} />}
-        {isLoggedIn && <TopTenBooks title={"Most Popular Manhua This Month"} books={manhuaBooks} />}
-        {isLoggedIn && <TopTenBooks title={"Most Popular Manga This Month"} books={mangaBooks} />}
-        {isLoggedIn && <TopTenBooks title={"Most Popular Light Novels This Month"} books={lightNovelBooks} />}
-        {isLoggedIn && <TopTenBooks title={"Most Popular Series"} books={sortedBooksByRating} />}
+        {!isLoggedIn && <Statistic label="Total Number of Books" value={numBooks.total} />}
+        {isLoggedIn && <TopTenBooks title={"Recently Updated"} books={books.recentlyUpdated} numBooks={numBooks.total} />}
+        {isLoggedIn && <TopTenBooks title={"Most Popular Manhwa This Month"} books={books.manhwa} numBooks={numBooks.manhwa} />}
+        {isLoggedIn && <TopTenBooks title={"Most Popular Manhua This Month"} books={books.manhua} numBooks={numBooks.manhua} />}
+        {isLoggedIn && <TopTenBooks title={"Most Popular Manga This Month"} books={books.manga} numBooks={numBooks.manga} />}
+        {isLoggedIn && <TopTenBooks title={"Most Popular Light Novels This Month"} books={books.lightNovel} numBooks={numBooks.lightNovel} />}
+        {/* TODO: Update this to be most popular (after getting users)*/}
+        {/* {isLoggedIn && <TopTenBooks title={"Most Popular Series"} books={books.carousel} numBooks={numBooks.total} />} */}
       </main>
     </div>
   );

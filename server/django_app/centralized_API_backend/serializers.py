@@ -1,9 +1,9 @@
 from rest_framework import serializers
-from .models import AsuraScans, LightNovelPub
+from .models import AllBooks
 
 class AsuraScansSerializer(serializers.ModelSerializer):
     class Meta:
-        model = AsuraScans
+        model = AllBooks
         fields = '__all__'  # Rather than individually adding all fields, use all fields from models.py
 
         # fields = [
@@ -15,27 +15,30 @@ class AsuraScansSerializer(serializers.ModelSerializer):
 
 class LightNovelPubSerializer(serializers.ModelSerializer):
     class Meta:
-        model = LightNovelPub
+        model = AllBooks
         fields = '__all__'
 
-class SimpleNovelSerializer(serializers.ModelSerializer):
+class HomeNovelSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ['title', 'image_url', 'newest_chapter']
+        model = AllBooks
+        fields = ['title', 'image_url', 'newest_chapter', 'rating']
 
-    def to_representation(self, instance):
-        if isinstance(instance, AsuraScans):
-            self.Meta.model = AsuraScans
-        elif isinstance(instance, LightNovelPub):
-            self.Meta.model = LightNovelPub
-        return super(SimpleNovelSerializer, self).to_representation(instance)
+    # def to_representation(self, instance):
+    #     if isinstance(instance, AllBooks):
+    #         self.Meta.model = AllBooks
+    #     elif isinstance(instance, AllBooks):
+    #         self.Meta.model = AllBooks
+    #     return super(HomeNovelSerializer, self).to_representation(instance)
 
 class BrowseNovelSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ['title', 'genres', 'newest_chapter']
-    def to_representation(self, instance):
-        if isinstance(instance, AsuraScans):
-            self.Meta.model = AsuraScans
-        elif isinstance(instance, LightNovelPub):
-            self.Meta.model = LightNovelPub
-        return super(BrowseNovelSerializer, self).to_representation(instance)
+        model = AllBooks
+        fields = ['title', 'image_url', 'genres', 'newest_chapter', 'status']
+
+    # def to_representation(self, instance):
+    #     if isinstance(instance, AllBooks):
+    #         self.Meta.model = AllBooks
+    #     elif isinstance(instance, AllBooks):
+    #         self.Meta.model = AllBooks
+    #     return super(BrowseNovelSerializer, self).to_representation(instance)
 

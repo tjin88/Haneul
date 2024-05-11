@@ -33,13 +33,13 @@ cd django_app
 python manage.py makemigrations
 python manage.py migrate
 
-### To clear "GET /centralized_API_backend/api/asurascans/" directory
+### To clear "GET /centralized_API_backend/api/allbooks/" directory --> THIS WILL REMOVE ALL BOOKS!!!
 cd server
 source myenv/bin/activate
 cd django_app
 python manage.py shell
-from centralized_API_backend.models import AsuraScans
-AsuraScans.objects.all().delete()
+from centralized_API_backend.models import AllBooks
+AllBooks.objects.all().delete()
 
 ### Update the requirements.txt
 cd server
@@ -54,6 +54,11 @@ pip freeze > requirements.txt
 ## Immediate (Done most, still need to host and add scheduled scraping**)
 1. Scheduled Scraping (Cron*)
     - Likely will scrape once every hour, 3 hours, or 6 hours (depends on the typical release schedule of publisher)
+2. Chrome extension
+    - Read "title" tag from "head" tag 
+3. Add original link (untranslated)
+    - Navier and other sources 
+    - https://comic.naver.com/index
 
 ## Short-term (Done all except tokenization!)
 1. Update frontend to use tokenization, allowing user to stay logged in for x days
