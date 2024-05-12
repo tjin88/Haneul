@@ -8,6 +8,7 @@ import traceback
 import threading
 import sys
 from logging.handlers import RotatingFileHandler
+from requests.exceptions import ConnectionError
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from django.db import IntegrityError, DatabaseError
@@ -89,7 +90,7 @@ class LightNovelPubScraper:
 
         # Used to skip extra scraping (reduces scraping time)
         self.continue_scraping = True
-        self.skipped_threshold = 500 
+        self.skipped_threshold = 200
 
     def scrape_book_and_update_db(self, title_url_tuple, book_number, total_books):
         """
@@ -137,7 +138,7 @@ class LightNovelPubScraper:
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
 
-            logger.info(f"{book_number}/{total_books} took {formatted_duration} to {'create' if not existing_book else 'update'} {len(details['chapters'])} chapters: {title}")
+            logger.info(f"{book_number}/{total_books} took {formatted_duration} to {'create' if not existing_book else 'update'} {title}, with {len(details['chapters'])} chapters")
             return {'status': 'processed', 'title': title}
         except DatabaseError as e:
             duration = datetime.datetime.now() - start_time
@@ -602,6 +603,9 @@ class Command(BaseCommand):
 
             logger.info(f"Successfully executed scrapeLightNovelPub in {formatted_duration} ")
             self.stdout.write(self.style.SUCCESS('Successfully executed scrapeLightNovelPub'))
+        except ConnectionError:
+            logger.error(f"Looks like the computer was not connected to the internet. \
+                         Abandoned this attempt to update server for Light Novel Pub books.")
         except Exception as e:
             logger.error(f"An error occurred during scraping: {e}")
             raise CommandError(f"Scraping failed due to an error: {e}")

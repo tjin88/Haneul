@@ -301,6 +301,9 @@ class AsuraScansScraper:
             return True  # New book, not in existing data
         except DatabaseError:
             return True
+        except Exception as e:
+            # One common error is from Migration --> two books created with the same title.
+            return True
 
         for key, value in new_data.items():
             if key in ['id', 'followers']:
@@ -374,8 +377,8 @@ class AsuraScansScraper:
                 # headers = {'Content-Type': 'application/json'}
                 book_title = book_data['title']
                 if book_data['novel_source'] != 'AsuraScans':
-                    logger.error(f'[ERROR] NOVEL SOURCE IS INVALID')
-                    # TODO: Throw some error here*
+                    logger.error(f"[ERROR] NOVEL SOURCE IS INVALID. Error processing '{book_title}': {e}")
+                    return -1
 
                 AllBooks.objects.update_or_create(
                     title=book_data['title'],
@@ -414,6 +417,7 @@ class Command(BaseCommand):
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
+        logger.info("Starting to scrape AsuraScans")
         start_time = datetime.datetime.now()
         scraper = AsuraScansScraper()
         try:
@@ -424,6 +428,9 @@ class Command(BaseCommand):
 
             logger.info(f"Successfully executed scrapeAsuraScans in {formatted_duration} ")
             self.stdout.write(self.style.SUCCESS('Successfully executed scrapeAsuraScans'))
+        except ConnectionError:
+            logger.error(f"Looks like the computer was not connected to the internet. \
+                         Abandoned this attempt to update server for AsuraScans books.")
         except Exception as e:
             logger.error(f"An error occurred during scraping: {e}")
             raise CommandError(f"Scraping failed due to an error: {e}")

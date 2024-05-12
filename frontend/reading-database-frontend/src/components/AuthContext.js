@@ -110,6 +110,7 @@ export const AuthProvider = ({ children }) => {
     setIsLoggedIn(false);
     localStorage.removeItem('token');
     console.log('Logged out!')
+    window.location.href = window.location.origin;
   };
 
   const value = { 

@@ -17,6 +17,8 @@ const Welcome = () => {
         platform where you can easily access, manage, and track your manga and light novel collections.
         My goal is to offer a reliable and ethical service for fellow enthusiasts while supporting 
         original publishers.
+        <br /><br />
+        Please create an account to browse the novels on this database and start tracking your favorite series!
       </p>
     </div>
   );

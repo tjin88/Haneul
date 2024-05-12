@@ -27,16 +27,18 @@ const Header = ({ isLightMode, setLightMode }) => {
         {user 
           ? (
             <>
-              <button onClick={logout} className="login-button">Logout</button>
-              <button className="profile-button">
-                <p>{user.profileName}</p>
-                <img src={user.image || ManColour} alt="Profile" />
+              <button onClick={logout} className="login-button">
+                <h1>Logout</h1>
               </button>
+              <a href="/user-profile" className="profile-button"> 
+                <h1 className="browse_redirect">{user.profileName}</h1>
+                <img src={user.image || ManColour} alt="Profile" className="browse_redirect" />
+              </a>
               </>
           ) : (
             <>
-              <button onClick={() => {setShowModal(true); setIsLoggingIn(false)}} className="login-button">Register</button>
-              <button onClick={() => {setShowModal(true); setIsLoggingIn(true)}} className="login-button">Login</button>
+              <button onClick={() => {setShowModal(true); setIsLoggingIn(false)}} className="login-button"><h1>Register</h1></button>
+              <button onClick={() => {setShowModal(true); setIsLoggingIn(true)}} className="login-button"><h1>Login</h1></button>
             </>
           )
         }

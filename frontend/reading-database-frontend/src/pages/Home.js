@@ -63,19 +63,6 @@ const Home = ({ lightMode }) => {
     fetchBooks();
   }, []);
 
-  // // TODO: Change to database doing the below calls (send 20 per)
-  // // Ensure books is an array before calling .filter and .sort
-  // const isBooksArray = Array.isArray(books);
-
-  // const mangaBooks = isBooksArray ? books.filter(book => book.novel_type === "Manga") : [];
-  // const manhuaBooks = isBooksArray ? books.filter(book => book.novel_type === "Manhua") : [];
-  // const manhwaBooks = isBooksArray ? books.filter(book => book.novel_type === "Manhwa") : [];
-  // const lightNovelBooks = isBooksArray ? books.filter(book => book.novel_type === "Light Novel") : [];
-  // const recentlyUpdatedBooks = isBooksArray ? books.sort((a, b) => new Date(b.updated_on) - new Date(a.updated_on)) : [];
-
-  // // Make a copy of the books array and sort it by rating
-  // const sortedBooksByRating = isBooksArray ? [...books].sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating)) : [];
-
   const handleVideoEnd = () => {
     setVideoEnded(true);
   };
@@ -99,7 +86,7 @@ const Home = ({ lightMode }) => {
           className={`banner ${videoEnded ? 'visible' : 'hidden'}`}
           src={lightMode ? BannerBoyBook : BannerSunset}
           alt="Home banner with a character reading"
-        />https://asuracomic.net/manga/list-mode/
+        />
       </div>
     );
   };  

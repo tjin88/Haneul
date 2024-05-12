@@ -90,13 +90,15 @@ class AllNovelBrowseView(views.APIView):
         title_query = request.GET.get('title', '')
         genre = request.GET.get('genre', '')
         # sort_type = request.GET.get('sortType', '')
-        novel_source = request.GET.get('novel_source', 'All')
+        novel_source = request.GET.get('novel_source', '')
 
         conditions = Q()
         if title_query:
             conditions &= Q(title__icontains=title_query)
         if genre:
             conditions &= Q(genres__icontains=genre)
+        if novel_source:
+            conditions &= Q(novel_source=novel_source)
 
         # browse_results = AllBooks.objects.filter(conditions).order_by(f'-{sort_type}')
         browse_results = AllBooks.objects.filter(conditions)

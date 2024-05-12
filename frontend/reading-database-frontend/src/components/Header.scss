@@ -56,12 +56,22 @@
     .login-button,
     .register-button,
     .profile-button {
+      display: flex;
+      align-items: center;
+      vertical-align: middle;
       padding: 0.5rem 1rem;
       border: none;
       background-color: #4a90e2;
       color: white;
       border-radius: 4px;
       cursor: pointer;
+
+      h1 {
+        font-size: 1rem;
+        height: 30px;
+        line-height: 30px;
+        margin: 0; 
+      }
 
       &:hover {
         background-color: darken(#4a90e2, 10%);
@@ -71,10 +81,17 @@
     .profile-button {
       display: flex;
       align-items: center;
+      text-decoration: none;
+      color: inherit; 
 
       img {
         height: 30px; 
         border-radius: 50%;
+      }
+
+      .browse_redirect {
+        font-size: 1rem;
+        margin: 0; 
       }
     }
   }
