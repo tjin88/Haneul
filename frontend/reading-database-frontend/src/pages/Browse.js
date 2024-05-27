@@ -91,8 +91,8 @@ const Browse = ({ lightMode }) => {
             <img src={book.image_url} alt={book.title} />
             <div className="book-info">
               <h3>{book.title}</h3>
-              <p>{book.newest_chapter.includes("Chapter") ? "" : "Chapter "}{book.newest_chapter}</p>
-              <p>{book.genres.join(', ')}</p>
+              <p>{book && book.newest_chapter && book.newest_chapter.includes("Chapter") ? "" : "Chapter "}{book.newest_chapter}</p>
+              <p>{book && book.genres && book.genres.join(', ')}</p>
               <p>{book.status}</p>
             </div>
           </a>

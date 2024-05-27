@@ -1,5 +1,4 @@
 import datetime
-import json
 import time
 import re
 import os
@@ -12,7 +11,7 @@ from logging.handlers import RotatingFileHandler
 from requests.exceptions import ConnectionError
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
-from django.db import IntegrityError, DatabaseError, connection
+from django.db import IntegrityError, DatabaseError
 from django.core.exceptions import ValidationError
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -23,10 +22,11 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
+from centralized_API_backend.models import AllBooks
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_app.django_app.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_app/django_app/settings')
 django.setup()
 
 def get_next_log_file_name(base_dir, base_filename):
@@ -72,8 +72,6 @@ class LightNovelPubScraper:
     def __init__(self):
         '''
         TODO: Test to see if this is the optimal number of threads
-        To be honest, ideally this script works on the burner computer. 
-        If so, adjust the number of threads accordingly.
 
         3 > 2 > 5. Test 4 to see where it stands 
         Too many threads = server ban or system overload 
@@ -89,6 +87,8 @@ class LightNovelPubScraper:
         # Too little threads = slower scraping time
         self.MAX_THREADS = 3 # max thread count (or number of concurrent windows used for scraping)
         self.driver_pool = DriverPool(size=self.MAX_THREADS)
+
+        # Used to skip extra scraping (reduces scraping time)
         self.continue_scraping = True
         self.skipped_threshold = 200
 
@@ -100,75 +100,40 @@ class LightNovelPubScraper:
             title_url_tuple (tuple): A tuple containing the title and URL of the book.
         """
         if not self.continue_scraping:
-            logger.info(f"{book_number}/{total_books} was 'cancelled': {title_url_tuple[0]}")
-            return {'status': 'cancelled', 'title': title_url_tuple[0]}
+            logger.info(f"{book_number}/{total_books} was 'cancelled': {title}")
+            return {'status': 'cancelled', 'title': title}
     
         title, url = title_url_tuple
         try:
+            # Get next available driver
             driver = self.driver_pool.get_driver()
+
             driver.get(url)
             
             start_time = datetime.datetime.now()
 
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [title, 'Light Novel Pub'])
-                existing_book = cursor.fetchone()
+            # Check if the book exists in the database
+            existing_book = AllBooks.objects.filter(title=title, novel_source='Light Novel Pub').first()
 
             if existing_book:
                 newest_chapter = self.scrape_newest_chapter(url, driver)
-                if newest_chapter == existing_book[0]:
+                if newest_chapter == existing_book.newest_chapter:
                     duration = datetime.datetime.now() - start_time
                     formatted_duration = self.format_duration(duration)
                     logger.info(f"{book_number}/{total_books} took {formatted_duration} to 'skip': {title}")
                     return {'status': 'skipped', 'title': title}
 
+            # Get all details for the book
             details = self.scrape_book_details(title, url, driver)
 
             # Attempt to update an existing book or create a new one
             # TODO: Come back to this --> May want to store then push at the end to avoid "concurrency issues" **
             # Look into batching --> bulk create or bulk update
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                    INSERT INTO all_books (title, synopsis, author, updated_on, newest_chapter, image_url, rating, status, novel_type, novel_source, followers, chapters)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (title, novel_source)
-                    DO UPDATE SET
-                        synopsis = EXCLUDED.synopsis,
-                        author = EXCLUDED.author,
-                        updated_on = EXCLUDED.updated_on,
-                        newest_chapter = EXCLUDED.newest_chapter,
-                        image_url = EXCLUDED.image_url,
-                        rating = EXCLUDED.rating,
-                        status = EXCLUDED.status,
-                        novel_type = EXCLUDED.novel_type,
-                        followers = EXCLUDED.followers,
-                        chapters = EXCLUDED.chapters
-                """, [
-                    details['title'],
-                    details['synopsis'],
-                    details['author'],
-                    details['updated_on'],
-                    details['newest_chapter'],
-                    details['image_url'],
-                    details['rating'],
-                    details['status'],
-                    details['novel_type'],
-                    details['novel_source'],
-                    details['followers'],
-                    json.dumps(details['chapters'])
-                ])
-
-                cursor.execute("DELETE FROM all_books_genres WHERE allbooks_title = %s AND allbooks_novel_source = %s", [details['title'], details['novel_source']])
-                for genre_name in details['genres']:
-                    genre_name = genre_name.strip().lower()
-                    cursor.execute("SELECT id FROM genre WHERE name = %s", [genre_name])
-                    genre_id = cursor.fetchone()
-                    if not genre_id:
-                        cursor.execute("INSERT INTO genre (name) VALUES (%s) RETURNING id", [genre_name])
-                        genre_id = cursor.fetchone()[0]
-                    else:
-                        genre_id = genre_id[0]
-                    cursor.execute("INSERT INTO all_books_genres (genre_id, allbooks_title, allbooks_novel_source) VALUES (%s, %s, %s)", [genre_id, details['title'], details['novel_source']])
+            AllBooks.objects.update_or_create(
+                title=details['title'],
+                novel_source=details['novel_source'],
+                defaults=details
+            )
 
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
@@ -178,8 +143,7 @@ class LightNovelPubScraper:
         except DatabaseError as e:
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
-            logger.error(f"{book_number}/{total_books} took {formatted_duration} to encounter a 'database error': {title}. Error: {e}")
-            return {'status': 'database_error', 'title': title, 'message': str(e)}
+            logger.error(f"{book_number}/{total_books} took {formatted_duration} to encounter a 'database error': {title}. Please ensure the MongoDB connection is properly established and the computer's IP is connected to the database.")
         except Exception as e:
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
@@ -201,7 +165,9 @@ class LightNovelPubScraper:
         main_url = f'{base_url}/browse/genre-all-25060123/order-updated/status-all'
 
         try:
+            # Initialize a new driver for scraping the main page
             driver = self.driver_pool.get_driver()
+
             books = self.scrape_main_page(main_url, driver=driver)
         finally:
             self.driver_pool.release_driver(driver)
@@ -228,12 +194,14 @@ class LightNovelPubScraper:
                 if result['status'] == 'error':
                     logger.error(f"Error processing {result['title']}: {result['message']}")
                 elif result['status'] == 'database_error':
+                    # While I agree this is "faulty" code, and is not the best implementation,
+                    # This was done simply for my testing purposes and may not be pushed to prod.
                     consecutive_skipped += 1
                     if consecutive_skipped >= 5:
-                        logger.info("5 books encountered a database error in a row. Exiting...")
-                        self.continue_scraping = False
-                        executor.shutdown(wait=False)
-                        break
+                            logger.info("5 books encountered a database error in a row. Exiting...")
+                            self.continue_scraping = False
+                            executor.shutdown(wait=False)
+                            break
                 elif results['processed'] > 0 or results['skipped'] > self.skipped_threshold:
                     if result['status'] == 'skipped':
                         consecutive_skipped += 1
@@ -252,8 +220,11 @@ class LightNovelPubScraper:
                         consecutive_skipped = 0
         
         self.driver_pool.close_all_drivers()
+
+        # Edge case where there are < 5 skipped books at the end of the books list
+        # Really only useful for logging purposes lol
         results['skipped'] += consecutive_skipped
-        logger.info(f"Books Processed: {results['processed']}, Skipped: {results['skipped'] + results['cancelled'] - 5 + self.MAX_THREADS}, Errors: {results['error']}")
+        logger.info(f"Books Processed: {results['processed']}, Skipped: {results['skipped']+results['cancelled']-5+self.MAX_THREADS}, Errors: {results['error']}")
         logger.info(f"There should be {total_books} books!")
 
     def scrape_main_page(self, url, driver=None):
@@ -273,13 +244,16 @@ class LightNovelPubScraper:
         books = []
 
         while True:
+            # Scrape the current page
             book_elements = self.wait_for_elements(By.CLASS_NAME, 'novel-item', driver=driver)
             for element in book_elements:
                 title = self.get_element_text(By.CLASS_NAME, 'novel-title', default_text='Title not available', element=element, driver=driver)
                 book_url = self.get_element_attribute(By.TAG_NAME, 'a', 'href', default_value=None, element=self.wait_for_element(By.CLASS_NAME, 'novel-title', element=element, driver=driver),  driver=driver)
                 books.append((title, book_url))
             
+            # If there are more books to add, add them to the list. If not, return all books.
             next_page_element = self.wait_for_element(By.CLASS_NAME, 'PagedList-skipToNext', timeout=5, driver=driver)
+
             if next_page_element:
                 next_page_url = self.get_element_attribute(By.TAG_NAME, 'a', 'href', default_value=None, element=next_page_element, driver=driver)
                 self.navigate_to_url(next_page_url, driver=driver)
@@ -322,6 +296,7 @@ class LightNovelPubScraper:
             synopsis = self.get_element_text(By.CSS_SELECTOR, '.summary .content', driver=driver)
             author = self.get_element_text(By.CSS_SELECTOR, '.author', 'Author not available', driver=driver).replace('Author:', '').strip()
             updated_on = self.get_element_text(By.CSS_SELECTOR, 'nav.content-nav p.update', driver=driver)
+            # the below line is throwing the issue***
             newest_chapter = self.get_element_text(By.CSS_SELECTOR, 'nav.content-nav p.latest', driver=driver)
             genres = [genre.text.strip() for genre in self.wait_for_elements(By.CSS_SELECTOR, 'div.categories a', driver=driver)]
             image_url = self.get_element_attribute(By.CSS_SELECTOR, 'figure.cover img', 'src', driver=driver)
@@ -337,6 +312,12 @@ class LightNovelPubScraper:
                 'title': title,
                 'synopsis': synopsis,
                 'author': author,
+                # 'artist': "None",
+                # 'released_by': "None",
+                # 'serialization': "None",
+                # 'posted_by': "None",
+                # The following two fields need to be both "datetime" fields
+                # 'posted_on': "placeholder to be found", # TODO: Find the original data posted
                 'updated_on': timezone_aware_updated_on,
                 'newest_chapter': newest_chapter,
                 'genres': genres,
@@ -415,6 +396,8 @@ class LightNovelPubScraper:
                 logger.error(f"Error waiting for element {value}: {e}")
                 raise
             else:
+                # logger.info(f"Starting process to update books")
+                # Time to update books!
                 return None
     
     def get_element_text(self, by, value, default_text='Not Available', element=None, driver=None):
@@ -474,19 +457,25 @@ class LightNovelPubScraper:
             dict: A dictionary where each key is a chapter title and each value is the corresponding chapter link.
         """
         self.navigate_to_url(chapters_url, driver=driver)
+
         book_chapters = {}
         try:
             while True:
                 chapter_elements = self.wait_for_elements(By.CSS_SELECTOR, 'ul.chapter-list a', driver=driver)
+
                 for chapter in chapter_elements:                
                     chapter_title, chapter_link = self.process_chapter_element(chapter, driver=driver)
+                    # logger.info(f"Extracted: {chapter_title} - {chapter_link}")
                     book_chapters[chapter_title] = chapter_link
                 
+                # If there are more books to add, add them to the list. If not, return all books.
                 next_page_element = self.wait_for_element(By.CLASS_NAME, 'PagedList-skipToNext', timeout=5, driver=driver)
+                
                 if next_page_element:
                     next_page_url = self.get_element_attribute(By.TAG_NAME, 'a', 'href', default_value=None, element=next_page_element, driver=driver)
                     self.navigate_to_url(next_page_url, driver=driver)
                 else:
+                    # No more pages found. Push to database
                     break
         except Exception as e:
             logger.error(f"An error occurred: {e}")
@@ -508,6 +497,7 @@ class LightNovelPubScraper:
             number = self.get_element_text(By.CLASS_NAME, 'chapter-no', default_text='', element=chapter_element, driver=driver)
             title = self.get_element_text(By.CLASS_NAME, 'chapter-title', default_text='', element=chapter_element, driver=driver)
             chapter_title = f'{number} - {title}' if number else title
+            
             chapter_link = chapter_element.get_attribute('href')
             return chapter_title, chapter_link
         except Exception as e:
@@ -526,6 +516,7 @@ class LightNovelPubScraper:
             datetime: A timezone-aware datetime object representing the parsed date.
         """
         today = timezone.now()
+        
         if time_str == "Updated yesterday":
             return today - datetime.timedelta(days=1)
         elif "days ago" in time_str:
@@ -533,7 +524,7 @@ class LightNovelPubScraper:
             return today - datetime.timedelta(days=days)
         elif "years ago" in time_str:
             years = int(re.search(r'(\d+) years ago', time_str).group(1))
-            return today - datetime.timedelta(days=years * 365)
+            return today - datetime.timedelta(days=years * 365)  # Best approximation I could think of ...
         else:
             return today
     
@@ -549,13 +540,16 @@ class LightNovelPubScraper:
             str: A string representing the duration in hours, minutes, and seconds.
         """
         total_duration = duration.total_seconds()
+
         hours = int(total_duration // 3600)
         minutes = int((total_duration % 3600) // 60)
         seconds = int(total_duration % 60)
         milliseconds = int((total_duration - int(total_duration)) * 1000)
+        
         if hours == 0:
             return f"{minutes}m {seconds}s {milliseconds}ms"
         return f"{hours}h {minutes}m {seconds}s"
+
 
 class DriverPool:
     def __init__(self, size):
@@ -579,6 +573,7 @@ class DriverPool:
         # options.add_argument('--disable-dev-shm-usage')  # Used to overcome limited resource problems
         options.add_argument("--headless")  # Make the scraping happen as a background process rather than an active window
 
+        # Initialize ChromeDriver
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
         return driver
 
@@ -586,6 +581,7 @@ class DriverPool:
         while not self.available_drivers.empty():
             driver = self.available_drivers.get()
             driver.quit()
+
 
 class Command(BaseCommand):
     help = 'Scrapes light novels from LightNovelPub and updates the database.'
@@ -601,12 +597,15 @@ class Command(BaseCommand):
         scraper = LightNovelPubScraper()
         try:
             scraper.scrape_light_novel_pub()
+
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
+
             logger.info(f"Successfully executed scrapeLightNovelPub in {formatted_duration} ")
             self.stdout.write(self.style.SUCCESS('Successfully executed scrapeLightNovelPub'))
         except ConnectionError:
-            logger.error("Looks like the computer was not connected to the internet. Abandoned this attempt to update server for Light Novel Pub books.")
+            logger.error(f"Looks like the computer was not connected to the internet. \
+                         Abandoned this attempt to update server for Light Novel Pub books.")
         except Exception as e:
             logger.error(f"An error occurred during scraping: {e}")
             raise CommandError(f"Scraping failed due to an error: {e}")

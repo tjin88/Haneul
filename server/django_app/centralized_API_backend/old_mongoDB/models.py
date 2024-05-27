@@ -1,6 +1,4 @@
 from django.db import models
-import uuid
-import re
 from django.contrib.auth.models import User
 
 class Genre(models.Model):
@@ -23,8 +21,8 @@ class Profile(models.Model):
         return self.user.username
 
 class AllBooks(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    title = models.CharField(max_length=255, db_index=True)
+    title = models.CharField(max_length=255)
+    novel_source = models.CharField(max_length=100, default='Unknown')
     synopsis = models.TextField()
     author = models.CharField(max_length=150, blank=True, null=True)
     updated_on = models.DateTimeField()
@@ -32,11 +30,10 @@ class AllBooks(models.Model):
     image_url = models.URLField(max_length=500)
     rating = models.DecimalField(max_digits=4, decimal_places=2)
     status = models.CharField(max_length=100)
-    novel_type = models.CharField(max_length=100)  # 'type' is a reserved keyword in Python
-    novel_source = models.CharField(max_length=100, default='Unknown')
+    novel_type = models.CharField(max_length=100)   # 'type' is a reserved keyword in Python
     followers = models.CharField(max_length=100)
     chapters = models.JSONField(default=dict)
-    genres = models.ManyToManyField('Genre', through='AllBooksGenres', related_name='all_books')
+    genres = models.ManyToManyField('Genre', through='AllBooksGenres')
 
     class Meta:
         db_table = 'all_books'
@@ -72,7 +69,6 @@ class AllBooks(models.Model):
         return self.chapters.get(chapter, None)
 
 class AllBooksGenres(models.Model):
-    id = models.BigAutoField(primary_key=True)
     allbooks = models.ForeignKey(AllBooks, on_delete=models.CASCADE)
     genre = models.ForeignKey(Genre, on_delete=models.CASCADE)
 
@@ -82,6 +78,3 @@ class AllBooksGenres(models.Model):
         indexes = [
             models.Index(fields=['allbooks', 'genre'])
         ]
-        # Migration issues with Django not supporting composite primary keys
-        # Thus, I will manage the many-to-many relationship manually
-        managed = False

@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from rest_framework import status, views
 from rest_framework.response import Response
-from .models import AllBooks, Profile
-from .serializers import AsuraScansSerializer, LightNovelPubSerializer, HomeNovelSerializer, BrowseNovelSerializer
+from .models import Profile
+# from .serializers import AsuraScansSerializer, LightNovelPubSerializer, HomeNovelSerializer, BrowseNovelSerializer
 from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
@@ -14,37 +14,51 @@ from django.http import JsonResponse
 import jwt
 from datetime import datetime, timedelta
 from django.conf import settings
-from django.db.models import Q
+from django.db import connection
+
+def fetch_books_as_dict(query):
+    cursor = connection.cursor()
+    cursor.execute(query)
+    columns = [col[0] for col in cursor.description]
+    results = []
+    for row in cursor.fetchall():
+        results.append(dict(zip(columns, row)))
+    return results
 
 class HomeNovelGetView(views.APIView):
     def get(self, request):
-        carousel_titles = {"Reaper of the Drifting Moon", "Solo Leveling", "The Strongest Player",
-        "Swordmaster’s Youngest Son", "Damn Reincarnation", "My Daughter is the Final Boss",
-        "Talent-Swallowing Magician", "Revenge of the Iron-Blooded Sword Hound", "Villain To Kill",
-        "The Novel’s Extra (Remake)", "Chronicles Of The Martial God’s Return", "Academy’s Undercover Professor",
-        "Everyone Else is A Returnee", "Heavenly Inquisition Sword", "Solo Bug Player",
-        "Nano Machine", "Chronicles of the Demon Faction", "Academy’s Genius Swordmaster",
-        "Shadow Slave", "Reverend Insanity", "Super Gene (Web Novel)", "Martial World (Web Novel)"}
+        carousel_titles = ("Reaper of the Drifting Moon", "Solo Leveling", "The Strongest Player",
+                           "Swordmaster’s Youngest Son", "Damn Reincarnation", "My Daughter is the Final Boss",
+                           "Talent-Swallowing Magician", "Revenge of the Iron-Blooded Sword Hound", "Villain To Kill",
+                           "The Novel’s Extra (Remake)", "Chronicles Of The Martial God’s Return", "Academy’s Undercover Professor",
+                           "Everyone Else is A Returnee", "Heavenly Inquisition Sword", "Solo Bug Player",
+                           "Nano Machine", "Chronicles of the Demon Faction", "Academy’s Genius Swordmaster",
+                           "Shadow Slave", "Reverend Insanity", "Super Gene (Web Novel)", "Martial World (Web Novel)")
         
-        carousel_books = AllBooks.objects.filter(title__in=carousel_titles)
-        recently_updated_books = AllBooks.objects.order_by('-updated_on')[:10]
-        manga_books = AllBooks.objects.filter(novel_type="Manga").order_by('-rating')[:10]
-        manhua_books = AllBooks.objects.filter(novel_type="Manhua").order_by('-rating')[:10]
-        manhwa_books = AllBooks.objects.filter(novel_type="Manhwa").order_by('-rating')[:10]
-        light_novel_books = AllBooks.objects.filter(novel_type="Light Novel").order_by('-rating')[:10]
+        carousel_books = fetch_books_as_dict(f"SELECT * FROM all_books WHERE title IN {carousel_titles}")
+        recently_updated_books = fetch_books_as_dict("SELECT * FROM all_books ORDER BY updated_on DESC LIMIT 10")
+        manga_books = fetch_books_as_dict("SELECT * FROM all_books WHERE novel_type='Manga' ORDER BY rating DESC LIMIT 10")
+        manhua_books = fetch_books_as_dict("SELECT * FROM all_books WHERE novel_type='Manhua' ORDER BY rating DESC LIMIT 10")
+        manhwa_books = fetch_books_as_dict("SELECT * FROM all_books WHERE novel_type='Manhwa' ORDER BY rating DESC LIMIT 10")
+        light_novel_books = fetch_books_as_dict("SELECT * FROM all_books WHERE novel_type='Light Novel' ORDER BY rating DESC LIMIT 10")
 
-        total_number_of_manga = AllBooks.objects.filter(novel_type="Manga").count()
-        total_number_of_manhua = AllBooks.objects.filter(novel_type="Manhua").count()
-        total_number_of_manhwa = AllBooks.objects.filter(novel_type="Manhwa").count()
-        total_number_of_light_novels = AllBooks.objects.filter(novel_type="Light Novel").count()
+        cursor = connection.cursor()
+        cursor.execute("SELECT COUNT(*) FROM all_books WHERE novel_type='Manga'")
+        total_number_of_manga = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM all_books WHERE novel_type='Manhua'")
+        total_number_of_manhua = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM all_books WHERE novel_type='Manhwa'")
+        total_number_of_manhwa = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM all_books WHERE novel_type='Light Novel'")
+        total_number_of_light_novels = cursor.fetchone()[0]
 
         return Response({
-            "carousel_books": HomeNovelSerializer(carousel_books, many=True).data,
-            "recently_updated_books": HomeNovelSerializer(recently_updated_books, many=True).data,
-            "manga_books": HomeNovelSerializer(manga_books, many=True).data,
-            "manhua_books": HomeNovelSerializer(manhua_books, many=True).data,
-            "manhwa_books": HomeNovelSerializer(manhwa_books, many=True).data,
-            "light_novel_books": HomeNovelSerializer(light_novel_books, many=True).data,
+            "carousel_books": carousel_books,
+            "recently_updated_books": recently_updated_books,
+            "manga_books": manga_books,
+            "manhua_books": manhua_books,
+            "manhwa_books": manhwa_books,
+            "light_novel_books": light_novel_books,
             "numManga": total_number_of_manga,
             "numLightNovel": total_number_of_light_novels,
             "numManhwa": total_number_of_manhwa,
@@ -53,10 +67,8 @@ class HomeNovelGetView(views.APIView):
 
 class AllNovelGetView(views.APIView):
     def get(self, request):
-        allBooks = AllBooks.objects.all()
-        allBookSerializer = AsuraScansSerializer(allBooks, many=True)
-
-        return Response(allBookSerializer.data)
+        all_books = fetch_books_as_dict("SELECT * FROM all_books")
+        return Response(all_books)
 
 class AllNovelSearchView(views.APIView):
     def get(self, request):
@@ -64,79 +76,110 @@ class AllNovelSearchView(views.APIView):
         genre = request.GET.get('genre', '')
         novel_source = request.GET.get('novel_source', 'All')
 
-        conditions = Q()
+        conditions = []
         if title_query:
-            conditions &= Q(title__icontains=title_query)
+            conditions.append(f"title ILIKE '%{title_query}%'")
         if genre:
-            conditions &= Q(genres__icontains=genre)
+            conditions.append(f"genres ILIKE '%{genre}%'")
         
-        serializer_data = []
+        condition_str = " AND ".join(conditions) if conditions else "1=1"
+
+        asura_results = []
+        lightnovel_results = []
         
-        # TODO: Combine this into one. Atm frontend not even sending novel_source ... (from Browse)
         if novel_source in ['All', 'AsuraScans', 'Manga']:
-            asura_results = AllBooks.objects.filter(conditions)
-            asura_serializer = AsuraScansSerializer(asura_results, many=True)
-            serializer_data += asura_serializer.data
+            asura_results = fetch_books_as_dict(f"SELECT * FROM all_books WHERE {condition_str}")
         
         if novel_source in ['All', 'Light Novel Pub', 'Light Novel']:
-            lightnovel_results = AllBooks.objects.filter(conditions)
-            lightnovel_serializer = LightNovelPubSerializer(lightnovel_results, many=True)
-            serializer_data += lightnovel_serializer.data
+            lightnovel_results = fetch_books_as_dict(f"SELECT * FROM all_books WHERE {condition_str}")
 
+        serializer_data = asura_results + lightnovel_results
         return Response(serializer_data)
     
 class AllNovelBrowseView(views.APIView):
     def get(self, request):
         title_query = request.GET.get('title', '')
         genre = request.GET.get('genre', '')
-        # sort_type = request.GET.get('sortType', '')
         novel_source = request.GET.get('novel_source', '')
 
-        conditions = Q()
+        conditions = []
         if title_query:
-            conditions &= Q(title__icontains=title_query)
+            conditions.append(f"title ILIKE '%{title_query}%'")
         if genre:
-            conditions &= Q(genres__icontains=genre)
+            conditions.append(f"genres ILIKE '%{genre}%'")
         if novel_source:
-            conditions &= Q(novel_source=novel_source)
+            conditions.append(f"novel_source='{novel_source}'")
 
-        # browse_results = AllBooks.objects.filter(conditions).order_by(f'-{sort_type}')
-        browse_results = AllBooks.objects.filter(conditions)
-        browse_serializer = BrowseNovelSerializer(browse_results, many=True)
-
-        return Response(browse_serializer.data)
+        condition_str = " AND ".join(conditions) if conditions else "1=1"
+        browse_results = fetch_books_as_dict(f"SELECT * FROM all_books WHERE {condition_str}")
+        return Response(browse_results)
 
 class AsuraScansCreateView(views.APIView):
     def post(self, request):
-        serializer = AsuraScansSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        data = request.data
+        cursor = connection.cursor()
+        cursor.execute("""
+            INSERT INTO all_books (title, novel_source, synopsis, author, updated_on, newest_chapter, image_url, rating, status, novel_type, followers, chapters)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            data['title'],
+            'AsuraScans',
+            data['synopsis'],
+            data.get('author'),
+            datetime.now(),
+            data['newest_chapter'],
+            data['image_url'],
+            data['rating'],
+            data['status'],
+            data['novel_type'],
+            data['followers'],
+            json.dumps(data['chapters'])
+        ))
+        connection.commit()
+        return Response(data, status=status.HTTP_201_CREATED)
     
     def get(self, request):
-        mangas = AllBooks.objects.filter(novel_source='AsuraScans').all()
-        serializer = AsuraScansSerializer(mangas, many=True)
-        return Response(serializer.data)
+        mangas = fetch_books_as_dict("SELECT * FROM all_books WHERE novel_source='AsuraScans'")
+        return Response(mangas)
 
 class AsuraScansUpdateView(views.APIView):
     def put(self, request, title):
-        try:
-            manga = AllBooks.objects.get(title=title, novel_source='AsuraScans')
-            serializer = AsuraScansSerializer(manga, data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except AllBooks.DoesNotExist:
-            return Response({'message': 'AsuraScans not found'}, status=status.HTTP_404_NOT_FOUND)
+        data = request.data
+        cursor = connection.cursor()
+        cursor.execute("""
+            UPDATE all_books SET
+            synopsis = %s,
+            author = %s,
+            updated_on = %s,
+            newest_chapter = %s,
+            image_url = %s,
+            rating = %s,
+            status = %s,
+            novel_type = %s,
+            followers = %s,
+            chapters = %s
+            WHERE title = %s AND novel_source = 'AsuraScans'
+        """, (
+            data['synopsis'],
+            data.get('author'),
+            datetime.now(),
+            data['newest_chapter'],
+            data['image_url'],
+            data['rating'],
+            data['status'],
+            data['novel_type'],
+            data['followers'],
+            json.dumps(data['chapters']),
+            title
+        ))
+        connection.commit()
+        return Response(data)
 
 class AsuraScansSearchView(views.APIView):
     def get(self, request):
         title_query = request.GET.get('title', '')
-        mangas = AllBooks.objects.filter(title__icontains=title_query, novel_source='AsuraScans')
-        serializer = AsuraScansSerializer(mangas, many=True)
-        return Response(serializer.data)
+        mangas = fetch_books_as_dict(f"SELECT * FROM all_books WHERE title ILIKE '%{title_query}%' AND novel_source='AsuraScans'")
+        return Response(mangas)
 
 @method_decorator(csrf_exempt, name='dispatch')
 @api_view(['POST'])
@@ -150,22 +193,17 @@ def register_view(request):
         if User.objects.get(username=username):
             return Response({"error": "User already exists"}, status=status.HTTP_409_CONFLICT)
     except User.DoesNotExist:
-        # User does not exist, so we can create a new user
         user = User.objects.create_user(username=username, email=username, password=password, first_name=profileName)
         payload = {
             'username': user.username,
             'profileName': user.first_name,
-            'exp': datetime.utcnow() + timedelta(days=2)  # Set token to expire in 2 days
+            'exp': datetime.utcnow() + timedelta(days=2)
         }
-        
         jwt_token = jwt.encode(payload, settings.JWT_TOKEN, algorithm='HS256')
-
         return Response({
             "message": "User created successfully",
             "token": jwt_token
         }, status=status.HTTP_201_CREATED)
-    
-    # This line should never be reached
     return Response({"error": "An unexpected error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @csrf_exempt
@@ -180,11 +218,9 @@ def login_view(request):
         payload = {
             'username': user.username,
             'profileName': user.first_name,
-            'exp': datetime.utcnow() + timedelta(days=2)  # Set token to expire in 2 days
+            'exp': datetime.utcnow() + timedelta(days=2)
         }
-        
         jwt_token = jwt.encode(payload, settings.JWT_TOKEN, algorithm='HS256')
-
         return Response({
             "message": "Login successful",
             "token": jwt_token
@@ -193,7 +229,6 @@ def login_view(request):
         return Response({"message": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
     
 @api_view(['PUT'])
-# @permission_classes([IsAuthenticated])
 def update_reading_list(request):
     data = request.data
     email = data.get('username')
@@ -236,23 +271,43 @@ def update_reading_list(request):
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
+
 class UserProfileReadingListView(views.APIView):
     # TODO: Add tokens for user authentication
     # permission_classes = [IsAuthenticated]
 
     def get(self, request, email):
         try:
-            user = User.objects.get(email=email)
-            profile = Profile.objects.get(user=user)
-            response = Response({'reading_list': profile.reading_list})
+            with connection.cursor() as cursor:
+                # Fetch user
+                cursor.execute("SELECT id FROM auth_user WHERE email = %s", [email])
+                user_result = cursor.fetchone()
+                
+                if not user_result:
+                    return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+                
+                user_id = user_result[0]
+
+                # Fetch profile
+                cursor.execute("SELECT reading_list FROM profile WHERE user_id = %s", [user_id])
+                profile_result = cursor.fetchone()
+
+                if not profile_result:
+                    return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
+
+                # Parse the reading_list JSON string
+                reading_list = json.loads(profile_result[0])
+
+            response = Response({'reading_list': reading_list})
             # TODO: Handle CORS better. 
             # Currently I am allowing all origins, which must be changed before deploying
             response["Access-Control-Allow-Origin"] = "*"
             response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
             response["Access-Control-Allow-Headers"] = "Origin, Content-Type, Accept"
             return response
-        except (User.DoesNotExist, Profile.DoesNotExist):
-            return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['DELETE'])
 def delete_book_from_reading_list(request):
@@ -270,10 +325,8 @@ def delete_book_from_reading_list(request):
 
         return Response({"message": "Book removed from reading list successfully"}, status=status.HTTP_200_OK)
     except User.DoesNotExist:
-        print("User not found")
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
     except Profile.DoesNotExist:
-        print("Profile not found")
         return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -289,77 +342,114 @@ def update_to_max_chapter(request):
         user = User.objects.get(email=email)
         profile = Profile.objects.get(user=user)
 
-        novel = AllBooks.objects.get(title=title, novel_source=novel_source)
-        # if (novel_source == 'Light Novel Pub'):
-        #     novel = AllBooks.objects.get(title=title, novel_source='Light Novel Pub')
-        # elif (novel_source == 'AsuraScans'):
-        #     novel = AllBooks.objects.get(title=title, novel_source='AsuraScans')
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT chapters
+            FROM all_books
+            WHERE title = %s AND novel_source = %s
+        """, [title, novel_source])
+        result = cursor.fetchone()
 
-        latest_chapter = novel.get_latest_chapter()
-        chapter_link = novel.get_chapter_link(latest_chapter)
+        if result:
+            chapters = json.loads(result[0])
+            if novel_source == 'AsuraScans':
+                latest_chapter = next(iter(chapters), None) if chapters else None
+            else:
+                def chapter_key(chapter_str):
+                    numbers = re.findall(r"\d+\.\d+|\d+", chapter_str)
+                    return [float(num) for num in numbers]
 
-        for book in profile.reading_list:
-            if book['title'] == title and book['novel_source'] == novel_source:
-                book['latest_read_chapter'] = latest_chapter
-                book['chapter_link'] = chapter_link
-                break
+                latest_chapter = max(chapters.keys(), key=chapter_key) if chapters else None
+                chapter_link = chapters.get(latest_chapter, None)
 
-        profile.save()
-        return Response({"message": "Updated to latest chapter successfully"}, status=status.HTTP_200_OK)
-    except AllBooks.DoesNotExist:
-        print("AllBooks not found")
-        return Response({"error": "AllBooks not found"}, status=status.HTTP_404_NOT_FOUND)
+            for book in profile.reading_list:
+                if book['title'] == title and book['novel_source'] == novel_source:
+                    book['latest_read_chapter'] = latest_chapter
+                    book['chapter_link'] = chapter_link
+                    break
+
+            profile.save()
+            return Response({"message": "Updated to latest chapter successfully"}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "AllBooks not found"}, status=status.HTTP_404_NOT_FOUND)
+
     except User.DoesNotExist:
-        print("User not found")
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
     except Profile.DoesNotExist:
-        print("Profile not found")
         return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class LightNovelPubCreateView(views.APIView):
     def post(self, request):
-        serializer = LightNovelPubSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        data = request.data
+        cursor = connection.cursor()
+        cursor.execute("""
+            INSERT INTO all_books (title, novel_source, synopsis, author, updated_on, newest_chapter, image_url, rating, status, novel_type, followers, chapters)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            data['title'],
+            'Light Novel Pub',
+            data['synopsis'],
+            data.get('author'),
+            datetime.now(),
+            data['newest_chapter'],
+            data['image_url'],
+            data['rating'],
+            data['status'],
+            data['novel_type'],
+            data['followers'],
+            json.dumps(data['chapters'])
+        ))
+        connection.commit()
+        return Response(data, status=status.HTTP_201_CREATED)
     
     def get(self, request):
-        lightNovels = AllBooks.objects.filter(novel_source='Light Novel Pub').all()
-        serializer = LightNovelPubSerializer(lightNovels, many=True)
-        return Response(serializer.data)
+        lightNovels = fetch_books_as_dict("SELECT * FROM all_books WHERE novel_source='Light Novel Pub'")
+        return Response(lightNovels)
 
 class LightNovelPubUpdateView(views.APIView):
     def put(self, request, title):
-        try:
-            lightNovel = AllBooks.objects.get(title=title, novel_source='Light Novel Pub')
-            serializer = LightNovelPubSerializer(lightNovel, data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except AllBooks.DoesNotExist:
-            return Response({'message': 'Light Novel not found'}, status=status.HTTP_404_NOT_FOUND)
+        data = request.data
+        cursor = connection.cursor()
+        cursor.execute("""
+            UPDATE all_books SET
+            synopsis = %s,
+            author = %s,
+            updated_on = %s,
+            newest_chapter = %s,
+            image_url = %s,
+            rating = %s,
+            status = %s,
+            novel_type = %s,
+            followers = %s,
+            chapters = %s
+            WHERE title = %s AND novel_source = 'Light Novel Pub'
+        """, (
+            data['synopsis'],
+            data.get('author'),
+            datetime.now(),
+            data['newest_chapter'],
+            data['image_url'],
+            data['rating'],
+            data['status'],
+            data['novel_type'],
+            data['followers'],
+            json.dumps(data['chapters']),
+            title
+        ))
+        connection.commit()
+        return Response(data)
 
 class LightNovelPubSearchView(views.APIView):
     def get(self, request):
         title_query = request.GET.get('title', '')
-        lightNovel = AllBooks.objects.filter(title__icontains=title_query, novel_source='Light Novel Pub')
-        serializer = LightNovelPubSerializer(lightNovel, many=True)
-        return Response(serializer.data)
+        lightNovels = fetch_books_as_dict(f"SELECT * FROM all_books WHERE title ILIKE '%{title_query}%' AND novel_source='Light Novel Pub'")
+        return Response(lightNovels)
 
-# TODO: Might need to change this to include light novel vs Manga, or source? Not sure
 class BookDetailsView(views.APIView):
     def get(self, request, title):
-        book = AllBooks.objects.filter(title=title).first()
+        book = fetch_books_as_dict(f"SELECT * FROM all_books WHERE title = '{title}'")
         if not book:
             return Response({'message': 'Book not found'}, status=status.HTTP_404_NOT_FOUND)
-        
-        if isinstance(book, AllBooks):
-            serializer = AsuraScansSerializer(book)
-        else:
-            serializer = LightNovelPubSerializer(book)
-        
-        return Response(serializer.data)
+        return Response(book[0])

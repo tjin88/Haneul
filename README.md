@@ -21,3 +21,10 @@ This is a personal project and is not licensed or open for public contribution a
 For inquiries or suggestions, feel free to reach out to me at tjin368@gmail.com.
 
 Thank you for your interest in Haneul! Let's enhance our reading experiences together :)
+
+## Tech Stack:
+- frontend: REACT
+- backend: Django
+- database: PostgreSQL (Currently localhost, but can store on AWS RDS or Render's SQL database)
+- server-hosting: Render (Took this down since I am using the free-tier, but simple plug and play)
+- frontend-hosting: Firebase (Took this down since my database is localhost)

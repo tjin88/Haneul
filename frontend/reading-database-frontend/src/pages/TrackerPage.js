@@ -40,7 +40,9 @@ const TrackerPage = () => {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        setTrackingList(data.reading_list);
+        // setTrackingList(data.readingList);
+        const readingList = JSON.parse(data.reading_list);
+        setTrackingList(readingList);
         setBookSource(extractUniqueAttributes(data.reading_list, 'novel_source'));
         setBookType(extractUniqueAttributes(data.reading_list, 'novel_type'));
         setUserTags(extractUniqueAttributes(data.reading_list, 'user_tag'));

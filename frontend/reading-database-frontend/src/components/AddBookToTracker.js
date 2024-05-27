@@ -34,7 +34,9 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                 throw new Error(`HTTP error! status: ${response.status}`);
               }
               const data = await response.json();
-              setTrackingList(data.reading_list);
+            //   setTrackingList(data.readingList);
+              const readingList = JSON.parse(data.reading_list);
+              setTrackingList(readingList);
           } catch (error) {
             console.error('Error fetching tracking list:', error);
           }

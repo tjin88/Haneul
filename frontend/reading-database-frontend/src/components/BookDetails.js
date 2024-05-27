@@ -23,7 +23,7 @@ const BookDetails = ({ bookDetails }) => {
       <div className="book-content">
         <h1 className="book-title">{bookDetails.title}</h1>
         <div className="book-genres">
-          {bookDetails.genres.map((genre, index) => (
+          {bookDetails && bookDetails.genres && bookDetails.genres.map((genre, index) => (
             <span key={index} className="genre">{genre}</span>
           ))}
         </div>
@@ -47,7 +47,7 @@ const BookDetails = ({ bookDetails }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {Object.entries(bookDetails.chapters).map(([chapter, link], index) => (
+                        {bookDetails && bookDetails.chapters && Object.entries(bookDetails.chapters).map(([chapter, link], index) => (
                             <tr key={index}>
                             <td>{chapter}</td>
                             <td><a href={link} target="_blank" rel="noopener noreferrer">Read</a></td>

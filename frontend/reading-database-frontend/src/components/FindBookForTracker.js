@@ -61,7 +61,7 @@ const FindBookForTracker = ({ onBookSelect, onClose }) => {
                     <div className="searchResults">
                         {loading && <div>Loading...</div>}
                         {error && <div>{error}</div>}
-                        {!loading && searchResults.map((book) => (
+                        {!loading && searchResults && searchResults.map((book) => (
                             <div key={book.id} className="searchResultItem" onClick={() => handleSelectBook(book)}>
                                 <img src={book.image_url} alt={book.title} />
                                 <div className="book-details">
@@ -71,7 +71,7 @@ const FindBookForTracker = ({ onBookSelect, onClose }) => {
                                 </div>
                                 <div className="book-chapters">Source: {book.novel_source}</div>
                                 <div className="book-genres">
-                                    {book.genres.map((genre, index) => (
+                                    {book && book.genres && book.genres.map((genre, index) => (
                                     <span key={index} className="genre">{genre}</span>
                                     ))}
                                 </div>

@@ -93,18 +93,34 @@ WSGI_APPLICATION = "django_app.wsgi.application"
 #     }
 # }
 
-username = quote_plus(os.getenv('USERNAME'))
-password = quote_plus(os.getenv('PASSWORD'))
-cluster = os.getenv('CLUSTER')
+# username = quote_plus(os.getenv('USERNAME'))
+# password = quote_plus(os.getenv('PASSWORD'))
+# cluster = os.getenv('CLUSTER')
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'djongo',
+#         'NAME': 'SCRAPED_MANGA_AND_LIGHTNOVEL_DATABASE',
+#         'ENFORCE_SCHEMA': False,
+#         'CLIENT': {
+#             'host': f"mongodb+srv://{username}:{password}@{cluster}/?retryWrites=true&w=majority"
+#         }
+#     }
+# }
+
+postgresql_name = os.getenv('postgresql_name')
+postgresql_user = os.getenv('postgresql_user')
+postgresql_password = os.getenv('postgresql_password')
+postgresql_host = os.getenv('postgresql_host')
+postgresql_port = os.getenv('postgresql_port')
 
 DATABASES = {
     'default': {
-        'ENGINE': 'djongo',
-        'NAME': 'SCRAPED_MANGA_AND_LIGHTNOVEL_DATABASE',
-        'ENFORCE_SCHEMA': False,
-        'CLIENT': {
-            'host': f"mongodb+srv://{username}:{password}@{cluster}/?retryWrites=true&w=majority"
-        }
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': postgresql_name,
+        'USER': postgresql_user,
+        'PASSWORD': postgresql_password,
+        'HOST': postgresql_host,
+        'PORT': postgresql_port,
     }
 }
 

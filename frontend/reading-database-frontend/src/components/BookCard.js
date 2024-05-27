@@ -16,7 +16,7 @@ const BookCard = ({ image_url, title, newest_chapter }) => {
             <div className="book-info">
               <span className="title">{title}</span>
               <br />
-              <span className="chapters">{newest_chapter.includes("Chapter") ? "" : "Chapter "}{newest_chapter}</span>
+              <span className="chapters">{newest_chapter && newest_chapter.includes("Chapter") ? "" : "Chapter "}{newest_chapter}</span>
             </div>
           </a>
         : <div className="book-card">
@@ -26,7 +26,7 @@ const BookCard = ({ image_url, title, newest_chapter }) => {
             <div className="book-info">
               <span className="title">{title}</span>
               <br />
-              <span className="chapters">{newest_chapter.includes("Chapter") ? "" : "Chapter "}{newest_chapter}</span>
+              <span className="chapters">{newest_chapter && newest_chapter.includes("Chapter") ? "" : "Chapter "}{newest_chapter}</span>
             </div>
           </div>
       }

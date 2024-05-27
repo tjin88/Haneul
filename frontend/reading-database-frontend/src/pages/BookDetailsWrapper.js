@@ -6,6 +6,13 @@ const BookDetailsWrapper = () => {
   const { bookTitle } = useParams();
   const [bookDetails, setBookDetails] = useState(null);
 
+  /*
+   TODO: Update this to return ALL books with this name. Then, we'll have two (or more) buttons:
+   - One button PER novel type (e.g. "Light Novel", "Manga", maybe "Anime" later ...)
+
+   TODO: Update this URL to include the novel type (probably gonna be):
+     /centralized_API_backend/api/book-details/<novel_type>/${encodeURIComponent(bookTitle)}
+  */
   useEffect(() => {
     const fetchBookDetails = async () => {
       try {
