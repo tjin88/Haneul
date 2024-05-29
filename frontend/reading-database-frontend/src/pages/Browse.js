@@ -1,28 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { useInView } from 'react-intersection-observer';
+import Select from 'react-select';
+import makeAnimated from 'react-select/animated';
 import BookCard from '../components/BookCard';
 import './Browse.scss';
 
 const Browse = ({ lightMode }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortType, setSortType] = useState('');
-  const [genreFilter, setGenreFilter] = useState('');
+  const [sortType, setSortType] = useState([]);
+  const [genreFilter, setGenreFilter] = useState([]);
+  const [genres, setGenres] = useState([]);
   const [books, setBooks] = useState([]);
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const animatedComponents = makeAnimated();
 
   const { ref, inView } = useInView({
     threshold: 0,
   });
 
   useEffect(() => {
+    const fetchGenres = async () => {
+      try {
+        const response = await fetch(`/centralized_API_backend/api/genres`);
+        const data = await response.json();
+        setGenres(data.map(genre => ({ value: genre, label: genre })));
+      } catch (error) {
+        console.error('Error fetching genres:', error);
+      }
+    };
+
+    fetchGenres();
+  }, []);
+
+  useEffect(() => {
     const fetchData = async () => {
       setIsFetching(true);
       const title = encodeURIComponent(searchTerm);
-      const genre = encodeURIComponent(genreFilter);
-      const response = await fetch(`/centralized_API_backend/api/all-novels/browse?title=${title}&genre=${genre}&page=${page}&sortType=${sortType}`);
+      const genre = encodeURIComponent(genreFilter.map(g => g.value).join(','));
+      const sort = encodeURIComponent(sortType.value);
+      const response = await fetch(`/centralized_API_backend/api/all-novels/browse?title=${title}&genre=${genre}&page=${page}&sortType=${sort}`);
       const data = await response.json();
       if (page === 1) {
         setBooks(data.results);
@@ -39,7 +58,7 @@ const Browse = ({ lightMode }) => {
     };
 
     const debounceFetchData = setTimeout(() => {
-      if (searchTerm.length >= 2 || genreFilter) {
+      if (searchTerm.length >= 2 || genreFilter.length > 0) {
         setError('');
         fetchData();
       } else if (sortType !== '') {
@@ -67,10 +86,26 @@ const Browse = ({ lightMode }) => {
     setPage(1);
   };
 
-  const handleGenreChange = (e) => {
-    setGenreFilter(e.target.value);
+  const handleGenreChange = (selectedOptions) => {
+    setGenreFilter(selectedOptions || []);
     setPage(1);
   };
+
+  const handleSortChange = (selectedOption) => {
+    setSortType(selectedOption);
+    setPage(1);
+  };
+
+  const sortOptions = [
+    { value: 'manga', label: 'Manga' },
+    { value: 'manhua', label: 'Manhua' },
+    { value: 'manhwa', label: 'Manhwa' },
+    { value: 'rating', label: 'Rating' },
+    { value: 'newest', label: 'Newest Added' },
+    { value: 'updated', label: 'Recently Updated' },
+    { value: 'followers', label: 'Most Followers' },
+    { value: 'chapters', label: 'Total Chapters' }
+  ];
 
   return (
     <div className="browse">
@@ -81,24 +116,22 @@ const Browse = ({ lightMode }) => {
         onChange={handleSearchChange}
         className="search-input"
       />
-      <input
-        type="text"
-        placeholder="Search by genre (Full genre name)"
+      <Select
+        isMulti
+        components={animatedComponents}
         value={genreFilter}
         onChange={handleGenreChange}
-        className="search-input"
+        options={genres}
+        className="select"
+        placeholder="Select genres..."
       />
-      <select onChange={(e) => setSortType(e.target.value)} className="sort-select">
-        <option value="">Sort by...</option>
-        <option value="manga">Manga</option>
-        <option value="manhua">Manhua</option>
-        <option value="manhwa">Manhwa</option>
-        <option value="rating">Rating</option>
-        <option value="newest">Newest Added</option>
-        <option value="updated">Recently Updated</option>
-        <option value="followers">Most Followers</option>
-        <option value="chapters">Total Chapters</option>
-      </select>
+      <Select
+        value={sortType}
+        onChange={handleSortChange}
+        options={sortOptions}
+        className="select"
+        placeholder="Sort by..."
+      />
       {isFetching 
         ? <div>Loading...</div> 
         : <p>{error}</p>

@@ -410,3 +410,13 @@ class BookDetailsView(views.APIView):
             return Response(book_dict)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class AllNovelGetGenres(views.APIView):
+    def get(self, request):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT name FROM genre WHERE name IS NOT NULL AND name != ''")
+                genres = [row[0] for row in cursor.fetchall()]
+            return Response(genres)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

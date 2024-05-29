@@ -16,6 +16,7 @@
     "react-lazy-load-image-component": "^1.6.0",
     "react-router-dom": "^6.18.0",
     "react-scripts": "^5.0.1",
+    "react-select": "^5.8.0",
     "react-slick": "^0.29.0",
     "sass": "^1.77.2",
     "slick-carousel": "^1.8.1",
