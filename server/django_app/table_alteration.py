@@ -22,6 +22,25 @@ conn = psycopg2.connect(
     port=postgresql_port,
 )
 
+def execute_sql_statements():
+    with conn.cursor() as cursor:
+        # Rename columns
+        cursor.execute("ALTER TABLE reading_list RENAME COLUMN title TO book_title;")
+        cursor.execute("ALTER TABLE reading_list RENAME COLUMN novel_source TO book_novel_source;")
+        
+        # Drop unnecessary columns
+        cursor.execute("ALTER TABLE reading_list DROP COLUMN chapter_link;")
+        cursor.execute("ALTER TABLE reading_list DROP COLUMN novel_type;")
+        
+        # Add unique constraint
+        cursor.execute("""
+            ALTER TABLE reading_list 
+            ADD CONSTRAINT unique_book_profile UNIQUE (book_title, book_novel_source, profile_id);
+        """)
+        
+        # Commit the changes
+        conn.commit()
+
 def fetch_table_data(table_name):
     with conn.cursor() as cursor:
         cursor.execute(f"SELECT * FROM {table_name}")
@@ -32,22 +51,12 @@ def fetch_table_data(table_name):
         for row in rows:
             print(f"{' | '.join(str(cell) for cell in row)}")
 
+# Execute the SQL statements to alter the table structure
+execute_sql_statements()
+
 # List of tables to fetch data from
 tables = [
-    # 'auth_user',
-    # 'genre',
-    # 'profile',
     'reading_list',
-    # 'all_books',
-    # 'all_books_genres'
-    # 'centralized_API_backend_profile',
-    # 'centralized_API_backend_lightnovelpub',
-    # 'centralized_API_backend_lightnovelpub_new_genres',
-    # 'centralized_API_backend_genre',
-    # 'centralized_API_backend_asurascans',
-    # 'centralized_API_backend_asurascans_new_genres',
-    # 'centralized_API_backend_allbooks',
-    # 'centralized_API_backend_allbooks_new_genres'
 ]
 
 for table in tables:

@@ -46,7 +46,7 @@ const BookCarousel = ({ books }) => {
     <div className='carousel-container'>
         <div className='book-carousel'>
             <Slider {...settings}>
-                {books.map((book, index) => (
+                {books && books.map((book, index) => (
                     <BookCard key={index} {...book} />
                 ))}
             </Slider>

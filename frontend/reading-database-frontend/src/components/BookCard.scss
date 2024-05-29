@@ -1,51 +1,67 @@
 .book-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 0 0 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 0 0.5rem;
+  border-radius: 15px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+  transition: transform 0.3s ease-in-out;
+  background-color: #fff; 
+  margin: 0 0 8px;
+  color: black;
+  text-decoration: none;
+
+  &:hover {
+    transform: translateY(-5px); 
+  }
+
+  .image-container {
+    width: 100%;
+    position: relative;
     border-radius: 15px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
-    transition: transform 0.3s ease-in-out;
-    background-color: #fff; 
-    margin: 0 0 8px;
-    color: black;
-    text-decoration: none;
-  
-    &:hover {
-      transform: translateY(-5px); 
+    overflow: hidden;
+
+    img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover; 
     }
-  
-    .image-container {
-      width: 100%; 
-      padding-top: 140%; 
-      position: relative; 
-      border-radius: 15px;
-      overflow: hidden;
-  
-      img {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover; 
-      }
-    }
-  
-    .book-info {
-      padding-top: 0.5rem;
-  
-      .title {
-        font-size: 1rem; 
-        font-weight: bold;
-        margin: 0.5rem 0;
-        overflow: ellipsis;
-      }
-  
-      .chapters {
-        font-size: 0.875rem;
-        color: #666;
+
+    .lazy-load-image-background {
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &::before {
+        content: '';
+        display: block;
+        padding-top: 140%;
       }
     }
   }
+
+  .book-info {
+    padding-top: 0.5rem;
+
+    .title {
+      font-size: 1rem; 
+      font-weight: bold;
+      margin: 0.5rem 0;
+      overflow: ellipsis;
+    }
+
+    .chapters {
+      font-size: 0.875rem;
+      color: #666;
+    }
+  }
+}

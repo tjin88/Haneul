@@ -71,6 +71,7 @@ def create_tables():
     );
     """)
 
+    # Old reading_list table structure
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS reading_list (
         id SERIAL PRIMARY KEY,
@@ -84,6 +85,20 @@ def create_tables():
         novel_source VARCHAR(100)
     );
     """)
+
+    # Current reading_list table structure
+    '''
+    CREATE TABLE IF NOT EXISTS reading_list (
+        id SERIAL PRIMARY KEY,
+        profile_id VARCHAR(24) REFERENCES profile(id) ON DELETE CASCADE,
+        reading_status VARCHAR(50),
+        user_tag VARCHAR(100),
+        latest_read_chapter VARCHAR(255),
+        book_title VARCHAR(255),
+        book_novel_source VARCHAR(100),
+        FOREIGN KEY (book_title, book_novel_source) REFERENCES all_books (title, novel_source) ON DELETE CASCADE
+    );
+    '''
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS all_books (

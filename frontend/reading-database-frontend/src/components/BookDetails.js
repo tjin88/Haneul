@@ -4,6 +4,7 @@ import './BookDetails.scss';
 
 const BookDetails = ({ bookDetails }) => {
   const [showModal, setShowModal] = useState(false);
+  const last_updated = new Date(bookDetails.updated_on);
 
   if (!bookDetails) {
     return <div>Loading...</div>;
@@ -28,9 +29,12 @@ const BookDetails = ({ bookDetails }) => {
           ))}
         </div>
         <div className="book-info">
-          <p className="type"><strong>Source:</strong> {bookDetails.novel_source}</p>
+          <p className="novel_source"><strong>Source:</strong> {bookDetails.novel_source}</p>
+          <p className="novel_author"><strong>Author:</strong> {bookDetails.author}</p>
           <p className="users-tracking"><strong>Followers:</strong> {bookDetails.followers}</p>
           <p className="chapters-available"><strong>Chapters Available:</strong> {Object.keys(bookDetails.chapters).length}</p>
+          <p className="novel_last_updated"><strong>Last Updated On:</strong> {last_updated.toString()}</p>
+          <p className="novel_status"><strong>Status:</strong> {bookDetails.status}</p>
         </div>
         <div className="book-synopsis">
           <h2>Synopsis</h2>

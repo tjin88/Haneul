@@ -123,36 +123,36 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
     <div className="trackerTableContainer">
         <div className="tableHeader">
           {
-          books.length === 0 
+          books && books.length === 0 
               ? <span className="headerText">No Books Found! Please add books to your tracker.</span>
-              : <span className="headerText">Showing 1 to {books.length} of {books.length} results</span>
+              : <span className="headerText">Showing 1 to {books && books.length} of {books && books.length} results</span>
           }
           <button className="refreshButton" onClick={() => fetchTrackingList()}>Refresh</button>
+          <button onClick={updateSelectedToMaxChapter}>Update Selected to Max Chapter</button>
+          <button onClick={deleteAllSelected}>Delete All Selected</button>
           <button className="addButton" onClick={() => handleAddBook()}>+ Add Book</button>
         </div>
-        <button onClick={updateSelectedToMaxChapter}>Update Selected to Max Chapter</button>
-        <button onClick={deleteAllSelected}>Delete All Selected</button>
         <table className='trackerTable'>
           <thead>
-          <tr>
-              <th>
-              <input
-                  type="checkbox"
-                  checked={selectAll}
-                  onChange={handleSelectAll}
-              />
-              </th>
-              <th>Title</th>
-              <th>Source</th>
-              <th>Last Chapter Read</th>
-              <th>Latest Update</th>
-              <th>Reading Status</th>
-              <th>User Tag</th>
-              <th>Actions</th>
-          </tr>
+            <tr>
+                <th>
+                  <input
+                      type="checkbox"
+                      checked={selectAll}
+                      onChange={handleSelectAll}
+                  />
+                </th>
+                <th>Title</th>
+                <th>Source</th>
+                <th>Last Chapter Read</th>
+                <th>Latest Update</th>
+                <th>Reading Status</th>
+                <th>User Tag</th>
+                <th>Actions</th>
+            </tr>
           </thead>
           <tbody>
-              {books.map((book, index) => (
+              {books && books.map((book, index) => (
                   <tr key={index}>
                   <td>
                       <input
@@ -163,8 +163,8 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
                   </td>
                   <td><a href={book.title} target="_blank" rel="noopener noreferrer">{book.title}</a></td>
                   <td>{book.novel_source}</td>
-                  <td><a href={book.chapter_link} target="_blank" rel="noopener noreferrer">{book.latest_read_chapter}</a></td>
-                  <td><a href={book.chapter_link} target="_blank" rel="noopener noreferrer">{book.newest_chapter}</a></td>
+                  <td><a href={book.latest_read_chapter_link} target="_blank" rel="noopener noreferrer">{book.latest_read_chapter}</a></td>
+                  <td><a href={book.newest_chapter_link} target="_blank" rel="noopener noreferrer">{book.newest_chapter}</a></td>
                   <td><span className={`status ${book.reading_status.toLowerCase()}`}>{book.reading_status}</span></td>
                   <td>{book.user_tag}</td>
                   <td>

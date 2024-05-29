@@ -34,9 +34,9 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                 throw new Error(`HTTP error! status: ${response.status}`);
               }
               const data = await response.json();
-            //   setTrackingList(data.readingList);
-              const readingList = JSON.parse(data.reading_list);
-              setTrackingList(readingList);
+              setTrackingList(data.reading_list);
+            //   const readingList = JSON.parse(data.reading_list);
+            //   setTrackingList(readingList);
           } catch (error) {
             console.error('Error fetching tracking list:', error);
           }
@@ -98,8 +98,6 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                         reading_status: readingStatus,
                         user_tag: userTags,
                         latest_read_chapter: latestReadChapter,
-                        chapter_link: bookDetails.chapters[latestReadChapter],
-                        novel_type: givenBook.novel_type,
                         novel_source: givenBook.novel_source,
                     }),
                 });

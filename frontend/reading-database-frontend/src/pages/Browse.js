@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useInView } from 'react-intersection-observer';
+import BookCard from '../components/BookCard';
 import './Browse.scss';
 
 const Browse = ({ lightMode }) => {
@@ -8,57 +10,73 @@ const Browse = ({ lightMode }) => {
   const [books, setBooks] = useState([]);
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+
+  const { ref, inView } = useInView({
+    threshold: 0,
+  });
 
   useEffect(() => {
     const fetchData = async () => {
       setIsFetching(true);
       const title = encodeURIComponent(searchTerm);
       const genre = encodeURIComponent(genreFilter);
-
-      // TODO: Add the sortType to the API call ***
-      // const response = await fetch(`/centralized_API_backend/api/all-novels/browse?title=${title}&genre=${genre}&sortType=${sortType}`);
-      const response = await fetch(`/centralized_API_backend/api/all-novels/browse?title=${title}&genre=${genre}`);
+      const response = await fetch(`/centralized_API_backend/api/all-novels/browse?title=${title}&genre=${genre}&page=${page}&sortType=${sortType}`);
       const data = await response.json();
-      if (data.length === 0) {
+      if (page === 1) {
+        setBooks(data.results);
+      } else {
+        setBooks(prevBooks => [...prevBooks, ...data.results]);
+      }
+      if (data.results.length === 0 && page === 1) {
         setError('No books matching the search criteria found!');
       } else {
         setError('');
       }
-      setBooks(data);
+      setTotalCount(data.total_count);
       setIsFetching(false);
     };
 
     const debounceFetchData = setTimeout(() => {
-      if ((searchTerm.length >= 3 || genreFilter)) {
+      if (searchTerm.length >= 2 || genreFilter) {
         setError('');
         fetchData();
       } else if (sortType !== '') {
         setBooks([]);
-        setError('Please search (with 3 or more characters) or add a genre!');
-      } else if (searchTerm.length > 0 && searchTerm.length < 3) {
+        setError('Please search (with 2 or more characters) or add a genre!');
+      } else if (searchTerm.length > 0 && searchTerm.length < 2) {
         setBooks([]);
-        setError('Please enter a search with 3 or more characters!');
+        setError('Please enter a search with 2 or more characters!');
       } else {
         setError('');
       }
     }, 500); // 500ms delay
 
     return () => clearTimeout(debounceFetchData); 
-  }, [searchTerm, genreFilter, sortType]);
+  }, [searchTerm, genreFilter, sortType, page]);
+
+  useEffect(() => {
+    if (inView && !isFetching && books.length < totalCount) {
+      setPage(prevPage => prevPage + 1);
+    }
+  }, [inView, isFetching, books.length, totalCount]);
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
+    setPage(1);
   };
 
   const handleGenreChange = (e) => {
     setGenreFilter(e.target.value);
+    setPage(1);
   };
 
   return (
     <div className="browse">
       <input
         type="text"
-        placeholder="Search by title (3 characters minimum)"
+        placeholder="Search by title (2 characters minimum)"
         value={searchTerm}
         onChange={handleSearchChange}
         className="search-input"
@@ -86,18 +104,11 @@ const Browse = ({ lightMode }) => {
         : <p>{error}</p>
       }
       <div className="books-grid">
-        {books.map((book, index) => (
-          <a key={index} className="book-item" href={`/${book.title}`}>
-            <img src={book.image_url} alt={book.title} />
-            <div className="book-info">
-              <h3>{book.title}</h3>
-              <p>{book && book.newest_chapter && book.newest_chapter.includes("Chapter") ? "" : "Chapter "}{book.newest_chapter}</p>
-              <p>{book && book.genres && book.genres.join(', ')}</p>
-              <p>{book.status}</p>
-            </div>
-          </a>
+        {books && books.map((book, index) => (
+          <BookCard key={index} {...book} />
         ))}
       </div>
+      <div ref={ref} style={{ height: '1px' }}></div>
     </div>
   );
 };

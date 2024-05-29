@@ -1,8 +1,7 @@
+import re
 from django.shortcuts import render
 from rest_framework import status, views
 from rest_framework.response import Response
-from .models import Profile
-# from .serializers import AsuraScansSerializer, LightNovelPubSerializer, HomeNovelSerializer, BrowseNovelSerializer
 from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
@@ -24,6 +23,12 @@ def fetch_books_as_dict(query):
     for row in cursor.fetchall():
         results.append(dict(zip(columns, row)))
     return results
+
+def fetch_count(query):
+    cursor = connection.cursor()
+    cursor.execute(query)
+    count = cursor.fetchone()[0]
+    return count
 
 class HomeNovelGetView(views.APIView):
     def get(self, request):
@@ -84,23 +89,22 @@ class AllNovelSearchView(views.APIView):
         
         condition_str = " AND ".join(conditions) if conditions else "1=1"
 
-        asura_results = []
-        lightnovel_results = []
+        results = []
         
-        if novel_source in ['All', 'AsuraScans', 'Manga']:
-            asura_results = fetch_books_as_dict(f"SELECT * FROM all_books WHERE {condition_str}")
-        
-        if novel_source in ['All', 'Light Novel Pub', 'Light Novel']:
-            lightnovel_results = fetch_books_as_dict(f"SELECT * FROM all_books WHERE {condition_str}")
+        if novel_source in ['Light Novel Pub', 'AsuraScans']:
+            results = fetch_books_as_dict(f"SELECT * FROM all_books WHERE {condition_str} AND novel_source='{novel_source}'")
+        else:
+            results = fetch_books_as_dict(f"SELECT * FROM all_books WHERE {condition_str}")
 
-        serializer_data = asura_results + lightnovel_results
-        return Response(serializer_data)
+        return Response(results)
     
 class AllNovelBrowseView(views.APIView):
     def get(self, request):
         title_query = request.GET.get('title', '')
         genre = request.GET.get('genre', '')
         novel_source = request.GET.get('novel_source', '')
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 20))
 
         conditions = []
         if title_query:
@@ -111,75 +115,26 @@ class AllNovelBrowseView(views.APIView):
             conditions.append(f"novel_source='{novel_source}'")
 
         condition_str = " AND ".join(conditions) if conditions else "1=1"
-        browse_results = fetch_books_as_dict(f"SELECT * FROM all_books WHERE {condition_str}")
-        return Response(browse_results)
 
-class AsuraScansCreateView(views.APIView):
-    def post(self, request):
-        data = request.data
-        cursor = connection.cursor()
-        cursor.execute("""
-            INSERT INTO all_books (title, novel_source, synopsis, author, updated_on, newest_chapter, image_url, rating, status, novel_type, followers, chapters)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (
-            data['title'],
-            'AsuraScans',
-            data['synopsis'],
-            data.get('author'),
-            datetime.now(),
-            data['newest_chapter'],
-            data['image_url'],
-            data['rating'],
-            data['status'],
-            data['novel_type'],
-            data['followers'],
-            json.dumps(data['chapters'])
-        ))
-        connection.commit()
-        return Response(data, status=status.HTTP_201_CREATED)
-    
-    def get(self, request):
-        mangas = fetch_books_as_dict("SELECT * FROM all_books WHERE novel_source='AsuraScans'")
-        return Response(mangas)
+        # Calculate offset for pagination
+        offset = (page - 1) * page_size
 
-class AsuraScansUpdateView(views.APIView):
-    def put(self, request, title):
-        data = request.data
-        cursor = connection.cursor()
-        cursor.execute("""
-            UPDATE all_books SET
-            synopsis = %s,
-            author = %s,
-            updated_on = %s,
-            newest_chapter = %s,
-            image_url = %s,
-            rating = %s,
-            status = %s,
-            novel_type = %s,
-            followers = %s,
-            chapters = %s
-            WHERE title = %s AND novel_source = 'AsuraScans'
-        """, (
-            data['synopsis'],
-            data.get('author'),
-            datetime.now(),
-            data['newest_chapter'],
-            data['image_url'],
-            data['rating'],
-            data['status'],
-            data['novel_type'],
-            data['followers'],
-            json.dumps(data['chapters']),
-            title
-        ))
-        connection.commit()
-        return Response(data)
+        # Query to get the total count of books
+        count_query = f"SELECT COUNT(*) FROM all_books WHERE {condition_str}"
+        total_count = fetch_count(count_query)
 
-class AsuraScansSearchView(views.APIView):
-    def get(self, request):
-        title_query = request.GET.get('title', '')
-        mangas = fetch_books_as_dict(f"SELECT * FROM all_books WHERE title ILIKE '%{title_query}%' AND novel_source='AsuraScans'")
-        return Response(mangas)
+        # Query to get the paginated results
+        query = f"SELECT * FROM all_books WHERE {condition_str} LIMIT {page_size} OFFSET {offset}"
+        browse_results = fetch_books_as_dict(query)
+
+        response_data = {
+            'total_count': total_count,
+            'page': page,
+            'page_size': page_size,
+            'results': browse_results
+        }
+
+        return Response(response_data)
 
 @method_decorator(csrf_exempt, name='dispatch')
 @api_view(['POST'])
@@ -227,50 +182,70 @@ def login_view(request):
         }, status=status.HTTP_200_OK)
     else:
         return Response({"message": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
-    
+
 @api_view(['PUT'])
 def update_reading_list(request):
     data = request.data
     email = data.get('username')
 
-    # TODO: Get user authentication to work
-    # if not user or user.is_anonymous:
-    #     return Response({"error": "User not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
-
-    # TODO: Make 'latest_read_chapter' hold the chapter (key), and have the VALUE be the URL to that chapter.
-    # This way, when there are any issues re: website URL changes, the dashboard won't forward you to a faulty link,
-    # Since the URLs will be updated in the database from each scrape.
     try:
-        user = User.objects.get(email=email)
-        profile = Profile.objects.get(user=user)
+        with connection.cursor() as cursor:
+            # Fetch user
+            cursor.execute("SELECT id FROM auth_user WHERE email = %s", [email])
+            user_result = cursor.fetchone()
+            if not user_result:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            user_id = user_result[0]
 
-        curr_book = {
-            'title': data.get('title'),
-            'reading_status': data.get('reading_status'),
-            'user_tag': data.get('user_tag'),
-            'latest_read_chapter': data.get('latest_read_chapter'),
-            'chapter_link': data.get('chapter_link'),
-            'novel_type': data.get('novel_type'),
-            'novel_source': data.get('novel_source'),
-        }
+            # TODO: Get user authentication to work
+            # if not user or user.is_anonymous:
+            #     return Response({"error": "User not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # If the book is already in the reading list, update it
-        for book in profile.reading_list:
-            if book['title'] == curr_book['title'] and book['novel_source'] == curr_book['novel_source']:
-                book.update(curr_book)
-                profile.save()
+            # Fetch profile
+            cursor.execute("SELECT id FROM profile WHERE user_id = %s", [user_id])
+            profile_result = cursor.fetchone()
+            if not profile_result:
+                return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
+            profile_id = profile_result[0]
+
+            # Fetch book details
+            cursor.execute("""
+                SELECT title, novel_source
+                FROM all_books
+                WHERE title = %s AND novel_source = %s
+            """, [data.get('title'), data.get('novel_source')])
+            book_result = cursor.fetchone()
+            if not book_result:
+                return Response({'error': 'Book not found in AllBooks'}, status=status.HTTP_404_NOT_FOUND)
+            title, novel_source = book_result
+
+            # Check if the book is already in the reading list
+            cursor.execute("""
+                SELECT id
+                FROM reading_list
+                WHERE profile_id = %s AND book_title = %s AND book_novel_source = %s
+            """, [profile_id, title, novel_source])
+            existing_book_result = cursor.fetchone()
+
+            if existing_book_result:
+                # Update the existing book
+                reading_list_id = existing_book_result[0]
+                cursor.execute("""
+                    UPDATE reading_list
+                    SET reading_status = %s, user_tag = %s, latest_read_chapter = %s
+                    WHERE id = %s
+                """, [data.get('reading_status'), data.get('user_tag'), data.get('latest_read_chapter'), reading_list_id])
                 return Response({"message": "Book updated in reading list successfully"}, status=status.HTTP_200_OK)
+            else:
+                # Add the new book to the reading list
+                cursor.execute("""
+                    INSERT INTO reading_list (profile_id, reading_status, user_tag, latest_read_chapter, book_title, book_novel_source)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, [profile_id, data.get('reading_status'), data.get('user_tag'), data.get('latest_read_chapter'), title, novel_source])
+                return Response({"message": "Book added to reading list successfully"}, status=status.HTTP_201_CREATED)
 
-        # As the book is not already in the reading list, add it
-        profile.reading_list.append(curr_book)
-        profile.save()
-
-        return Response({"message": "Book added to reading list successfully"})
-    except Profile.DoesNotExist:
-        return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class UserProfileReadingListView(views.APIView):
     # TODO: Add tokens for user authentication
@@ -288,15 +263,35 @@ class UserProfileReadingListView(views.APIView):
                 
                 user_id = user_result[0]
 
-                # Fetch profile
-                cursor.execute("SELECT reading_list FROM profile WHERE user_id = %s", [user_id])
-                profile_result = cursor.fetchone()
+                # Fetch reading list
+                cursor.execute("""
+                    SELECT rl.id, rl.reading_status, rl.user_tag, rl.latest_read_chapter, 
+                           ab.title AS book_title, ab.novel_source, ab.novel_type, ab.newest_chapter, 
+                           ab.chapters->>rl.latest_read_chapter AS latest_read_chapter_link, 
+                           ab.chapters->>ab.newest_chapter AS newest_chapter_link
+                    FROM reading_list rl
+                    JOIN all_books ab ON rl.book_title = ab.title AND rl.book_novel_source = ab.novel_source
+                    WHERE rl.profile_id = (
+                        SELECT id FROM profile WHERE user_id = %s
+                    )
+                """, [user_id])
+                reading_list_results = cursor.fetchall()
 
-                if not profile_result:
-                    return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
-
-                # Parse the reading_list JSON string
-                reading_list = json.loads(profile_result[0])
+                # Prepare the reading list response
+                reading_list = []
+                for row in reading_list_results:
+                    reading_list.append({
+                        'id': row[0],
+                        'reading_status': row[1],
+                        'user_tag': row[2],
+                        'latest_read_chapter': row[3],
+                        'title': row[4],
+                        'novel_source': row[5],
+                        'novel_type': row[6],
+                        'newest_chapter': row[7],
+                        'latest_read_chapter_link': row[8],
+                        'newest_chapter_link': row[9]
+                    })
 
             response = Response({'reading_list': reading_list})
             # TODO: Handle CORS better. 
@@ -317,19 +312,31 @@ def delete_book_from_reading_list(request):
     source = data.get('novel_source')
 
     try:
-        user = User.objects.get(email=email)
-        profile = Profile.objects.get(user=user)
+        with connection.cursor() as cursor:
+            # Fetch user
+            cursor.execute("SELECT id FROM auth_user WHERE email = %s", [email])
+            user_result = cursor.fetchone()
+            if not user_result:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            user_id = user_result[0]
 
-        profile.reading_list = [book for book in profile.reading_list if book['title'] != title_to_delete or (book['title'] == title_to_delete and book['novel_source'] != source)]
-        profile.save()
+            # Fetch profile
+            cursor.execute("SELECT id FROM profile WHERE user_id = %s", [user_id])
+            profile_result = cursor.fetchone()
+            if not profile_result:
+                return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
+            profile_id = profile_result[0]
 
-        return Response({"message": "Book removed from reading list successfully"}, status=status.HTTP_200_OK)
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-    except Profile.DoesNotExist:
-        return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
+            # Delete the book from the reading list
+            cursor.execute("""
+                DELETE FROM reading_list
+                WHERE profile_id = %s AND book_title = %s AND book_novel_source = %s
+            """, [profile_id, title_to_delete, source])
+
+            return Response({"message": "Book removed from reading list successfully"}, status=status.HTTP_200_OK)
+
     except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['PUT'])
 def update_to_max_chapter(request):
@@ -339,117 +346,67 @@ def update_to_max_chapter(request):
     novel_source = data.get('novel_source')
 
     try:
-        user = User.objects.get(email=email)
-        profile = Profile.objects.get(user=user)
+        with connection.cursor() as cursor:
+            # Fetch user
+            cursor.execute("SELECT id FROM auth_user WHERE email = %s", [email])
+            user_result = cursor.fetchone()
+            if not user_result:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            user_id = user_result[0]
 
-        cursor = connection.cursor()
-        cursor.execute("""
-            SELECT chapters
-            FROM all_books
-            WHERE title = %s AND novel_source = %s
-        """, [title, novel_source])
-        result = cursor.fetchone()
+            # Fetch profile
+            cursor.execute("SELECT id FROM profile WHERE user_id = %s", [user_id])
+            profile_result = cursor.fetchone()
+            if not profile_result:
+                return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
+            profile_id = profile_result[0]
 
-        if result:
-            chapters = json.loads(result[0])
-            if novel_source == 'AsuraScans':
-                latest_chapter = next(iter(chapters), None) if chapters else None
+            # Fetch book details
+            cursor.execute("""
+                SELECT chapters, novel_source
+                FROM all_books
+                WHERE title = %s AND novel_source = %s
+            """, [title, novel_source])
+            result = cursor.fetchone()
+            if not result:
+                return Response({'error': 'Book not found in AllBooks'}, status=status.HTTP_404_NOT_FOUND)
+            chapters, novel_source = result
+            chapters = json.loads(chapters)
+
+            # Since we using SQL queries, I can't use my built-in get_latest_chapter function. 
+            def chapter_key(chapter_str):
+                numbers = re.findall(r"\d+\.\d+|\d+", chapter_str)
+                return [float(num) for num in numbers]
+            latest_chapter = max(chapters.keys(), key=chapter_key) if chapters else None
+
+            if latest_chapter:
+                # Update the latest read chapter in the reading list
+                cursor.execute("""
+                    UPDATE reading_list
+                    SET latest_read_chapter = %s
+                    WHERE profile_id = %s AND book_title = %s AND book_novel_source = %s
+                """, [latest_chapter, profile_id, title, novel_source])
+
+                return Response({"message": "Updated to latest chapter successfully"}, status=status.HTTP_200_OK)
             else:
-                def chapter_key(chapter_str):
-                    numbers = re.findall(r"\d+\.\d+|\d+", chapter_str)
-                    return [float(num) for num in numbers]
+                return Response({"error": "No chapters found"}, status=status.HTTP_404_NOT_FOUND)
 
-                latest_chapter = max(chapters.keys(), key=chapter_key) if chapters else None
-                chapter_link = chapters.get(latest_chapter, None)
-
-            for book in profile.reading_list:
-                if book['title'] == title and book['novel_source'] == novel_source:
-                    book['latest_read_chapter'] = latest_chapter
-                    book['chapter_link'] = chapter_link
-                    break
-
-            profile.save()
-            return Response({"message": "Updated to latest chapter successfully"}, status=status.HTTP_200_OK)
-        else:
-            return Response({"error": "AllBooks not found"}, status=status.HTTP_404_NOT_FOUND)
-
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-    except Profile.DoesNotExist:
-        return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-class LightNovelPubCreateView(views.APIView):
-    def post(self, request):
-        data = request.data
-        cursor = connection.cursor()
-        cursor.execute("""
-            INSERT INTO all_books (title, novel_source, synopsis, author, updated_on, newest_chapter, image_url, rating, status, novel_type, followers, chapters)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (
-            data['title'],
-            'Light Novel Pub',
-            data['synopsis'],
-            data.get('author'),
-            datetime.now(),
-            data['newest_chapter'],
-            data['image_url'],
-            data['rating'],
-            data['status'],
-            data['novel_type'],
-            data['followers'],
-            json.dumps(data['chapters'])
-        ))
-        connection.commit()
-        return Response(data, status=status.HTTP_201_CREATED)
-    
-    def get(self, request):
-        lightNovels = fetch_books_as_dict("SELECT * FROM all_books WHERE novel_source='Light Novel Pub'")
-        return Response(lightNovels)
-
-class LightNovelPubUpdateView(views.APIView):
-    def put(self, request, title):
-        data = request.data
-        cursor = connection.cursor()
-        cursor.execute("""
-            UPDATE all_books SET
-            synopsis = %s,
-            author = %s,
-            updated_on = %s,
-            newest_chapter = %s,
-            image_url = %s,
-            rating = %s,
-            status = %s,
-            novel_type = %s,
-            followers = %s,
-            chapters = %s
-            WHERE title = %s AND novel_source = 'Light Novel Pub'
-        """, (
-            data['synopsis'],
-            data.get('author'),
-            datetime.now(),
-            data['newest_chapter'],
-            data['image_url'],
-            data['rating'],
-            data['status'],
-            data['novel_type'],
-            data['followers'],
-            json.dumps(data['chapters']),
-            title
-        ))
-        connection.commit()
-        return Response(data)
-
-class LightNovelPubSearchView(views.APIView):
-    def get(self, request):
-        title_query = request.GET.get('title', '')
-        lightNovels = fetch_books_as_dict(f"SELECT * FROM all_books WHERE title ILIKE '%{title_query}%' AND novel_source='Light Novel Pub'")
-        return Response(lightNovels)
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class BookDetailsView(views.APIView):
     def get(self, request, title):
-        book = fetch_books_as_dict(f"SELECT * FROM all_books WHERE title = '{title}'")
-        if not book:
-            return Response({'message': 'Book not found'}, status=status.HTTP_404_NOT_FOUND)
-        return Response(book[0])
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT * FROM all_books WHERE title = %s", [title])
+                book = cursor.fetchone()
+                if not book:
+                    return Response({'message': 'Book not found'}, status=status.HTTP_404_NOT_FOUND)
+
+                # Fetch column names to construct the dictionary
+                columns = [col[0] for col in cursor.description]
+                book_dict = dict(zip(columns, book))
+
+            return Response(book_dict)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

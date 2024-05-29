@@ -18,7 +18,7 @@ const TrackerPage = () => {
 
   const { user } = useAuth();
 
-  const filteredBooks = trackingList.filter(book =>
+  const filteredBooks = trackingList && trackingList.filter(book =>
     book.title?.toLowerCase().includes(titleQuery.toLowerCase()) 
     && book.novel_source?.toLowerCase().includes(sourceQuery.toLowerCase()) 
     && book.novel_type?.toLowerCase().includes(typeQuery.toLowerCase()) 
@@ -40,9 +40,10 @@ const TrackerPage = () => {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        // setTrackingList(data.readingList);
-        const readingList = JSON.parse(data.reading_list);
-        setTrackingList(readingList);
+        // console.log(data.reading_list);
+        setTrackingList(data.reading_list);
+        // const readingList = JSON.parse(data.reading_list);
+        // setTrackingList(readingList);
         setBookSource(extractUniqueAttributes(data.reading_list, 'novel_source'));
         setBookType(extractUniqueAttributes(data.reading_list, 'novel_type'));
         setUserTags(extractUniqueAttributes(data.reading_list, 'user_tag'));

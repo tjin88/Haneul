@@ -17,7 +17,8 @@ const BookDetailsWrapper = () => {
     const fetchBookDetails = async () => {
       try {
         const response = await fetch(`/centralized_API_backend/api/book-details/${encodeURIComponent(bookTitle)}`);
-        const data = await response.json();
+        let data = await response.json();
+        data.chapters = JSON.parse(data.chapters);
         setBookDetails(data);
       } catch (error) {
         console.error('Error fetching book details:', error);
