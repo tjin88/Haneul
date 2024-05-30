@@ -40,12 +40,12 @@ class HomeNovelGetView(views.APIView):
                            "Nano Machine", "Chronicles of the Demon Faction", "Academy’s Genius Swordmaster",
                            "Shadow Slave", "Reverend Insanity", "Super Gene (Web Novel)", "Martial World (Web Novel)")
         
-        carousel_books = fetch_books_as_dict(f"SELECT * FROM all_books WHERE title IN {carousel_titles}")
-        recently_updated_books = fetch_books_as_dict("SELECT * FROM all_books ORDER BY updated_on DESC LIMIT 10")
-        manga_books = fetch_books_as_dict("SELECT * FROM all_books WHERE novel_type='Manga' ORDER BY rating DESC LIMIT 10")
-        manhua_books = fetch_books_as_dict("SELECT * FROM all_books WHERE novel_type='Manhua' ORDER BY rating DESC LIMIT 10")
-        manhwa_books = fetch_books_as_dict("SELECT * FROM all_books WHERE novel_type='Manhwa' ORDER BY rating DESC LIMIT 10")
-        light_novel_books = fetch_books_as_dict("SELECT * FROM all_books WHERE novel_type='Light Novel' ORDER BY rating DESC LIMIT 10")
+        carousel_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter FROM all_books WHERE title IN {carousel_titles}")
+        recently_updated_books = fetch_books_as_dict("SELECT title, image_url, newest_chapter, rating FROM all_books ORDER BY updated_on DESC LIMIT 10")
+        manga_books = fetch_books_as_dict("SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manga' ORDER BY rating DESC LIMIT 10")
+        manhua_books = fetch_books_as_dict("SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manhua' ORDER BY rating DESC LIMIT 10")
+        manhwa_books = fetch_books_as_dict("SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manhwa' ORDER BY rating DESC LIMIT 10")
+        light_novel_books = fetch_books_as_dict("SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Light Novel' ORDER BY rating DESC LIMIT 10")
 
         cursor = connection.cursor()
         cursor.execute("SELECT COUNT(*) FROM all_books WHERE novel_type='Manga'")
@@ -69,11 +69,6 @@ class HomeNovelGetView(views.APIView):
             "numManhwa": total_number_of_manhwa,
             "numManhua": total_number_of_manhua
         })
-
-class AllNovelGetView(views.APIView):
-    def get(self, request):
-        all_books = fetch_books_as_dict("SELECT * FROM all_books")
-        return Response(all_books)
 
 class AllNovelSearchView(views.APIView):
     def get(self, request):
@@ -124,7 +119,7 @@ class AllNovelBrowseView(views.APIView):
         total_count = fetch_count(count_query)
 
         # Query to get the paginated results
-        query = f"SELECT * FROM all_books WHERE {condition_str} LIMIT {page_size} OFFSET {offset}"
+        query = f"SELECT title, image_url, newest_chapter FROM all_books WHERE {condition_str} LIMIT {page_size} OFFSET {offset}"
         browse_results = fetch_books_as_dict(query)
 
         response_data = {

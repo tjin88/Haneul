@@ -35,7 +35,6 @@ const Home = ({ lightMode }) => {
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        // const response = await fetch(`/centralized_API_backend/api/all-novels/`);
         const response = await fetch(`/centralized_API_backend/api/home-novels/`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

@@ -70,7 +70,7 @@ const Browse = ({ lightMode }) => {
       } else {
         setError('');
       }
-    }, 500); // 500ms delay
+    }, 300); // 300ms delay
 
     return () => clearTimeout(debounceFetchData); 
   }, [searchTerm, genreFilter, sortType, page]);

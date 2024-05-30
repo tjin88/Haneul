@@ -1,5 +1,6 @@
 .trackerTableContainer {
-  max-height: 600px;
+  // Got all heights from header, footer, title, and search area
+  height: calc(90vh - 117px - 5.5rem);
   overflow-y: auto;
   border-radius: 10px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);

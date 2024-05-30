@@ -6,11 +6,13 @@ import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 
 const BookCarousel = ({ books }) => {
+  const slidesToShow = books.length > 6 ? 6 : books.length;
+
   const settings = {
     dots: true, // Enables dot indicators below the carousel
     infinite: true,
     speed: 500,
-    slidesToShow: 6, // Shows 6 books at once
+    slidesToShow: slidesToShow,
     slidesToScroll: 1,
     draggable: true,
     swipe: true,

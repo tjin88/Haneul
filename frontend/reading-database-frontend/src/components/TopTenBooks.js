@@ -1,4 +1,5 @@
 import React from 'react';
+import BookCarousel from './BookCarousel';
 import './TopTenBooks.scss';
 
 const TopTenBooks = ({ title, books, numBooks }) => {
@@ -9,20 +10,7 @@ const TopTenBooks = ({ title, books, numBooks }) => {
         <h2 id="collection-heading">{title}</h2>
         <a href="/browse" className="see-all">See {numberOfBooks <= 1 ? `${numberOfBooks} Book` : `All ${numberOfBooks} Books`} →</a>
       </div>
-      <div className="books-slider relative">
-        <div className="books-list flex gap-4 overflow-x-auto">
-          {books.slice(0, 11).map((book, index) => (
-            <a href={`/${encodeURIComponent(book.title)}`} key={index} className="book-card">
-              <img src={book.image_url} alt={book.title} className="book-cover rounded-lg" />
-              {/* TODO: Make these clickable --> Should go to the website's page for that book */}
-              <div className="book-info">
-                <p className="book-title">{book.title}</p>
-                <p className="tracking-info">Rating: {book.rating}</p>
-              </div>
-            </a>
-          ))}
-        </div>
-      </div>
+      <BookCarousel books={books} />
     </div>
   );
 };

@@ -1,15 +1,12 @@
 from django.urls import path, re_path
 
-from .views import HomeNovelGetView, AllNovelGetGenres, AllNovelGetView, AllNovelSearchView, login_view, register_view, UserProfileReadingListView, update_reading_list, delete_book_from_reading_list, update_to_max_chapter, BookDetailsView, AllNovelBrowseView
+from .views import HomeNovelGetView, AllNovelGetGenres, AllNovelSearchView, login_view, register_view, UserProfileReadingListView, update_reading_list, delete_book_from_reading_list, update_to_max_chapter, BookDetailsView, AllNovelBrowseView
 
 urlpatterns = [
     path('api/home-novels/', HomeNovelGetView.as_view(), name='get_all_novels'),
     path('api/genres/', AllNovelGetGenres.as_view(), name='get_all_genres'),
-
     # TODO: Might need to change this to include light novel vs Manga, or source? Not sure
     path('api/book-details/<str:title>/', BookDetailsView.as_view(), name='book-details'),
-
-    path('api/all-novels/', AllNovelGetView.as_view(), name='get_all_novels'),
     path('api/all-novels/search', AllNovelSearchView.as_view(), name='search_all_novels'),
     path('api/all-novels/browse', AllNovelBrowseView.as_view(), name='browse_all_novels'),
 
