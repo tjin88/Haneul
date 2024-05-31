@@ -40,7 +40,7 @@ const Browse = ({ lightMode }) => {
       setIsFetching(true);
       const title = encodeURIComponent(searchTerm);
       const genre = encodeURIComponent(genreFilter.map(g => g.value).join(','));
-      const sort = encodeURIComponent(sortType.value);
+      const sort = encodeURIComponent(sortType.map(g => g.value).join(','));
       const response = await fetch(`/centralized_API_backend/api/all-novels/browse?title=${title}&genre=${genre}&page=${page}&sortType=${sort}`);
       const data = await response.json();
       if (page === 1) {
@@ -100,11 +100,10 @@ const Browse = ({ lightMode }) => {
     { value: 'manga', label: 'Manga' },
     { value: 'manhua', label: 'Manhua' },
     { value: 'manhwa', label: 'Manhwa' },
+    { value: 'light_novel', label: 'Light Novel' },
     { value: 'rating', label: 'Rating' },
-    { value: 'newest', label: 'Newest Added' },
     { value: 'updated', label: 'Recently Updated' },
     { value: 'followers', label: 'Most Followers' },
-    { value: 'chapters', label: 'Total Chapters' }
   ];
 
   return (
@@ -126,6 +125,8 @@ const Browse = ({ lightMode }) => {
         placeholder="Select genres..."
       />
       <Select
+        isMulti
+        components={animatedComponents}
         value={sortType}
         onChange={handleSortChange}
         options={sortOptions}

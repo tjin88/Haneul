@@ -81,49 +81,104 @@ class AllNovelSearchView(views.APIView):
             conditions.append(f"title ILIKE '%{title_query}%'")
         if genre:
             conditions.append(f"genres ILIKE '%{genre}%'")
-        
+
         condition_str = " AND ".join(conditions) if conditions else "1=1"
 
         results = []
-        
+
         if novel_source in ['Light Novel Pub', 'AsuraScans']:
             results = fetch_books_as_dict(f"SELECT * FROM all_books WHERE {condition_str} AND novel_source='{novel_source}'")
         else:
             results = fetch_books_as_dict(f"SELECT * FROM all_books WHERE {condition_str}")
 
         return Response(results)
-    
+
 class AllNovelBrowseView(views.APIView):
     def get(self, request):
         title_query = request.GET.get('title', '')
-        genre = request.GET.get('genre', '')
-        novel_source = request.GET.get('novel_source', '')
+        genres = request.GET.get('genre', '').split(',')
+        sort_types = request.GET.get('sortType', '').split(',')
         page = int(request.GET.get('page', 1))
         page_size = int(request.GET.get('page_size', 20))
 
         conditions = []
         if title_query:
-            conditions.append(f"title ILIKE '%{title_query}%'")
-        if genre:
-            conditions.append(f"genres ILIKE '%{genre}%'")
-        if novel_source:
-            conditions.append(f"novel_source='{novel_source}'")
+            conditions.append(f"ab.title ILIKE '%{title_query}%'")
+        
+        genre_conditions = []
+        if genres and any(genres):
+            genre_conditions = [f"g.name = '{genre.strip().lower()}'" for genre in genres if genre.strip()]
+            if genre_conditions:
+                genre_subquery = f"""
+                    SELECT abg.allbooks_title, abg.allbooks_novel_source
+                    FROM all_books_genres abg
+                    JOIN genre g ON abg.genre_id = g.id
+                    WHERE {" OR ".join(genre_conditions)}
+                    GROUP BY abg.allbooks_title, abg.allbooks_novel_source
+                    HAVING COUNT(DISTINCT g.name) = {len(genre_conditions)}
+                """
+                conditions.append(f"(ab.title, ab.novel_source) IN ({genre_subquery})")
+
+        # Novel type conditions
+        novel_type_conditions = []
+        for sort_type in sort_types:
+            if sort_type in ['manga', 'manhua', 'manhwa']:
+                novel_type_conditions.append(f"ab.novel_type = '{sort_type.capitalize()}'")
+            elif sort_type == 'light_novel':
+                novel_type_conditions.append("ab.novel_type = 'Light Novel'")
+    
+        if novel_type_conditions:
+            conditions.append(f"({' OR '.join(novel_type_conditions)})")
 
         condition_str = " AND ".join(conditions) if conditions else "1=1"
+
+        # Sorting logic
+        sort_mapping = {
+            'rating': 'rating DESC',
+            'updated': 'updated_on DESC',
+            'followers': 'followers DESC',
+        }
+
+        order_by_clauses = []
+        for sort_type in sort_types:
+            if sort_type in sort_mapping:
+                order_by_clauses.append(sort_mapping[sort_type])
+    
+        order_by = ', '.join(order_by_clauses) if order_by_clauses else ''
 
         # Calculate offset for pagination
         offset = (page - 1) * page_size
 
-        # Query to get the total count of books
-        count_query = f"SELECT COUNT(*) FROM all_books WHERE {condition_str}"
-        total_count = fetch_count(count_query)
-
         # Query to get the paginated results
-        query = f"SELECT title, image_url, newest_chapter FROM all_books WHERE {condition_str} LIMIT {page_size} OFFSET {offset}"
+        base_columns = ["title", "image_url", "newest_chapter"]
+        additional_columns = []
+        if 'rating' in sort_types:
+            additional_columns.append("rating")
+        if 'updated' in sort_types:
+            additional_columns.append("updated_on")
+        if 'followers' in sort_types:
+            additional_columns.append("followers")
+
+        select_columns = base_columns + additional_columns
+
+        query = f"""
+            SELECT {', '.join(select_columns)}
+            FROM (
+                SELECT ab.title, ab.image_url, ab.newest_chapter
+                       {', ' + ', '.join(additional_columns) if additional_columns else ''}, 
+                       ROW_NUMBER() OVER (PARTITION BY ab.title ORDER BY {order_by if order_by else 'ab.title'}) as row_num
+                FROM all_books ab
+                LEFT JOIN all_books_genres abg ON ab.title = abg.allbooks_title AND ab.novel_source = abg.allbooks_novel_source
+                LEFT JOIN genre g ON abg.genre_id = g.id
+                WHERE {condition_str}
+            ) subquery
+            WHERE row_num = 1
+            ORDER BY {order_by if order_by else 'title'}
+            LIMIT {page_size} OFFSET {offset}
+        """
         browse_results = fetch_books_as_dict(query)
 
         response_data = {
-            'total_count': total_count,
             'page': page,
             'page_size': page_size,
             'results': browse_results

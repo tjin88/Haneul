@@ -35,8 +35,6 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
               }
               const data = await response.json();
               setTrackingList(data.reading_list);
-            //   const readingList = JSON.parse(data.reading_list);
-            //   setTrackingList(readingList);
           } catch (error) {
             console.error('Error fetching tracking list:', error);
           }
@@ -51,7 +49,6 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
         if (givenBook) {
             setBookTitle(givenBook.title);
 
-            // TODO: Update the givenBook to have chapters and genres --> No need to do excess API calls
             const loadBookDetails = async () => {
                 if (givenBook && (!givenBook.chapters || !givenBook.genres)) {
                     const book = await fetchBookDetails(givenBook.title, givenBook.novel_source);
@@ -172,7 +169,7 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                         onChange={(e) => setLatestReadChapter(e.target.value)}
                     >   
                         <option value="" disabled>Latest Read Chapter</option>
-                        {Object.keys(bookDetails.chapters).map((chapter, index) => (
+                        {Object.keys(JSON.parse(bookDetails.chapters)).map((chapter, index) => (
                             <option key={index} value={chapter}>Chapter {chapter}</option>
                         ))}
                     </select>}
