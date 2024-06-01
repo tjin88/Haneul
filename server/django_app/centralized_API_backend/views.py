@@ -14,6 +14,7 @@ import jwt
 from datetime import datetime, timedelta
 from django.conf import settings
 from django.db import connection
+from django.views.decorators.http import require_http_methods
 
 def fetch_books_as_dict(query):
     cursor = connection.cursor()
@@ -297,6 +298,7 @@ def update_reading_list(request):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 class UserProfileReadingListView(views.APIView):
     # TODO: Add tokens for user authentication
     # permission_classes = [IsAuthenticated]
@@ -318,7 +320,7 @@ class UserProfileReadingListView(views.APIView):
                     SELECT rl.id, rl.reading_status, rl.user_tag, rl.latest_read_chapter, 
                            ab.title AS book_title, ab.novel_source, ab.novel_type, ab.newest_chapter, 
                            ab.chapters->>rl.latest_read_chapter AS latest_read_chapter_link, 
-                           ab.chapters->>ab.newest_chapter AS newest_chapter_link
+                           ab.chapters AS chapters_json
                     FROM reading_list rl
                     JOIN all_books ab ON rl.book_title = ab.title AND rl.book_novel_source = ab.novel_source
                     WHERE rl.profile_id = (
@@ -330,6 +332,19 @@ class UserProfileReadingListView(views.APIView):
                 # Prepare the reading list response
                 reading_list = []
                 for row in reading_list_results:
+                    chapters_json = row[9]
+
+                    if isinstance(chapters_json, str):
+                        try:
+                            chapters_json = chapters_json.replace('\\"', '"')  # Remove extra escape characters if necessary
+                            chapters_dict = json.loads(chapters_json)
+                        except json.JSONDecodeError:
+                            chapters_dict = {}
+                    else:
+                        chapters_dict = chapters_json
+
+                    newest_chapter_link = self.get_newest_chapter_link(chapters_dict)
+                    
                     reading_list.append({
                         'id': row[0],
                         'reading_status': row[1],
@@ -340,7 +355,7 @@ class UserProfileReadingListView(views.APIView):
                         'novel_type': row[6],
                         'newest_chapter': row[7],
                         'latest_read_chapter_link': row[8],
-                        'newest_chapter_link': row[9]
+                        'newest_chapter_link': newest_chapter_link
                     })
 
             response = Response({'reading_list': reading_list})
@@ -349,10 +364,83 @@ class UserProfileReadingListView(views.APIView):
             response["Access-Control-Allow-Origin"] = "*"
             response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
             response["Access-Control-Allow-Headers"] = "Origin, Content-Type, Accept"
+
+            print(response)
             return response
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def get_newest_chapter_link(self, chapters):
+        max_chapter = -1
+        max_link = ""
+        for chapter_key, link in chapters.items():
+            try:
+                chapter_num = float(re.findall(r"[-+]?\d*\.\d+|\d+", chapter_key)[0])
+                if chapter_num > max_chapter:
+                    max_chapter = chapter_num
+                    max_link = link
+            except (ValueError, IndexError):
+                continue
+        return max_link
+
+# class UserProfileReadingListView(views.APIView):
+#     # TODO: Add tokens for user authentication
+#     # permission_classes = [IsAuthenticated]
+
+#     def get(self, request, email):
+#         try:
+#             with connection.cursor() as cursor:
+#                 # Fetch user
+#                 cursor.execute("SELECT id FROM auth_user WHERE email = %s", [email])
+#                 user_result = cursor.fetchone()
+                
+#                 if not user_result:
+#                     return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+                
+#                 user_id = user_result[0]
+
+#                 # Fetch reading list
+#                 cursor.execute("""
+#                     SELECT rl.id, rl.reading_status, rl.user_tag, rl.latest_read_chapter, 
+#                            ab.title AS book_title, ab.novel_source, ab.novel_type, ab.newest_chapter, 
+#                            ab.chapters->>rl.latest_read_chapter AS latest_read_chapter_link, 
+#                            ab.chapters->>ab.newest_chapter AS newest_chapter_link
+#                     FROM reading_list rl
+#                     JOIN all_books ab ON rl.book_title = ab.title AND rl.book_novel_source = ab.novel_source
+#                     WHERE rl.profile_id = (
+#                         SELECT id FROM profile WHERE user_id = %s
+#                     )
+#                 """, [user_id])
+#                 reading_list_results = cursor.fetchall()
+
+#                 # Prepare the reading list response
+#                 reading_list = []
+#                 for row in reading_list_results:
+#                     reading_list.append({
+#                         'id': row[0],
+#                         'reading_status': row[1],
+#                         'user_tag': row[2],
+#                         'latest_read_chapter': row[3],
+#                         'title': row[4],
+#                         'novel_source': row[5],
+#                         'novel_type': row[6],
+#                         'newest_chapter': row[7],
+#                         'latest_read_chapter_link': row[8],
+#                         'newest_chapter_link': row[9]
+#                     })
+
+#             response = Response({'reading_list': reading_list})
+#             # TODO: Handle CORS better. 
+#             # Currently I am allowing all origins, which must be cha
+#             # \nged before deploying
+#             response["Access-Control-Allow-Origin"] = "*"
+#             response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+#             response["Access-Control-Allow-Headers"] = "Origin, Content-Type, Accept"
+#             return response
+
+#         except Exception as e:
+#             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['DELETE'])
 def delete_book_from_reading_list(request):
@@ -470,3 +558,87 @@ class AllNovelGetGenres(views.APIView):
             return Response(genres)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@csrf_exempt
+@require_http_methods(["OPTIONS", "POST"])
+@api_view(['POST'])
+def update_reading(request):
+    if request.method == 'OPTIONS':
+        response = JsonResponse({'status': 'ok'})
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "Authorization, Content-Type, X-User-Email"
+        return response
+
+    try:
+        data = json.loads(request.body)
+        book_title = data.get('bookTitle')
+        chapter = data.get('chapter')
+        novel_source = data.get('novel_source')
+        user_email = request.headers.get('X-User-Email')
+        token = request.headers.get('Authorization').split()[1]  # Assuming Bearer token
+        print(f'user_email: {user_email}, token: {token}, book_title: {book_title}, chapter: {chapter}, novel_source: {novel_source}')
+
+        if not user_email or not token:
+            return JsonResponse({'status': 'failure', 'error': 'User email or token not provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verify token
+        try:
+            decoded = jwt.decode(token, settings.JWT_TOKEN, algorithms=['HS256'])
+            if decoded['username'] != user_email:
+                raise jwt.InvalidTokenError
+        except jwt.ExpiredSignatureError:
+            return JsonResponse({'status': 'failure', 'error': 'Token has expired'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return JsonResponse({'status': 'failure', 'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        print(f'Valid token for user: {user_email}')
+
+        with connection.cursor() as cursor:
+            # Fetch user by email
+            cursor.execute("SELECT id FROM auth_user WHERE email = %s", [user_email])
+            user_result = cursor.fetchone()
+            if not user_result:
+                return JsonResponse({'status': 'failure', 'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            user_id = user_result[0]
+
+            # Fetch profile by user_id
+            cursor.execute("SELECT id FROM profile WHERE user_id = %s", [user_id])
+            profile_result = cursor.fetchone()
+            if not profile_result:
+                return JsonResponse({'status': 'failure', 'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
+            profile_id = profile_result[0]
+
+            # Check if the book is already in the reading list
+            cursor.execute("""
+                SELECT id FROM reading_list
+                WHERE profile_id = %s AND book_title = %s AND book_novel_source = %s
+            """, [profile_id, book_title, novel_source])
+            existing_book_result = cursor.fetchone()
+
+            if existing_book_result:
+                print(f'Existing book found. reading_list ID: {existing_book_result[0]}')
+                print(f'Updating the latest read chapter for book id {existing_book_result[0]} to {chapter}')
+                # Update the existing book
+                cursor.execute("""
+                    UPDATE reading_list
+                    SET latest_read_chapter = %s
+                    WHERE id = %s
+                """, [chapter, existing_book_result[0]])
+            else:
+                print('New book. Adding to reading list')
+                print(f'Adding book {book_title} from {novel_source} at chapter {chapter} to reading list for user {user_email}')
+                # Add the new book to the reading list
+                cursor.execute("""
+                    INSERT INTO reading_list (profile_id, book_title, book_novel_source, latest_read_chapter, reading_status, user_tag)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, [profile_id, book_title, novel_source, chapter, "Reading", ""])
+
+        response = JsonResponse({'status': 'success'})
+        response["Access-Control-Allow-Origin"] = "*"
+        return response
+
+    except Exception as e:
+        response = JsonResponse({'status': 'failure', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        response["Access-Control-Allow-Origin"] = "*"
+        return response

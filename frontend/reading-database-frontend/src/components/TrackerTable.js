@@ -142,6 +142,7 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
                       onChange={handleSelectAll}
                   />
                 </th>
+                <th>ID</th>
                 <th>Title</th>
                 <th>Source</th>
                 <th>Last Chapter Read</th>
@@ -153,7 +154,7 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
           </thead>
           <tbody>
               {books && books.map((book, index) => (
-                  <tr key={index}>
+                <tr key={index}>
                   <td>
                       <input
                       type="checkbox"
@@ -161,6 +162,7 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
                       onChange={() => handleBookSelection(book.title)}
                       />
                   </td>
+                  <td>{book.id}</td>
                   <td><a href={book.title} target="_blank" rel="noopener noreferrer">{book.title}</a></td>
                   <td>{book.novel_source}</td>
                   <td><a href={book.latest_read_chapter_link} target="_blank" rel="noopener noreferrer">{book.latest_read_chapter}</a></td>
@@ -172,7 +174,7 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
                       <button onClick={() => handleEditBook(book)}>Edit</button>
                       {/* <button onClick={() => deleteBook(book.title, book.novel_source)}>Delete</button> */}
                   </td>
-                  </tr>
+                </tr>
               ))}
           </tbody>
         </table>

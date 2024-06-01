@@ -15,6 +15,7 @@ from decouple import config
 import os
 from dotenv import load_dotenv
 from urllib.parse import quote_plus
+from corsheaders.defaults import default_headers
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -126,6 +127,9 @@ DATABASES = {
 
 # TODO: REMOVE THIS BEFORE DEPLOYING*****
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'X-User-Email',
+]
 
 # CORS_ALLOWED_ORIGINS = [
 #     "http://localhost:3000",

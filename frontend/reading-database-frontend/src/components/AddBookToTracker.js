@@ -11,6 +11,7 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
     const [isEditting, setIsEditting] = useState(false);
     const [bookDetails, setBookDetails] = useState(null);
     const { user } = useAuth();
+    const [bookChapters, setBookChapters] = useState({});
 
     const fetchBookDetails = async (title, source) => {
         try {
@@ -27,17 +28,17 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
 
     const fetchTrackingList = async () => {
         if (user) {
-          try {
-              const encodedEmail = encodeURIComponent(user.username);
-              const response = await fetch(`/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list`);
-              if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-              }
-              const data = await response.json();
-              setTrackingList(data.reading_list);
-          } catch (error) {
-            console.error('Error fetching tracking list:', error);
-          }
+            try {
+                const encodedEmail = encodeURIComponent(user.username);
+                const response = await fetch(`/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                setTrackingList(data.reading_list);
+            } catch (error) {
+                console.error('Error fetching tracking list:', error);
+            }
         }
     };
 
@@ -62,9 +63,22 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                 }
             };
             loadBookDetails();
+        }
+    }, [givenBook]);
+
+    useEffect(() => {
+        if (bookDetails) {
+            try {
+                if (typeof bookDetails.chapters === 'string') {
+                    setBookChapters(JSON.parse(bookDetails.chapters));
+                } else { 
+                    setBookChapters(bookDetails.chapters); 
+                }
+            } catch (error) {
+                console.error('Error parsing chapters:', error);
+            }
 
             const bookInList = trackingList.find(book => book.title === givenBook.title && book.novel_source === givenBook.novel_source);
-
             if (bookInList) {
                 setReadingStatus(bookInList.reading_status);
                 setUserTags(bookInList.user_tag);
@@ -72,16 +86,16 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                 setIsEditting(true);
             }
         }
-    }, [givenBook, trackingList]);
+    }, [bookDetails, givenBook, trackingList]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-    
+
         if (!bookTitle || !readingStatus || !latestReadChapter) {
             alert('Please fill in all fields');
             return;
         }
-    
+
         if (user) {
             try {
                 const response = await fetch(`/centralized_API_backend/api/profiles/update_reading_list/`, {
@@ -102,11 +116,11 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
+
                 if (onBookAdded) {
                     onBookAdded();
                 }
-    
+
                 setBookTitle('');
                 setReadingStatus('');
                 setUserTags('');
@@ -163,13 +177,13 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                         onChange={(e) => setUserTags(e.target.value)} 
                         placeholder="User Tag (optional)" 
                     />
-                    {bookDetails && bookDetails.chapters && <select
+                    {bookChapters && <select
                         className='formInput'
                         value={latestReadChapter}
                         onChange={(e) => setLatestReadChapter(e.target.value)}
                     >   
                         <option value="" disabled>Latest Read Chapter</option>
-                        {Object.keys(JSON.parse(bookDetails.chapters)).map((chapter, index) => (
+                        {Object.keys(bookChapters).map((chapter, index) => (
                             <option key={index} value={chapter}>Chapter {chapter}</option>
                         ))}
                     </select>}

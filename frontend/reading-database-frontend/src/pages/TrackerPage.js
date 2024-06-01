@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import TrackerTable from '../components/TrackerTable';
+import Select from 'react-select';
+import makeAnimated from 'react-select/animated';
 import { useAuth } from '../components/AuthContext';
 import './TrackerPage.scss';
 
 const TrackerPage = () => {
   const [trackingList, setTrackingList] = useState([]);
-  const [titleQuery, setTitleQuery] = useState('');                     // Solo Leveling, Absolute _, etc.
-  const [sourceQuery, setSourceQuery] = useState('');                   // AsuraScans, LightNovelPub, etc.
-  const [typeQuery, setTypeQuery] = useState('');                       // Manhwa, Manhua, Light Novel, etc.
-  const [readingStatusQuery, setReadingStatusQuery] = useState('');     // Reading, Dropped, Completed, etc.
-  const [userTagQuery, setUserTagQuery] = useState('');
+  const [titleQuery, setTitleQuery] = useState('');
+  const [sourceQuery, setSourceQuery] = useState([]);
+  const [typeQuery, setTypeQuery] = useState([]);
+  const [readingStatusQuery, setReadingStatusQuery] = useState([]);
+  const [userTagQuery, setUserTagQuery] = useState([]);
 
   const [bookSource, setBookSource] = useState([]);
   const [bookType, setBookType] = useState([]);
@@ -17,13 +19,14 @@ const TrackerPage = () => {
   const [userTags, setUserTags] = useState([]);
 
   const { user } = useAuth();
+  const animatedComponents = makeAnimated();
 
   const filteredBooks = trackingList && trackingList.filter(book =>
-    book.title?.toLowerCase().includes(titleQuery.toLowerCase()) 
-    && book.novel_source?.toLowerCase().includes(sourceQuery.toLowerCase()) 
-    && book.novel_type?.toLowerCase().includes(typeQuery.toLowerCase()) 
-    && book.reading_status?.toLowerCase().includes(readingStatusQuery.toLowerCase()) 
-    && book.user_tag?.toLowerCase().includes(userTagQuery.toLowerCase()) 
+    book.title?.toLowerCase().includes(titleQuery.toLowerCase()) &&
+    (sourceQuery.length === 0 || sourceQuery.some(source => book.novel_source?.toLowerCase() === source.value.toLowerCase())) &&
+    (typeQuery.length === 0 || typeQuery.some(type => book.novel_type?.toLowerCase() === type.value.toLowerCase())) &&
+    (readingStatusQuery.length === 0 || readingStatusQuery.some(status => book.reading_status?.toLowerCase() === status.value.toLowerCase())) &&
+    (userTagQuery.length === 0 || userTagQuery.some(tag => book.user_tag?.toLowerCase() === tag.value.toLowerCase()))
   );
 
   const extractUniqueAttributes = (trackingList, attribute) => {
@@ -40,14 +43,11 @@ const TrackerPage = () => {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        // console.log(data.reading_list);
         setTrackingList(data.reading_list);
-        // const readingList = JSON.parse(data.reading_list);
-        // setTrackingList(readingList);
-        setBookSource(extractUniqueAttributes(data.reading_list, 'novel_source'));
-        setBookType(extractUniqueAttributes(data.reading_list, 'novel_type'));
-        setUserTags(extractUniqueAttributes(data.reading_list, 'user_tag'));
-        setReadingStatus(extractUniqueAttributes(data.reading_list, 'reading_status'));
+        setBookSource(extractUniqueAttributes(data.reading_list, 'novel_source').map(source => ({ value: source, label: source })));
+        setBookType(extractUniqueAttributes(data.reading_list, 'novel_type').map(type => ({ value: type, label: type })));
+        setUserTags(extractUniqueAttributes(data.reading_list, 'user_tag').map(tag => ({ value: tag, label: tag })));
+        setReadingStatus(extractUniqueAttributes(data.reading_list, 'reading_status').map(status => ({ value: status, label: status })));
       } catch (error) {
         console.error('Error fetching tracking list:', error);
       }
@@ -62,6 +62,22 @@ const TrackerPage = () => {
     fetchTrackingList();
   };
 
+  const handleSourceChange = (selectedOptions) => {
+    setSourceQuery(selectedOptions || []);
+  };
+
+  const handleTypeChange = (selectedOptions) => {
+    setTypeQuery(selectedOptions || []);
+  };
+
+  const handleStatusChange = (selectedOptions) => {
+    setReadingStatusQuery(selectedOptions || []);
+  };
+
+  const handleTagChange = (selectedOptions) => {
+    setUserTagQuery(selectedOptions || []);
+  };
+
   return (
     <div className='trackerPage'>
       {user && user.profileName
@@ -74,42 +90,42 @@ const TrackerPage = () => {
         value={titleQuery}
         onChange={(e) => setTitleQuery(e.target.value)}
       />
-      <select
+      <Select
+        isMulti
+        components={animatedComponents}
         value={sourceQuery}
-        onChange={(e) => setSourceQuery(e.target.value)}
-      >
-        <option value="">All Book Sources</option>
-        {bookSource.map((source, index) => (
-          <option key={index} value={source}>{source}</option>
-        ))}
-      </select>
-      <select
+        onChange={handleSourceChange}
+        options={bookSource}
+        className="select"
+        placeholder="Select sources..."
+      />
+      <Select
+        isMulti
+        components={animatedComponents}
         value={typeQuery}
-        onChange={(e) => setTypeQuery(e.target.value)}
-      >
-        <option value="">All Book Types</option>
-        {bookType.map((type, index) => (
-          <option key={index} value={type}>{type}</option>
-        ))}
-      </select>
-      <select
+        onChange={handleTypeChange}
+        options={bookType}
+        className="select"
+        placeholder="Select types..."
+      />
+      <Select
+        isMulti
+        components={animatedComponents}
         value={readingStatusQuery}
-        onChange={(e) => setReadingStatusQuery(e.target.value)}
-      >
-        <option value="">All Reading Status</option>
-        {readingStatus.map((status, index) => (
-          <option key={index} value={status}>{status}</option>
-        ))}
-      </select>
-      <select
+        onChange={handleStatusChange}
+        options={readingStatus}
+        className="select"
+        placeholder="Select reading statuses..."
+      />
+      <Select
+        isMulti
+        components={animatedComponents}
         value={userTagQuery}
-        onChange={(e) => setUserTagQuery(e.target.value)}
-      >
-        <option value="">All User Tags</option>
-        {userTags.map((tag, index) => (
-          <option key={index} value={tag}>{tag}</option>
-        ))}
-      </select>
+        onChange={handleTagChange}
+        options={userTags}
+        className="select"
+        placeholder="Select user tags..."
+      />
       <TrackerTable books={filteredBooks} fetchTrackingList={fetchTrackingList} onBookEdited={handleBookChanged} />
     </div>
   );

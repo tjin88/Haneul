@@ -14,6 +14,15 @@ const BookDetails = ({ bookDetails }) => {
     setShowModal(false);
   };
 
+  // Check if chapters are in string format and parse if necessary
+  let chapters;
+  try {
+    chapters = typeof bookDetails.chapters === 'string' ? JSON.parse(bookDetails.chapters) : bookDetails.chapters;
+  } catch (error) {
+    console.error('Error parsing chapters:', error);
+    chapters = {};
+  }
+
   return (
     <div className="book-details">
       <div className="book-cover">
@@ -32,7 +41,7 @@ const BookDetails = ({ bookDetails }) => {
           <p className="novel_source"><strong>Source:</strong> {bookDetails.novel_source}</p>
           <p className="novel_author"><strong>Author:</strong> {bookDetails.author}</p>
           <p className="users-tracking"><strong>Followers:</strong> {bookDetails.followers}</p>
-          <p className="chapters-available"><strong>Chapters Available:</strong> {Object.keys(bookDetails.chapters).length}</p>
+          <p className="chapters-available"><strong>Chapters Available:</strong> {Object.keys(chapters).length}</p>
           <p className="novel_last_updated"><strong>Last Updated On:</strong> {last_updated.toString()}</p>
           <p className="novel_status"><strong>Status:</strong> {bookDetails.status}</p>
         </div>
@@ -41,27 +50,26 @@ const BookDetails = ({ bookDetails }) => {
           <p>{bookDetails.synopsis}</p>
         </div>
         <div className="book-chapters">
-            <h2>Chapters</h2>
-            <div className="chapter-table-container">
-                <table className="chapter-table">
-                    <thead>
-                        <tr>
-                            <th>Chapter</th>
-                            <th>Link</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {bookDetails && bookDetails.chapters && Object.entries(bookDetails.chapters).map(([chapter, link], index) => (
-                            <tr key={index}>
-                            <td>{chapter}</td>
-                            <td><a href={link} target="_blank" rel="noopener noreferrer">Read</a></td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+          <h2>Chapters</h2>
+          <div className="chapter-table-container">
+            <table className="chapter-table">
+              <thead>
+                <tr>
+                  <th>Chapter</th>
+                  <th>Link</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chapters && Object.entries(chapters).map(([chapter, link], index) => (
+                  <tr key={index}>
+                    <td>{chapter}</td>
+                    <td><a href={link} target="_blank" rel="noopener noreferrer">Read</a></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-        {/* Add additional sections as needed */}
       </div>
     </div>
   );
