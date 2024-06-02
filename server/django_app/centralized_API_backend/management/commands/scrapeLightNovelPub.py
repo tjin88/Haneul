@@ -100,7 +100,7 @@ class LightNovelPubScraper:
             title_url_tuple (tuple): A tuple containing the title and URL of the book.
         """
         if not self.continue_scraping:
-            logger.info(f"{book_number}/{total_books} was 'cancelled': {title_url_tuple[0]}")
+            # logger.info(f"{book_number}/{total_books} was 'cancelled': {title_url_tuple[0]}")
             return {'status': 'cancelled', 'title': title_url_tuple[0]}
     
         title, url = title_url_tuple

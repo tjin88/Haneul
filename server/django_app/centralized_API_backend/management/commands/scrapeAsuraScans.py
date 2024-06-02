@@ -309,7 +309,7 @@ class AsuraScansScraper:
                     columns = [col[0] for col in cursor.description]
                     existing_data_dict = dict(zip(columns, existing_book_data))
                     if not self.is_data_new(existing_data_dict, book_data):
-                        logger.info(f"Book '{book_title}' from '{book_data['novel_source']}' is up-to-date. No update needed.")
+                        # logger.info(f"Book '{book_title}' from '{book_data['novel_source']}' is up-to-date. No update needed.")
                         return 0
 
                 sql_query = """
