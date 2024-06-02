@@ -33,51 +33,36 @@ cd django_app
 python manage.py makemigrations
 python manage.py migrate
 
-### To clear "GET /centralized_API_backend/api/allbooks/" directory --> THIS WILL REMOVE ALL BOOKS!!!
-cd server
-source myenv/bin/activate
-cd django_app
-python manage.py shell
-from centralized_API_backend.models import AllBooks
-AllBooks.objects.all().delete()
-
 ### Update the requirements.txt
 cd server
 source myenv/bin/activate
 pip freeze > requirements.txt
 
 # Notes:
-- Currently scraping manga using standalone python scripts --> Port over to Django app!
+- Long term goal: Recommendation algo for users. Likely a K-means model?
+- Socket programming would work well with the extension
+- Extension has two different manifest.json files
+    - V2 if Firefox (not Chromium)
+
+# Current Tech Stack
+- Frontend: REACT
+- Backend: Django
+- Database: PostgreSQL (hosted locally, will host on same platform as server later)
+- Server: Local. Planning on using either AWS or Render (Render is nice since free tier)
+- Extension: Available on Chrome, Firefox, and Edge
+- Cron Jobs: Locally scraping AsuraScans every 2 hours, and Light Novel Pub every 4 hours
 
 # Next steps:
 
-## Immediate (Done most, still need to host and add scheduled scraping**)
-1. Scheduled Scraping (Cron*)
-    - Likely will scrape once every hour, 3 hours, or 6 hours (depends on the typical release schedule of publisher)
-2. Chrome extension
-    - Read "title" tag from "head" tag 
-3. Add original link (untranslated)
+## Immediate
+1. Add original link (untranslated)
     - Navier and other sources 
     - https://comic.naver.com/index
 
 ## Short-term (Done all except tokenization!)
 1. Update frontend to use tokenization, allowing user to stay logged in for x days
     - This will also make sure proper CSRF protection
-2. Update frontend to have less API calls to it more efficient/fast
-3. Add a page for user settings, where you can change your profile image, password, and email
-
-## Long-term
-- Look into opening multiple tabs with selenium to reduce the time to scrape all books
-    - scrapeLightNovelPub: 
-        - Currently it takes a minimum of ~17 minutes to scrape all books with NO changes
-        - With changes is usually 45 - 75 minutes. Clearly this needs to be reduced or improved.
-    - scrapeAsuraScans:
-        - Currently it is around 50-60 seconds. No changes needed atm.
-- Add AWS or other cloud hosting to run every x minutes/hours
-    - Planning on using Cron at the moment
-- Look at how to solve the problem where the novel has mutliple names
-    - Look into finding/creating a database with all novel/manga, along with their alt names?
-
+2. Add a page for user settings, where you can change your profile image, password, and email
 
 ## Websites to scrape:
 - https://void-scans.com/az-list/

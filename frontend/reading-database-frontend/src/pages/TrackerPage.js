@@ -84,48 +84,51 @@ const TrackerPage = () => {
         ? <h1>{user.profileName}'s Tracking List</h1>
         : <h1>User's Tracking List</h1>
       }
-      <input
-        type="text"
-        placeholder="Search books by title"
-        value={titleQuery}
-        onChange={(e) => setTitleQuery(e.target.value)}
-      />
-      <Select
-        isMulti
-        components={animatedComponents}
-        value={sourceQuery}
-        onChange={handleSourceChange}
-        options={bookSource}
-        className="select"
-        placeholder="Select sources..."
-      />
-      <Select
-        isMulti
-        components={animatedComponents}
-        value={typeQuery}
-        onChange={handleTypeChange}
-        options={bookType}
-        className="select"
-        placeholder="Select types..."
-      />
-      <Select
-        isMulti
-        components={animatedComponents}
-        value={readingStatusQuery}
-        onChange={handleStatusChange}
-        options={readingStatus}
-        className="select"
-        placeholder="Select reading statuses..."
-      />
-      <Select
-        isMulti
-        components={animatedComponents}
-        value={userTagQuery}
-        onChange={handleTagChange}
-        options={userTags}
-        className="select"
-        placeholder="Select user tags..."
-      />
+      <div className='filters'>
+        <input
+          className='title_filter'
+          type="text"
+          placeholder="Search books by title"
+          value={titleQuery}
+          onChange={(e) => setTitleQuery(e.target.value)}
+        />
+        <Select
+          isMulti
+          components={animatedComponents}
+          value={sourceQuery}
+          onChange={handleSourceChange}
+          options={bookSource}
+          className="select"
+          placeholder="Select sources..."
+        />
+        <Select
+          isMulti
+          components={animatedComponents}
+          value={typeQuery}
+          onChange={handleTypeChange}
+          options={bookType}
+          className="select"
+          placeholder="Select types..."
+        />
+        <Select
+          isMulti
+          components={animatedComponents}
+          value={readingStatusQuery}
+          onChange={handleStatusChange}
+          options={readingStatus}
+          className="select"
+          placeholder="Select reading statuses..."
+        />
+        <Select
+          isMulti
+          components={animatedComponents}
+          value={userTagQuery}
+          onChange={handleTagChange}
+          options={userTags}
+          className="select"
+          placeholder="Select user tags..."
+        />
+      </div>
       <TrackerTable books={filteredBooks} fetchTrackingList={fetchTrackingList} onBookEdited={handleBookChanged} />
     </div>
   );

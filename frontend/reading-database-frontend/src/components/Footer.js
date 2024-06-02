@@ -5,8 +5,7 @@ const Footer = () => {
   return (
     <footer className="footer">
       <div className="footer-content">
-        <p>&copy; {new Date().getFullYear()} TJin. All rights reserved.</p>
-        {/* You can add more footer content here such as links, social media icons, etc. */}
+        <p>&copy; {new Date().getFullYear()} TJin. All rights reserved. Please email tjin368@gmail.com for any comments or inquiries.</p>
       </div>
     </footer>
   );

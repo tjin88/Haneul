@@ -15,6 +15,10 @@ from datetime import datetime, timedelta
 from django.conf import settings
 from django.db import connection
 from django.views.decorators.http import require_http_methods
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  # Load environment variables from .env file
 
 def fetch_books_as_dict(query):
     cursor = connection.cursor()
@@ -229,7 +233,8 @@ def login_view(request):
         jwt_token = jwt.encode(payload, settings.JWT_TOKEN, algorithm='HS256')
         return Response({
             "message": "Login successful",
-            "token": jwt_token
+            "token": jwt_token,
+            "secret": os.getenv('EXTENSION_SECRET_KEY')
         }, status=status.HTTP_200_OK)
     else:
         return Response({"message": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
@@ -537,6 +542,7 @@ class BookDetailsView(views.APIView):
         try:
             with connection.cursor() as cursor:
                 cursor.execute("SELECT * FROM all_books WHERE title = %s", [title])
+                # TODO: Make this fetchall() --> then return all books, sorted by novel_type
                 book = cursor.fetchone()
                 if not book:
                     return Response({'message': 'Book not found'}, status=status.HTTP_404_NOT_FOUND)

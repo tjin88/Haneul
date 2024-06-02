@@ -4,12 +4,13 @@
   overflow-y: auto;
   border-radius: 10px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  margin: 20px;
+  margin-top: 20px;
   background: #fff;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .tableHeader {
+  width: calc(100% - 40px);
   display: flex;
   justify-content: space-between;
   align-items: center;
