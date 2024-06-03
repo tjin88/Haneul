@@ -112,9 +112,9 @@ class LightNovelPubScraper:
             if existing_book:
                 newest_chapter = self.scrape_newest_chapter(url, driver)
                 if newest_chapter == existing_book[0]:
-                    duration = datetime.datetime.now() - start_time
-                    formatted_duration = self.format_duration(duration)
-                    logger.info(f"{book_number}/{total_books} took {formatted_duration} to 'skip': {title}")
+                    # duration = datetime.datetime.now() - start_time
+                    # formatted_duration = self.format_duration(duration)
+                    # logger.info(f"{book_number}/{total_books} took {formatted_duration} to 'skip': {title}")
                     return {'status': 'skipped', 'title': title}
 
             details = self.scrape_book_details(title, url, driver)

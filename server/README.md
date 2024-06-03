@@ -65,6 +65,14 @@ pip freeze > requirements.txt
 2. Add a page for user settings, where you can change your profile image, password, and email
 
 ## Websites to scrape:
-- https://rizzcomic.com/series
-- https://reset-scans.us/mangas/?m_orderby=latest
-- 
+Easy (Similar to AsuraScans/HiveScans):
+- https://rizzfables.com/series
+
+Medium (These are all similar format):
+- https://tritinia.org/manga/700ea051-dc31-43a8-a386-b7709e11ca82/
+- https://mangasushi.org/manga/isekai-ni-shoukan-saretan-dakedo-nandemo-kireteshimau-kennou-wo-teni-ireta-node-easy-mode-deshita/
+- https://mortalsgroove.com/manga/human-mask/
+- https://lhtranslation.net/manga/maseki-gurume-mamono-no-chikara-wo-tabeta-ore-wa-saikyou/
+- https://gdscans.com/manga/dark-demon-sword/
+- https://setsuscans.com/manga/tales-of-the-demon-and-gods/
+- https://reset-scans.xyz/mangas/?m_orderby=latest

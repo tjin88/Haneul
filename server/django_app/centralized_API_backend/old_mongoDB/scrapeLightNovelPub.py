@@ -127,8 +127,6 @@ class LightNovelPubScraper:
             details = self.scrape_book_details(title, url, driver)
 
             # Attempt to update an existing book or create a new one
-            # TODO: Come back to this --> May want to store then push at the end to avoid "concurrency issues" **
-            # Look into batching --> bulk create or bulk update
             AllBooks.objects.update_or_create(
                 title=details['title'],
                 novel_source=details['novel_source'],
@@ -317,7 +315,7 @@ class LightNovelPubScraper:
                 # 'serialization': "None",
                 # 'posted_by': "None",
                 # The following two fields need to be both "datetime" fields
-                # 'posted_on': "placeholder to be found", # TODO: Find the original data posted
+                # 'posted_on': "placeholder to be found",
                 'updated_on': timezone_aware_updated_on,
                 'newest_chapter': newest_chapter,
                 'genres': genres,

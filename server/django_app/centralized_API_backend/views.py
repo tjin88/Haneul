@@ -100,7 +100,8 @@ class AllNovelSearchView(views.APIView):
 
 class AllNovelBrowseView(views.APIView):
     def get(self, request):
-        title_query = request.GET.get('title', '')
+        # TODO: Replace all ' with ’
+        title_query = request.GET.get('title', '').replace("'", "’")
         genres = request.GET.get('genre', '').split(',')
         sort_types = request.GET.get('sortType', '').split(',')
         page = int(request.GET.get('page', 1))

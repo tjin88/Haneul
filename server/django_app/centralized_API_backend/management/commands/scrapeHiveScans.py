@@ -6,10 +6,10 @@ import re
 import django
 import logging
 import requests
-import threading
 import urllib.parse
 from logging.handlers import RotatingFileHandler
 from bs4 import BeautifulSoup
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from requests.exceptions import RequestException, HTTPError, ConnectionError, Timeout, TooManyRedirects
 from dateutil.parser import parse
 from django.core.management.base import BaseCommand, CommandError
@@ -18,7 +18,6 @@ from django.core.exceptions import ValidationError
 from bson import ObjectId, Decimal128
 import traceback
 import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_app.django_app.settings')
 django.setup()
@@ -218,6 +217,15 @@ class HiveScansScraper:
         return books
 
     def scrape_book_details(self, book_url):
+        """
+        Scrapes detailed information about a book from its individual page.
+
+        Args:
+        book_url (str): URL of the book's detail page.
+
+        Returns:
+        dict: A dictionary containing key details of the book. Returns None if scraping fails.
+        """
         try:
             response = requests.get(book_url)
             response.raise_for_status()
@@ -322,6 +330,11 @@ class Command(BaseCommand):
     help = 'Scrapes books from HiveScans and updates the database.'
 
     def handle(self, *args, **kwargs):
+        """
+        Handles the command execution for scraping books from HiveScans.
+
+        Executes the scraping process, calculates the duration of the operation, and logs the result.
+        """
         logger.info("Starting to scrape HiveScans")
 
         try:
@@ -351,6 +364,15 @@ class Command(BaseCommand):
     
     @staticmethod
     def format_duration(duration):
+        """
+        Formats a duration into a human-readable string.
+
+        Args:
+            duration (datetime.timedelta): The duration to format.
+
+        Returns:
+            str: A string representing the duration in hours, minutes, and seconds.
+        """
         seconds = duration.total_seconds()
         hours = int(seconds // 3600)
         minutes = int((seconds % 3600) // 60)

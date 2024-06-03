@@ -38,7 +38,7 @@ const Browse = ({ lightMode }) => {
   useEffect(() => {
     const fetchData = async () => {
       setIsFetching(true);
-      const title = encodeURIComponent(searchTerm);
+      const title = encodeURIComponent(searchTerm).replace("'", "’");
       const genre = encodeURIComponent(genreFilter.map(g => g.value).join(','));
       const sort = encodeURIComponent(sortType.map(g => g.value).join(','));
       const response = await fetch(`/centralized_API_backend/api/all-novels/browse?title=${title}&genre=${genre}&page=${page}&sortType=${sort}`);

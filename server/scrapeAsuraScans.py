@@ -294,7 +294,7 @@ def send_book_data(api_url, book_data, existing_data):
             novel_source = book_data['novel_source']
             if book_data['novel_source'] != 'AsuraScans':
                 print(f'[ERROR] NOVEL SOURCE IS INVALID')
-                # TODO: Throw some error here*
+                return -1
 
             # request_url = f"{api_url}{encode_title(book_title)}/{novel_source}"  # URL encoding for the book title
             request_url = f"{api_url}{encode_title(book_title)}/"  # URL encoding for the book title
@@ -341,8 +341,8 @@ if __name__ == "__main__":
         total_books = len(books)
 
         # Process each scraped book
-        # TODO: Removed artist, released_by, serialization, posted_by, and posted_on fields
-        #       to match novels from light novel pub
+        # Removed artist, released_by, serialization, posted_by, and posted_on fields
+        # åto match novels from light novel pub
         for title, details in books.items():
             book_data = {
                 'title': details.get('title'),

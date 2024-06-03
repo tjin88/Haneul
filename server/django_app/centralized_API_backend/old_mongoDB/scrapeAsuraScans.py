@@ -1,9 +1,3 @@
-'''
-TODO: To make this EVEN FASTER:
-- Add threading (similar to scrapeLightNovelPub)
-- Start by scraping all manga links from the main text/list page
-- Then, scrape each manga's individual page in parallel using threads :)
-'''
 import datetime
 import time
 import os
@@ -79,8 +73,8 @@ class AsuraScansScraper:
             total_books = len(books)
 
             # Process each scraped book
-            # TODO: Removed artist, released_by, serialization, posted_by, and posted_on fields
-            #       to match novels from light novel pub
+            # Removed artist, released_by, serialization, posted_by, and posted_on fields
+            # to match novels from light novel pub
             for title, details in books.items():
                 book_data = {
                     'title': details.get('title'),
@@ -308,7 +302,6 @@ class AsuraScansScraper:
         except DatabaseError:
             return True
         except AllBooks.MultipleObjectsReturned:
-            # TODO: Fix this!!!
             print(f"Multiple objects returned for {new_data['title']} from {new_data['novel_source']}.")
             existing_books = AllBooks.objects.filter(title=new_data['title'], novel_source=new_data['novel_source'])
             for book in existing_books:
