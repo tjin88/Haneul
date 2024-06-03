@@ -65,7 +65,6 @@ pip freeze > requirements.txt
 2. Add a page for user settings, where you can change your profile image, password, and email
 
 ## Websites to scrape:
-- https://void-scans.com/az-list/
 - https://rizzcomic.com/series
 - https://reset-scans.us/mangas/?m_orderby=latest
 - 

@@ -32,15 +32,10 @@ django.setup()
 def get_next_log_file_name(base_dir, base_filename):
     counter = 0
     while True:
-        if counter == 0:
-            log_file_name = f"{base_filename}.txt"
-        else:
-            log_file_name = f"{base_filename}_{counter}.txt"
-        
+        log_file_name = f"{base_filename}_{counter}.txt" if counter else f"{base_filename}.txt"
         full_path = os.path.join(base_dir, log_file_name)
         if not os.path.exists(full_path):
             return full_path
-        
         counter += 1
 
 # Setting up the logging configuration

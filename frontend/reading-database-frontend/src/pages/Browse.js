@@ -58,12 +58,9 @@ const Browse = ({ lightMode }) => {
     };
 
     const debounceFetchData = setTimeout(() => {
-      if (searchTerm.length >= 2 || genreFilter.length > 0) {
+      if (searchTerm.length >= 2 || genreFilter.length > 0 || sortType.length > 0) {
         setError('');
         fetchData();
-      } else if (sortType !== '') {
-        setBooks([]);
-        setError('Please search (with 2 or more characters) or add a genre!');
       } else if (searchTerm.length > 0 && searchTerm.length < 2) {
         setBooks([]);
         setError('Please enter a search with 2 or more characters!');

@@ -1,9 +1,3 @@
-'''
-TODO: To make this EVEN FASTER:
-- Add threading (similar to scrapeLightNovelPub)
-- Start by scraping all manga links from the main text/list page
-- Then, scrape each manga's individual page in parallel using threads :)
-'''
 import datetime
 import json
 import time
@@ -15,13 +9,15 @@ import requests
 import urllib.parse
 from logging.handlers import RotatingFileHandler
 from bs4 import BeautifulSoup
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from requests.exceptions import RequestException, HTTPError, ConnectionError, Timeout, TooManyRedirects
 from dateutil.parser import parse
 from django.core.management.base import BaseCommand, CommandError
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, DatabaseError, connection
 from django.core.exceptions import ValidationError
 from bson import ObjectId, Decimal128
+import traceback
+import sys
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_app.django_app.settings')
 django.setup()
@@ -29,15 +25,10 @@ django.setup()
 def get_next_log_file_name(base_dir, base_filename):
     counter = 0
     while True:
-        if counter == 0:
-            log_file_name = f"{base_filename}.txt"
-        else:
-            log_file_name = f"{base_filename}_{counter}.txt"
-        
+        log_file_name = f"{base_filename}_{counter}.txt" if counter else f"{base_filename}.txt"
         full_path = os.path.join(base_dir, log_file_name)
         if not os.path.exists(full_path):
             return full_path
-        
         counter += 1
 
 # Setting up the logging configuration
@@ -74,33 +65,23 @@ class AsuraScansScraper:
             logger.error("Unsuccessful scraping. It is assumed to be a network issue - please try again in 3+ minutes.")
         else:
             total_books = len(books)
+            with ThreadPoolExecutor(max_workers=10) as executor:
+                future_to_title = {executor.submit(self.scrape_book_and_update_db, title_url, idx + 1, total_books): title_url for idx, title_url in enumerate(books.items())}
 
-            # Process each scraped book
-            for title, details in books.items():
-                book_data = {
-                    'title': details.get('title'),
-                    'synopsis': details.get('synopsis'),
-                    'author': details.get('author'),
-                    'updated_on': details.get('updated_on'),
-                    'newest_chapter': details.get('newest_chapter'),
-                    'genres': details.get('genres', []),
-                    'image_url': details.get('image_url'),
-                    'rating': details.get('rating'),
-                    'status': details.get('status'),
-                    'novel_type': details.get('novel_type'),
-                    'novel_source': details.get('novel_source'),
-                    'followers': details.get('followers'),
-                    'chapters': details.get('chapters')
-                }
-                
-                # Update database (if needed) with new or modified book data
-                result = self.send_book_data(book_data)
-                if result == 1:
-                    pushed_books += 1
-                elif result == -1:
-                    error_books += 1
+                for future in as_completed(future_to_title):
+                    title_url = future_to_title[future]
+                    try:
+                        result = future.result()
+                        if result['status'] == 'processed':
+                            pushed_books += 1
+                        elif result['status'] == 'skipped':
+                            continue
+                        else:
+                            error_books += 1
+                    except Exception as e:
+                        logger.error(f"Error processing {title_url}: {e}")
+                        error_books += 1
 
-            # Log summary of scraping results
             logger.info(f"{total_books} books scraped. {pushed_books} updated, {error_books} errors, {total_books - pushed_books - error_books} unchanged.")
 
     def get_text_or_default(self, soup, selector, attribute=None, default='Not Available'):
@@ -121,31 +102,6 @@ class AsuraScansScraper:
             return element[attribute].strip() if attribute and element.has_attr(attribute) else element.get_text().strip()
         return default
 
-    def scrape_with_retries(self, book_url, max_retries=3, delay=10):
-        """
-        Scrapes a webpage for book details, with a specified number of retries in case of failure.
-
-        Parameters:
-        book_url (str): The URL of the book page to scrape.
-        max_retries (int): Maximum number of retry attempts. Default is 3.
-        delay (int): Delay in seconds between retries. Default is 10.
-
-        Returns:
-        dict or None: The scraped book data as a dictionary if successful, None if all retries fail.
-        """
-        for attempt in range(max_retries):
-            try:
-                return self.scrape_book_details(book_url)
-            except (ConnectionError, Timeout) as e:
-                logger.warning(f"Attempt {attempt + 1}: Network error ({e}). Retrying in {delay} seconds...")
-                time.sleep(delay)
-            except (HTTPError, TooManyRedirects) as e:
-                logger.error(f"Attempt {attempt + 1}: Non-recoverable error ({e}). Stopping retries.")
-                return None
-
-        logger.error(f"Failed to scrape {book_url} after {max_retries} attempts.")
-        return None
-
     def extract_chapter_number(self, chapter_str):
         match = re.search(r'\d+', chapter_str)
         return match.group(0) if match else None
@@ -165,29 +121,22 @@ class AsuraScansScraper:
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
 
-            # Simplifying extraction process
             details = {
                 'title': self.get_text_or_default(soup, ('h1', {'class': 'entry-title'})),
-                'synopsis': 'Not Available',  # Placeholder for synopsis,
-                'author': 'Not Available',  # Placeholder for author
-                'artist': 'Not Available',  # Placeholder for artist
-                'released_by': 'Not Available',  # Placeholder for released_by
-                'serialization': 'Not Available',  # Placeholder for serialization
-                'posted_by': self.get_text_or_default(soup, ('span', {'class': 'author'})),
-                'posted_on': self.get_text_or_default(soup, ('time', {'itemprop': 'datePublished'}), attribute='datetime'),
+                'synopsis': 'Not Available',
+                'author': 'Not Available',
                 'updated_on': self.get_text_or_default(soup, ('time', {'itemprop': 'dateModified'}), attribute='datetime'),
                 'newest_chapter': self.extract_chapter_number(self.get_text_or_default(soup, ('span', {'class': 'epcur epcurlast'}))),
                 'genres': [a.get_text().strip() for a in soup.find('span', class_='mgen').find_all('a')] if soup.find('span', class_='mgen') else [],
                 'image_url': self.get_text_or_default(soup, ('img', {'class': 'wp-post-image'}), attribute='src'),
                 'rating': self.get_text_or_default(soup, ('div', {'itemprop': 'ratingValue'})),
-                'status': 'Not Available',  # Placeholder for status
-                'novel_type': 'Manhwa',  # Placeholder for novel_type
-                'novel_source': 'AsuraScans',  # This is always true
-                'followers': 'Not Available',  # Placeholder for followers
-                'chapters': {},  # Placeholder for chapters
+                'status': 'Not Available',
+                'novel_type': 'Manhwa',
+                'novel_source': 'AsuraScans',
+                'followers': 'Not Available',
+                'chapters': {},
             }
 
-            # Extracting fields from 'imptdt' class elements
             imptdt_elements = soup.find_all('div', class_='imptdt')
             for element in imptdt_elements:
                 text = element.get_text().strip()
@@ -196,7 +145,6 @@ class AsuraScansScraper:
                 elif 'Type' in text:
                     details['novel_type'] = text.replace('Type', '').strip()
 
-            # Extracting released_by, serialization, and posted_by
             fmed_elements = soup.find_all('div', class_='fmed')
             for element in fmed_elements:
                 b_element = element.find('b')
@@ -204,26 +152,17 @@ class AsuraScansScraper:
                 if b_element and span_element:
                     category = b_element.get_text().strip()
                     value = span_element.get_text().strip()
-                    if 'Released' in category and value != '-':
-                        details['released_by'] = value
-                    elif 'Serialization' in category and value != '-':
-                        details['serialization'] = value
-                    elif 'Artist' in category and value != '-':
-                        details['artist'] = value
-                    elif 'Author' in category and value != '-':
+                    if 'Author' in category and value != '-':
                         details['author'] = value
 
-            # Extracting followers count
             followers_element = soup.find('div', class_='bmc')
             if followers_element:
                 details['followers'] = followers_element.get_text().strip()
 
-            # Extracting the synopsis
             synopsis = ' '.join(p.get_text().strip() for p in soup.find_all('p') if p.get_text().strip())
             if synopsis:
                 details['synopsis'] = synopsis
 
-            # Extracting the book's chapters
             chapter_elements = soup.find_all('li', {'data-num': True})
             chapters = {}
             for chapter in chapter_elements:
@@ -240,7 +179,6 @@ class AsuraScansScraper:
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
 
-        # Return some default value
         return None
 
     def scrape_book_titles(self, url):
@@ -263,118 +201,17 @@ class AsuraScansScraper:
             for element in book_elements:
                 title = element.get_text().strip()
                 book_url = element['href']
-                if title and book_url and title not in books:
-                    # Retry scraping in case of network-related errors
-                    books[title] = self.scrape_with_retries(book_url) or 'Details not available'
+                if title and book_url:
+                    normalized_title = self.normalize_title(title)
+                    if normalized_title not in books:
+                        books[normalized_title] = book_url
             return books
         except (HTTPError, ConnectionError, Timeout, TooManyRedirects, RequestException) as e:
             logger.error(f"Error occurred while fetching the main page: {e}")
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
-        
-        # Return some default value
+
         return {}
-
-    # def encode_title(self, title):
-    #     return urllib.parse.quote(title)
-
-    def send_book_data(self, book_data):
-        """
-        Sends book data to the database for adding new books or updating existing ones.
-
-        Args:
-        book_data (dict): The data of the book to be sent.
-
-        Returns:
-        int: 1 for success, -1 for failure, 0 for no action needed.
-        """
-        try:
-            book_title = book_data['title']
-            if book_data['novel_source'] != 'AsuraScans':
-                logger.error(f"[ERROR] NOVEL SOURCE IS INVALID. Error processing '{book_title}'")
-                return -1
-
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT COUNT(*) FROM all_books WHERE title = %s AND novel_source = %s", [book_data['title'], book_data['novel_source']])
-                count = cursor.fetchone()[0]
-
-                if count > 1:
-                    cursor.execute("DELETE FROM all_books WHERE title = %s AND novel_source = %s", [book_data['title'], book_data['novel_source']])
-                    logger.warning(f"Deleted {count} duplicate entries in the database for book '{book_data['title']}' from '{book_data['novel_source']}'.")
-
-                cursor.execute("SELECT * FROM all_books WHERE title = %s AND novel_source = %s", [book_data['title'], book_data['novel_source']])
-                existing_book_data = cursor.fetchone()
-
-                if existing_book_data:
-                    columns = [col[0] for col in cursor.description]
-                    existing_data_dict = dict(zip(columns, existing_book_data))
-                    if not self.is_data_new(existing_data_dict, book_data):
-                        # logger.info(f"Book '{book_title}' from '{book_data['novel_source']}' is up-to-date. No update needed.")
-                        return 0
-
-                sql_query = """
-                    INSERT INTO all_books (title, synopsis, author, updated_on, newest_chapter, image_url, rating, status, novel_type, novel_source, followers, chapters)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (title, novel_source)
-                    DO UPDATE SET
-                        synopsis = EXCLUDED.synopsis,
-                        author = EXCLUDED.author,
-                        updated_on = EXCLUDED.updated_on,
-                        newest_chapter = EXCLUDED.newest_chapter,
-                        image_url = EXCLUDED.image_url,
-                        rating = EXCLUDED.rating,
-                        status = EXCLUDED.status,
-                        novel_type = EXCLUDED.novel_type,
-                        followers = EXCLUDED.followers,
-                        chapters = EXCLUDED.chapters
-                """
-
-                sql_values = [
-                    book_data['title'],
-                    book_data['synopsis'],
-                    book_data['author'],
-                    book_data['updated_on'],
-                    book_data['newest_chapter'],
-                    book_data['image_url'],
-                    book_data['rating'],
-                    book_data['status'],
-                    book_data['novel_type'],
-                    book_data['novel_source'],
-                    book_data['followers'],
-                    json.dumps(book_data['chapters'])
-                ]
-
-                logger.debug(f"Executing SQL query: {sql_query} with values: {sql_values}")
-                cursor.execute(sql_query, sql_values)
-
-                # Handle the many-to-many relationship for genres
-                cursor.execute("DELETE FROM all_books_genres WHERE allbooks_title = %s AND allbooks_novel_source = %s", [book_data['title'], book_data['novel_source']])
-                for genre_name in book_data['genres']:
-                    genre_name = genre_name.strip().lower()
-                    cursor.execute("SELECT id FROM genre WHERE name = %s", [genre_name])
-                    genre_id = cursor.fetchone()
-                    if not genre_id:
-                        cursor.execute("INSERT INTO genre (name) VALUES (%s) RETURNING id", [genre_name])
-                        genre_id = cursor.fetchone()[0]
-                    else:
-                        genre_id = genre_id[0]
-                    cursor.execute("INSERT INTO all_books_genres (genre_id, allbooks_title, allbooks_novel_source) VALUES (%s, %s, %s)", [genre_id, book_data['title'], book_data['novel_source']])
-
-                logger.info(f"Book '{book_title}' from '{book_data['novel_source']}' successfully inserted/updated into the database.")
-                return 1
-
-        except IntegrityError as e:
-            logger.error(f"Database integrity error for {book_title}: {e}")
-            return -1
-        except ValidationError as e:
-            logger.error(f"Validation error for {book_title}: {e}")
-            return -1
-        except DatabaseError:
-            logger.error(f"Database error for {book_title}. Please ensure the PostgreSQL connection is properly established.")
-            return -1
-        except Exception as e:
-            logger.error(f"Unexpected error while processing book '{book_title}': {e}")
-            return -1
 
     def is_data_new(self, existing_book_data, new_data):
         """
@@ -392,12 +229,10 @@ class AsuraScansScraper:
 
         for key, value in new_data.items():
             if key in ['id', 'followers', 'genres']:
-                continue  # Skip 'id' and 'followers' fields
-            
-            # Normalize and compare date format fields
+                continue
+
             if key in ['posted_on', 'updated_on']:
                 existing_value = existing_book_data.get(key)
-                
                 if isinstance(existing_value, datetime.datetime):
                     existing_date = existing_value.replace(tzinfo=None)
                 else:
@@ -442,7 +277,6 @@ class AsuraScansScraper:
                 existing_chapters = existing_book_data.get(key, {})
                 new_chapters = value or {}
 
-                # Ensure both chapters are dictionaries
                 if isinstance(existing_chapters, str):
                     try:
                         existing_chapters = json.loads(existing_chapters)
@@ -473,76 +307,123 @@ class AsuraScansScraper:
                 logger.info(f'Existing value: {existing_book_data.get(key)}, new_data value: {value}')
                 return True
 
-        # If all fields match, the data is not new
         return False
 
-    def update_existing_book_data(self, existing_data_dict, new_data):
+    def normalize_title(self, title):
         """
-        Updates the existing book data if there are changes.
-
-        Args:
-        existing_data_dict (dict): The existing data of the book in the database.
-        new_data (dict): The new data of the book to be updated.
-
-        Returns:
-        bool: True if the data was updated, False otherwise.
+        Normalizes the title by replacing all occurrences of ' with ’.
         """
-        update_fields = {}
-        for key, value in new_data.items():
-            if key in ['id', 'followers']:
-                continue  # Skip 'id' and 'followers' fields
+        return title.replace("'", "’")
 
-            # Normalize and compare date format fields
-            if key in ['posted_on', 'updated_on']:
-                existing_value = existing_data_dict.get(key)
-                if isinstance(existing_value, datetime.datetime):
-                    existing_date = existing_value
-                else:
-                    try:
-                        existing_date = parse(existing_value) if existing_value else None
-                    except ValueError:
-                        update_fields[key] = value
-                        continue
+    def scrape_book_and_update_db(self, title_url_tuple, book_number, total_books):
+        title, url = title_url_tuple
+        try:
+            start_time = datetime.datetime.now()
 
-                # Parse the new date only if it's a string
-                if isinstance(value, str):
-                    try:
-                        new_date = parse(value) if value else None
-                    except ValueError:
-                        update_fields[key] = value
-                        continue
-                else:
-                    new_date = value
+            # Normalize the title. Needed to not break the database LOL
+            normalized_title = self.normalize_title(title)
 
-                if existing_date != new_date:
-                    update_fields[key] = value
-                continue
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [normalized_title.strip(), 'AsuraScans'])
+                existing_book = cursor.fetchone()
 
-            if key == 'rating':
-                existing_rating = float(existing_data_dict.get(key, 0))
-                new_rating = float(value or 0)
-                if existing_rating != new_rating:
-                    update_fields[key] = value
-                continue
+            newest_chapter = self.scrape_newest_chapter(url)
+            if not newest_chapter or newest_chapter == "Chapter not available" or newest_chapter.strip() == "Chapter  ?":
+                logger.warning(f"No chapters found for {normalized_title}. Deleting from database.")
+                with connection.cursor() as cursor:
+                    cursor.execute("DELETE FROM all_books WHERE title = %s AND novel_source = %s", [normalized_title.strip(), 'AsuraScans'])
+                return {'status': 'skipped', 'title': normalized_title}
 
-            if existing_data_dict.get(key) != value:
-                update_fields[key] = value
+            if existing_book and newest_chapter == existing_book[0]:
+                # duration = datetime.datetime.now() - start_time
+                # formatted_duration = self.format_duration(duration)
+                # logger.info(f"{book_number}/{total_books} took {formatted_duration} to 'skip': {normalized_title}")
+                return {'status': 'skipped', 'title': normalized_title}
 
-        if not update_fields:
-            return False
+            details = self.scrape_book_details(url)
+            details['newest_chapter'] = newest_chapter
 
-        # Perform the update for the changed fields only
-        set_clause = ", ".join([f"{field} = %s" for field in update_fields])
-        update_values = list(update_fields.values())
-        update_values.extend([new_data['title'], new_data['novel_source']])
-        with connection.cursor() as cursor:
-            cursor.execute(f"""
-                UPDATE all_books
-                SET {set_clause}
-                WHERE title = %s AND novel_source = %s
-            """, update_values)
+            if len(details['chapters']) == 0:
+                logger.warning(f"No chapters found for {normalized_title}. Skipping.")
+                return {'status': 'skipped', 'title': normalized_title}
 
-        return True
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO all_books (title, synopsis, author, updated_on, newest_chapter, image_url, rating, status, novel_type, novel_source, followers, chapters)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (title, novel_source)
+                    DO UPDATE SET
+                        synopsis = EXCLUDED.synopsis,
+                        author = EXCLUDED.author,
+                        updated_on = EXCLUDED.updated_on,
+                        newest_chapter = EXCLUDED.newest_chapter,
+                        image_url = EXCLUDED.image_url,
+                        rating = EXCLUDED.rating,
+                        status = EXCLUDED.status,
+                        novel_type = EXCLUDED.novel_type,
+                        followers = EXCLUDED.followers,
+                        chapters = EXCLUDED.chapters
+                """, [
+                    details['title'].strip(),
+                    details['synopsis'],
+                    details['author'],
+                    details['updated_on'],
+                    details['newest_chapter'],
+                    details['image_url'],
+                    details['rating'],
+                    details['status'],
+                    details['novel_type'],
+                    details['novel_source'],
+                    details['followers'],
+                    json.dumps(details['chapters'])
+                ])
+
+                cursor.execute("DELETE FROM all_books_genres WHERE allbooks_title = %s AND allbooks_novel_source = %s", [details['title'].strip(), details['novel_source']])
+                for genre_name in details['genres']:
+                    genre_name = genre_name.strip().lower()
+                    cursor.execute("SELECT id FROM genre WHERE name = %s", [genre_name])
+                    genre_id = cursor.fetchone()
+                    if not genre_id:
+                        cursor.execute("INSERT INTO genre (name) VALUES (%s) RETURNING id", [genre_name])
+                        genre_id = cursor.fetchone()[0]
+                    else:
+                        genre_id = genre_id[0]
+                    cursor.execute("INSERT INTO all_books_genres (genre_id, allbooks_title, allbooks_novel_source) VALUES (%s, %s, %s)", [genre_id, details['title'].strip(), details['novel_source']])
+
+            duration = datetime.datetime.now() - start_time
+            formatted_duration = self.format_duration(duration)
+
+            logger.info(f"{book_number}/{total_books} took {formatted_duration} to {'create' if not existing_book else 'update'} {normalized_title}, with {len(details['chapters'])} chapters")
+            return {'status': 'processed', 'title': normalized_title}
+        except DatabaseError as e:
+            duration = datetime.datetime.now() - start_time
+            formatted_duration = self.format_duration(duration)
+            logger.error(f"{book_number}/{total_books} took {formatted_duration} to encounter a 'database error': {normalized_title}. Error: {e}")
+            return {'status': 'database_error', 'title': normalized_title, 'message': str(e)}
+        except Exception as e:
+            duration = datetime.datetime.now() - start_time
+            formatted_duration = self.format_duration(duration)
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            logger.error(f"{book_number}/{total_books} took {formatted_duration} to encounter an 'error': {normalized_title}. Error message: {e}")
+            logger.error(f"Exception Type: {exc_type}")
+            logger.error(f"Exception Value: {exc_value}")
+            logger.error(f"Traceback: {''.join(traceback.format_tb(exc_traceback))}")
+            return {'status': 'error', 'title': normalized_title, 'message': str(e)}
+
+    def scrape_newest_chapter(self, url):
+        details = self.scrape_book_details(url)
+        return details['newest_chapter'] if details else None
+
+    @staticmethod
+    def format_duration(duration):
+        total_duration = duration.total_seconds()
+        hours = int(total_duration // 3600)
+        minutes = int((total_duration % 3600) // 60)
+        seconds = int(total_duration % 60)
+        milliseconds = int((total_duration - int(total_duration)) * 1000)
+        if hours == 0:
+            return f"{minutes}m {seconds}s {milliseconds}ms"
+        return f"{hours}h {minutes}m {seconds}s"
 
 class Command(BaseCommand):
     help = 'Scrapes books from AsuraScans and updates the database.'
