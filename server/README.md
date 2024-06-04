@@ -65,14 +65,27 @@ pip freeze > requirements.txt
 2. Add a page for user settings, where you can change your profile image, password, and email
 
 ## Websites to scrape:
-Easy (Similar to AsuraScans/HiveScans):
-- https://rizzfables.com/series
+On Pause:
+- https://rizzfables.com/series --> Similar to AsuraScans, but there are some security protections. Fair, but I want to help them ?
 
-Medium (These are all similar format):
-- https://tritinia.org/manga/700ea051-dc31-43a8-a386-b7709e11ca82/
-- https://mangasushi.org/manga/isekai-ni-shoukan-saretan-dakedo-nandemo-kireteshimau-kennou-wo-teni-ireta-node-easy-mode-deshita/
-- https://mortalsgroove.com/manga/human-mask/
-- https://lhtranslation.net/manga/maseki-gurume-mamono-no-chikara-wo-tabeta-ore-wa-saikyou/
-- https://gdscans.com/manga/dark-demon-sword/
-- https://setsuscans.com/manga/tales-of-the-demon-and-gods/
-- https://reset-scans.xyz/mangas/?m_orderby=latest
+Easy Light Novels (Similar to AsuraScans):
+- https://arcanetranslations.com/series/list-mode/ --> Change "Korean Novel" to "Light Novel"
+
+Medium Manga (These are all similar format):
+- https://boxnovel.com/novel/
+- https://tritinia.org/manga/
+- https://lhtranslation.net/manga/
+- https://mangasushi.org/manga/
+- https://setsuscans.com/
+- https://mortalsgroove.com/mangas/
+
+Medium Manga (These are similar to the above, but likely most protection or slightly different format)
+- https://gdscans.com/page/2/
+- https://reset-scans.xyz/mangas/
+- https://hiraethtranslation.com/novel-genre/web-novel-cn/
+
+Not the worst:
+- https://lightnovelstranslations.com/read/page/14/
+
+Hard:
+- https://zetrotranslation.com/novel/i-hope-youre-still-alive-when-tomorrow-comes/

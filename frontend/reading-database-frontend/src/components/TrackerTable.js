@@ -142,7 +142,6 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
                       onChange={handleSelectAll}
                   />
                 </th>
-                <th>ID</th>
                 <th>Title</th>
                 <th>Source</th>
                 <th>Last Chapter Read</th>
@@ -162,7 +161,6 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
                       onChange={() => handleBookSelection(book.title)}
                       />
                   </td>
-                  <td>{book.id}</td>
                   <td><a href={book.title} target="_blank" rel="noopener noreferrer">{book.title}</a></td>
                   <td>{book.novel_source}</td>
                   <td><a href={book.latest_read_chapter_link} target="_blank" rel="noopener noreferrer">{book.latest_read_chapter}</a></td>
