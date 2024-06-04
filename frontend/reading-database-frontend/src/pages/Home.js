@@ -3,6 +3,7 @@ import Welcome from '../components/Welcome.js';
 import BookCarousel from '../components/BookCarousel.js';
 import TopTenBooks from '../components/TopTenBooks.js';
 import Statistic from '../components/Statistic.js';
+import CookieNotice from '../components/CookieNotice.js';
 import "slick-carousel/slick/slick.css"; 
 import "slick-carousel/slick/slick-theme.css";
 // import BannerDark from '../assets/BannerDark.png';
@@ -96,6 +97,7 @@ const Home = ({ lightMode }) => {
       <main>
         {books && <BookCarousel books={books.carousel} />}
         {!isLoggedIn && <Welcome />}
+        {!isLoggedIn && <CookieNotice />}
         {!isLoggedIn && <Statistic label="Total Number of Books" value={numBooks.total} />}
         {isLoggedIn && <TopTenBooks title={"Recently Updated"} books={books.recentlyUpdated} numBooks={numBooks.total} />}
         {isLoggedIn && <TopTenBooks title={"Most Popular Manhwa This Month"} books={books.manhwa} numBooks={numBooks.manhwa} />}

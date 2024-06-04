@@ -8,6 +8,7 @@ import NotFound from './pages/NotFound';
 import BookDetailsWrapper from './pages/BookDetailsWrapper';
 import TrackerPage from './pages/TrackerPage';
 import UserProfile from './pages/UserProfile'; 
+import PrivacyPolicy from './pages/PrivacyPolicy'; 
 
 const App = () => {
   const [lightMode, setLightMode] = useState(true);
@@ -19,7 +20,8 @@ const App = () => {
             <Route exact path="/" element={<Home lightMode={lightMode} />} />
             <Route path="/browse" element={<Browse lightMode={lightMode} />} />
             <Route path="/track" element={<TrackerPage lightMode={lightMode} />} />
-            <Route path="/user-profile" element={<UserProfile lightMode={lightMode} />} />
+            <Route path="/user-profile" element={<UserProfile lightMode={lightMode} setLightMode={setLightMode} />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy lightMode={lightMode} />} />
             <Route path="/:bookTitle" element={<BookDetailsWrapper />} />
             <Route path="*" element={<NotFound lightMode={lightMode} />} />
           </Routes>
