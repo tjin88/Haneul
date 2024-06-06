@@ -58,6 +58,7 @@ pip freeze > requirements.txt
 1. Add original link (untranslated)
     - Navier and other sources 
     - https://comic.naver.com/index
+- TODO: Protect against injection attacks **
 
 ## Short-term (Done all except tokenization!)
 1. Update frontend to use tokenization, allowing user to stay logged in for x days
@@ -75,7 +76,6 @@ Medium Manga (These are all similar format):
 - https://boxnovel.com/novel/
 - https://tritinia.org/manga/
 - https://lhtranslation.net/manga/
-- https://mangasushi.org/manga/
 - https://setsuscans.com/
 - https://mortalsgroove.com/mangas/
 
