@@ -61,6 +61,8 @@ class HomeNovelGetView(views.APIView):
         total_number_of_manhwa = cursor.fetchone()[0]
         cursor.execute("SELECT COUNT(*) FROM all_books WHERE novel_type='Light Novel'")
         total_number_of_light_novels = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(DISTINCT novel_source) FROM all_books")
+        total_number_of_sources = cursor.fetchone()[0]
 
         return Response({
             "carousel_books": carousel_books,
@@ -72,7 +74,8 @@ class HomeNovelGetView(views.APIView):
             "numManga": total_number_of_manga,
             "numLightNovel": total_number_of_light_novels,
             "numManhwa": total_number_of_manhwa,
-            "numManhua": total_number_of_manhua
+            "numManhua": total_number_of_manhua,
+            "numSources": total_number_of_sources
         })
 
 class AllNovelSearchView(views.APIView):

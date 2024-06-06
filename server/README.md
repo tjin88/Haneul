@@ -74,9 +74,6 @@ Easy Light Novels (Similar to AsuraScans):
 
 Medium Manga (These are all similar format):
 - https://boxnovel.com/novel/
-- https://tritinia.org/manga/
-- https://lhtranslation.net/manga/
-- https://setsuscans.com/
 - https://mortalsgroove.com/mangas/
 
 Medium Manga (These are similar to the above, but likely most protection or slightly different format)

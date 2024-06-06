@@ -280,7 +280,7 @@ class LightNovelPubScraper:
                 self.navigate_to_url(next_page_url, driver=driver)
             else:
                 return books
-    
+
     def scrape_newest_chapter(self, book_url, driver):
         """
         Scrapes only the newest chapter of a book.

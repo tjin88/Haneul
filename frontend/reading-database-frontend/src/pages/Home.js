@@ -30,7 +30,8 @@ const Home = ({ lightMode }) => {
     manhua: 0,
     manhwa: 0,
     lightNovel: 0,
-    total: 0
+    total: 0,
+    numSources: 0,
   });
 
   useEffect(() => {
@@ -54,7 +55,8 @@ const Home = ({ lightMode }) => {
           manhwa: data.numManhwa,
           manhua: data.numManhua,
           manga: data.numManga,
-          total: data.numLightNovel+data.numManhwa+data.numManhua+data.numManga
+          total: data.numLightNovel+data.numManhwa+data.numManhua+data.numManga,
+          numSources: data.numSources,
         });
       } catch (error) {
         console.error('Error fetching books:', error);
@@ -89,7 +91,7 @@ const Home = ({ lightMode }) => {
         />
       </div>
     );
-  };  
+  };
 
   return (
     <div className="home">
@@ -98,7 +100,7 @@ const Home = ({ lightMode }) => {
         {books && <BookCarousel books={books.carousel} />}
         {!isLoggedIn && <Welcome />}
         {!isLoggedIn && <CookieNotice />}
-        {!isLoggedIn && <Statistic label="Total Number of Books" value={numBooks.total} />}
+        {!isLoggedIn && <Statistic label="Total Number of Books" value={numBooks.total} label2="Number of Supported Sites" value2={numBooks.numSources} />}
         {isLoggedIn && <TopTenBooks title={"Recently Updated"} books={books.recentlyUpdated} numBooks={numBooks.total} />}
         {isLoggedIn && <TopTenBooks title={"Popular Manhwa"} books={books.manhwa} numBooks={numBooks.manhwa} />}
         {isLoggedIn && <TopTenBooks title={"Popular Manhua"} books={books.manhua} numBooks={numBooks.manhua} />}

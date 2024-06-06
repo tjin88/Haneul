@@ -39,8 +39,8 @@ def get_next_log_file_name(base_dir, base_filename):
         counter += 1
 
 # Setting up the logging configuration
-log_directory = "../out/MangaSushi"
-log_base_filename = "scrapeMangaSushi"
+log_directory = "../out/TritiniaScans"
+log_base_filename = "scrapeTritiniaScans"
 log_file_path = get_next_log_file_name(log_directory, log_base_filename)
 
 # Ensure the log directory exists
@@ -61,9 +61,9 @@ logging.basicConfig(
 logging.getLogger('WDM').setLevel(logging.WARNING)
 
 # Set logger for all other log messages
-logger = logging.getLogger("MangaSushiScraper")
+logger = logging.getLogger("TritiniaScansScraper")
 
-class MangaSushiScraper:
+class TritiniaScansScraper:
     def __init__(self):
         '''
         TODO: Test to see if this is the optimal number of threads
@@ -74,9 +74,9 @@ class MangaSushiScraper:
         Too many threads = server ban or system overload 
         Too little threads = slower scraping time
 
-        3 threads, all skipped = 0h 9m 36s  --> See out/MangaSushi/scrapeMangaSushi_45.txt
-        2 threads, all skipped = 0h 11m 35s --> See out/MangaSushi/scrapeMangaSushi_46.txt
-        5 threads, all skipped = 1h 2m 34s  --> See out/MangaSushi/scrapeMangaSushi_44.txt
+        3 threads, all skipped = 0h 9m 36s  --> See out/TritiniaScans/scrapeTritiniaScans_45.txt
+        2 threads, all skipped = 0h 11m 35s --> See out/TritiniaScans/scrapeTritiniaScans_46.txt
+        5 threads, all skipped = 1h 2m 34s  --> See out/TritiniaScans/scrapeTritiniaScans_44.txt
         '''
         # TODO: Test to see if this is the optimal number of threads
         # 3 > 2 > 5. Test 4 to see where it stands 
@@ -106,7 +106,7 @@ class MangaSushiScraper:
             start_time = datetime.datetime.now()
 
             with connection.cursor() as cursor:
-                cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [title, 'Manga Sushi'])
+                cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [title, 'Tritinia Scans'])
                 existing_book = cursor.fetchone()
 
             if existing_book:
@@ -118,6 +118,7 @@ class MangaSushiScraper:
                     return {'status': 'skipped', 'title': title}
 
             details = self.scrape_book_details(title, url, driver)
+            # logger.info(details)
 
             # Attempt to update an existing book or create a new one
             # TODO: Come back to this --> May want to store then push at the end to avoid "concurrency issues" **
@@ -189,10 +190,10 @@ class MangaSushiScraper:
 
     def scrape_manga_sushi(self):
         """
-        Scrapes the Manga Sushi website for manga details and updates the database.
+        Scrapes the Tritinia Scans website for manga details and updates the database.
         Uses multi-threading for faster scraping.
         """
-        base_url = 'https://mangasushi.org/manga/'
+        base_url = 'https://tritinia.org/manga/'
         try:
             driver = self.driver_pool.get_driver()
             books = self.scrape_main_page(base_url, driver=driver)
@@ -200,6 +201,7 @@ class MangaSushiScraper:
             self.driver_pool.release_driver(driver)
 
         logger.info(f"Found {len(books)} books. Starting to scrape details.")
+        # logger.info(books)
 
         results = {'processed': 0, 'skipped': 0, 'error': 0, 'cancelled': 0}
         book_number = 0
@@ -252,7 +254,7 @@ class MangaSushiScraper:
     def scrape_main_page(self, url, driver=None):
         """
         Scrapes the main listing page for book URLs using Selenium.
-        This method scrapes the main page of Manga Sushi to find all the books listed. 
+        This method scrapes the main page of Tritinia Scans to find all the books listed. 
         It uses Selenium's WebDriverWait to ensure that the page is loaded before attempting to find elements. 
 
         Args:
@@ -370,8 +372,8 @@ class MangaSushiScraper:
                 'image_url': image_url,
                 'rating': float(rating) * 2.0 if rating else 0.0,
                 'status': status,
-                'novel_type': 'Manga',
-                'novel_source': 'Manga Sushi',
+                'novel_type': 'Manga' if 'Manga' in genres else 'Manhwa' if 'Manhwa' in genres else 'Manhua' if 'Manhua' in genres else 'Manga',
+                'novel_source': 'Tritinia Scans',
                 'followers': followers,
                 'chapters': chapters
             }
@@ -637,7 +639,7 @@ class DriverPool:
             driver.quit()
 
 class Command(BaseCommand):
-    help = 'Scrapes manga from Manga Sushi and updates the database.'
+    help = 'Scrapes manga from Tritinia Scans and updates the database.'
 
     def handle(self, *args, **kwargs):
         """
@@ -645,17 +647,17 @@ class Command(BaseCommand):
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape Manga Sushi")
+        logger.info("Starting to scrape Tritinia Scans")
         start_time = datetime.datetime.now()
-        scraper = MangaSushiScraper()
+        scraper = TritiniaScansScraper()
         try:
             scraper.scrape_manga_sushi()
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
-            logger.info(f"Successfully executed scrapeMangaSushi in {formatted_duration} ")
-            self.stdout.write(self.style.SUCCESS('Successfully executed scrapeMangaSushi'))
+            logger.info(f"Successfully executed scrapeTritiniaScans in {formatted_duration} ")
+            self.stdout.write(self.style.SUCCESS('Successfully executed scrapeTritiniaScans'))
         except ConnectionError:
-            logger.error("Looks like the computer was not connected to the internet. Abandoned this attempt to update server for Manga Sushi books.")
+            logger.error("Looks like the computer was not connected to the internet. Abandoned this attempt to update server for Tritinia Scans books.")
         except Exception as e:
             logger.error(f"An error occurred during scraping: {e}")
             raise CommandError(f"Scraping failed due to an error: {e}")
