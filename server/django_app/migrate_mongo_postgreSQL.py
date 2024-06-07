@@ -107,7 +107,7 @@ def create_tables():
         synopsis TEXT NOT NULL,
         author VARCHAR(150),
         updated_on TIMESTAMP NOT NULL,
-        newest_chapter VARCHAR(150) NOT NULL,
+        newest_chapter TEXT NOT NULL,
         image_url VARCHAR(500) NOT NULL,
         rating DECIMAL(4, 2) NOT NULL,
         status VARCHAR(100) NOT NULL,

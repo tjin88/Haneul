@@ -38,6 +38,9 @@ def execute_sql_statements():
             ADD CONSTRAINT unique_book_profile UNIQUE (book_title, book_novel_source, profile_id);
         """)
         
+        # Change the column type of newest_chapter to TEXT
+        cursor.execute("ALTER TABLE all_books ALTER COLUMN newest_chapter TYPE TEXT;")
+        
         # Commit the changes
         conn.commit()
 
@@ -56,7 +59,7 @@ execute_sql_statements()
 
 # List of tables to fetch data from
 tables = [
-    'reading_list',
+    'all_books',
 ]
 
 for table in tables:

@@ -32,8 +32,8 @@ def get_next_log_file_name(base_dir, base_filename):
         counter += 1
 
 # Setting up the logging configuration
-log_directory = "../out/FlameComics"
-log_base_filename = "scrapeFlameComics"
+log_directory = "../out/FreakScans"
+log_base_filename = "scrapeFreakScans"
 log_file_path = get_next_log_file_name(log_directory, log_base_filename)
 
 # Ensure the log directory exists
@@ -49,12 +49,12 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-logger = logging.getLogger("FlameComicsScraper")
+logger = logging.getLogger("FreakScansScraper")
 
-class FlameComicsScraper:
-    def scrape_flame_comics(self):
+class FreakScansScraper:
+    def scrape_freak_scans(self):
         # Define URLs for scraping
-        url = 'https://flamecomics.me/series/list-mode/'
+        url = 'https://freakscans.com/manga/list-mode/'
 
         # Initialize counters for book processing
         pushed_books, error_books = 0, 0
@@ -65,10 +65,7 @@ class FlameComicsScraper:
             logger.error("Unsuccessful scraping. It is assumed to be a network issue - please try again in 3+ minutes.")
         else:
             total_books = len(books)
-            # FlameComics has a blocker, so you can't scrape too quickly
-            # Limiting to 1 worker/thread to hopefully not get perma banned
-            # I just want to bring traffic to them :/
-            with ThreadPoolExecutor(max_workers=1) as executor:
+            with ThreadPoolExecutor(max_workers=5) as executor:
                 future_to_title = {executor.submit(self.scrape_book_and_update_db, title_url, idx + 1, total_books): title_url for idx, title_url in enumerate(books.items())}
 
                 for future in as_completed(future_to_title):
@@ -135,7 +132,7 @@ class FlameComicsScraper:
                 'rating': self.get_text_or_default(soup, ('div', {'class': 'numscore'})),
                 'status': 'Not Available',
                 'novel_type': 'Manhwa',
-                'novel_source': 'FlameComics',
+                'novel_source': 'FreakScans',
                 'followers': 'Not Available',
                 'chapters': {},
             }
@@ -147,8 +144,16 @@ class FlameComicsScraper:
                     details['status'] = text.replace('Status', '').strip()
                 elif 'Type' in text:
                     details['novel_type'] = text.replace('Type', '').strip()
-                elif 'Author' in text:
-                    details['author'] = text.replace('Author', '').strip()
+
+            fmed_elements = soup.find_all('div', class_='fmed')
+            for element in fmed_elements:
+                b_element = element.find('b')
+                span_element = element.find('span')
+                if b_element and span_element:
+                    category = b_element.get_text().strip()
+                    value = span_element.get_text().strip()
+                    if 'Author' in category and value != '-':
+                        details['author'] = value
 
             followers_element = soup.find('div', class_='bmc')
             if followers_element:
@@ -323,7 +328,7 @@ class FlameComicsScraper:
             normalized_title = self.normalize_title(title)
 
             with connection.cursor() as cursor:
-                cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [normalized_title.strip(), 'FlameComics'])
+                cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [normalized_title.strip(), 'FreakScans'])
                 existing_book = cursor.fetchone()
 
             newest_chapter = self.scrape_newest_chapter(url)
@@ -420,15 +425,15 @@ class FlameComicsScraper:
         return f"{hours}h {minutes}m {seconds}s"
 
 class Command(BaseCommand):
-    help = 'Scrapes books from FlameComics and updates the database.'
+    help = 'Scrapes books from FreakScans and updates the database.'
 
     def handle(self, *args, **kwargs):
         """
-        Handles the command execution for scraping books from FlameComics.
+        Handles the command execution for scraping books from FreakScans.
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape FlameComics")
+        logger.info("Starting to scrape FreakScans")
 
         # Test database connection
         try:
@@ -441,18 +446,18 @@ class Command(BaseCommand):
             return
 
         start_time = datetime.datetime.now()
-        scraper = FlameComicsScraper()
+        scraper = FreakScansScraper()
         try:
-            scraper.scrape_flame_comics()
+            scraper.scrape_freak_scans()
 
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
 
-            logger.info(f"Successfully executed scrapeFlameComics in {formatted_duration} ")
-            self.stdout.write(self.style.SUCCESS('Successfully executed scrapeFlameComics'))
+            logger.info(f"Successfully executed scrapeFreakScans in {formatted_duration} ")
+            self.stdout.write(self.style.SUCCESS('Successfully executed scrapeFreakScans'))
         except ConnectionError:
             logger.error(f"Looks like the computer was not connected to the internet. \
-                         Abandoned this attempt to update server for FlameComics books.")
+                         Abandoned this attempt to update server for FreakScans books.")
         except Exception as e:
             logger.error(f"An error occurred during scraping: {e}")
             raise CommandError(f"Scraping failed due to an error: {e}")
