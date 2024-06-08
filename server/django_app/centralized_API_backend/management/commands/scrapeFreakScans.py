@@ -163,7 +163,7 @@ class FreakScansScraper:
             if synopsis:
                 details['synopsis'] = synopsis
 
-            chapter_elements = soup.find_all('li', {'data-num': True})
+            chapter_elements = soup.select('#chapterlist li[data-num]')
             chapters = {}
             for chapter in chapter_elements:
                 chapter_num = chapter['data-num']
@@ -228,9 +228,6 @@ class FreakScansScraper:
         Returns:
         bool: True if the new data is different from the existing data, False otherwise.
         """
-        # logger.info(f"Existing book data: {existing_book_data}")
-        # logger.info(f"New book data: {new_data}")
-
         for key, value in new_data.items():
             if key in ['id', 'followers', 'genres']:
                 continue
@@ -339,7 +336,6 @@ class FreakScansScraper:
                 return {'status': 'skipped', 'title': normalized_title}
 
             details = self.scrape_book_details(url)
-            details['newest_chapter'] = newest_chapter
 
             if len(details['chapters']) == 0:
                 logger.warning(f"No chapters found for {normalized_title}. Skipping.")
@@ -408,10 +404,12 @@ class FreakScansScraper:
             logger.error(f"Traceback: {''.join(traceback.format_tb(exc_traceback))}")
             return {'status': 'error', 'title': normalized_title, 'message': str(e)}
 
-    # TODO: Fix this ... horrible code ...
     def scrape_newest_chapter(self, url):
-        details = self.scrape_book_details(url)
-        return details['newest_chapter'] if details else None
+        response = requests.get(url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        chapter_elements = soup.select('#chapterlist li[data-num]')
+        return chapter_elements[0]['data-num'] if chapter_elements else None
 
     @staticmethod
     def format_duration(duration):

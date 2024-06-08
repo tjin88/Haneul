@@ -32,8 +32,8 @@ def get_next_log_file_name(base_dir, base_filename):
         counter += 1
 
 # Setting up the logging configuration
-log_directory = "../out/AsuraScans"
-log_base_filename = "scrapeAsuraScans"
+log_directory = "../out/NightScans"
+log_base_filename = "scrapeNightScans"
 log_file_path = get_next_log_file_name(log_directory, log_base_filename)
 
 # Ensure the log directory exists
@@ -49,12 +49,12 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-logger = logging.getLogger("AsuraScansScraper")
+logger = logging.getLogger("NightScansScraper")
 
-class AsuraScansScraper:
-    def scrape_asura_scans(self):
+class NightScansScraper:
+    def scrape_night_scans(self):
         # Define URLs for scraping
-        url = 'https://asuracomic.net/manga/list-mode/'
+        url = 'https://night-scans.com/manga/list-mode'
 
         # Initialize counters for book processing
         pushed_books, error_books = 0, 0
@@ -126,13 +126,13 @@ class AsuraScansScraper:
                 'synopsis': 'Not Available',
                 'author': 'Not Available',
                 'updated_on': self.get_text_or_default(soup, ('time', {'itemprop': 'dateModified'}), attribute='datetime'),
-                'newest_chapter': self.extract_chapter_number(self.get_text_or_default(soup, ('span', {'class': 'epcur epcurlast'}))),
+                'newest_chapter': None,
                 'genres': [a.get_text().strip() for a in soup.find('span', class_='mgen').find_all('a')] if soup.find('span', class_='mgen') else [],
                 'image_url': self.get_text_or_default(soup, ('img', {'class': 'wp-post-image'}), attribute='src'),
                 'rating': self.get_text_or_default(soup, ('div', {'itemprop': 'ratingValue'})),
                 'status': 'Not Available',
                 'novel_type': 'Manhwa',
-                'novel_source': 'AsuraScans',
+                'novel_source': 'Night Scans',
                 'followers': 'Not Available',
                 'chapters': {},
             }
@@ -144,16 +144,8 @@ class AsuraScansScraper:
                     details['status'] = text.replace('Status', '').strip()
                 elif 'Type' in text:
                     details['novel_type'] = text.replace('Type', '').strip()
-
-            fmed_elements = soup.find_all('div', class_='fmed')
-            for element in fmed_elements:
-                b_element = element.find('b')
-                span_element = element.find('span')
-                if b_element and span_element:
-                    category = b_element.get_text().strip()
-                    value = span_element.get_text().strip()
-                    if 'Author' in category and value != '-':
-                        details['author'] = value
+                elif 'Author' in text:
+                    details['author'] = text.replace('Author', '').strip()
 
             followers_element = soup.find('div', class_='bmc')
             if followers_element:
@@ -171,6 +163,10 @@ class AsuraScansScraper:
                 chapters[chapter_num] = chapter_url
 
             details['chapters'] = chapters
+
+            # Set newest_chapter to the first chapter number if available
+            if chapter_elements:
+                details['newest_chapter'] = chapter_elements[0]['data-num']
 
             return details
 
@@ -224,9 +220,6 @@ class AsuraScansScraper:
         Returns:
         bool: True if the new data is different from the existing data, False otherwise.
         """
-        # logger.info(f"Existing book data: {existing_book_data}")
-        # logger.info(f"New book data: {new_data}")
-
         for key, value in new_data.items():
             if key in ['id', 'followers', 'genres']:
                 continue
@@ -323,8 +316,11 @@ class AsuraScansScraper:
             # Normalize the title. Needed to not break the database LOL
             normalized_title = self.normalize_title(title)
 
+            if title.strip() == "April Fools Catalogue":
+                return {'status': 'skipped', 'title': title}
+
             with connection.cursor() as cursor:
-                cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [normalized_title.strip(), 'AsuraScans'])
+                cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [normalized_title.strip(), 'Night Scans'])
                 existing_book = cursor.fetchone()
 
             newest_chapter = self.scrape_newest_chapter(url)
@@ -404,17 +400,11 @@ class AsuraScansScraper:
             return {'status': 'error', 'title': normalized_title, 'message': str(e)}
 
     def scrape_newest_chapter(self, url):
-        try:
-            response = requests.get(url)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.text, 'html.parser')
-            return self.extract_chapter_number(self.get_text_or_default(soup, ('span', {'class': 'epcur epcurlast'})))
-        except (HTTPError, ConnectionError, Timeout, TooManyRedirects, RequestException) as e:
-            logger.error(f"Error occurred while fetching newest chapter from {url}: {e}")
-            return None
-        except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
-            return None
+        response = requests.get(url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        chapter_elements = soup.select('#chapterlist li[data-num]')
+        return chapter_elements[0]['data-num'] if chapter_elements else None
 
     @staticmethod
     def format_duration(duration):
@@ -428,15 +418,15 @@ class AsuraScansScraper:
         return f"{hours}h {minutes}m {seconds}s"
 
 class Command(BaseCommand):
-    help = 'Scrapes books from AsuraScans and updates the database.'
+    help = 'Scrapes books from NightScans and updates the database.'
 
     def handle(self, *args, **kwargs):
         """
-        Handles the command execution for scraping books from AsuraScans.
+        Handles the command execution for scraping books from NightScans.
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape AsuraScans")
+        logger.info("Starting to scrape NightScans")
 
         # Test database connection
         try:
@@ -449,18 +439,18 @@ class Command(BaseCommand):
             return
 
         start_time = datetime.datetime.now()
-        scraper = AsuraScansScraper()
+        scraper = NightScansScraper()
         try:
-            scraper.scrape_asura_scans()
+            scraper.scrape_night_scans()
 
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
 
-            logger.info(f"Successfully executed scrapeAsuraScans in {formatted_duration} ")
-            self.stdout.write(self.style.SUCCESS('Successfully executed scrapeAsuraScans'))
+            logger.info(f"Successfully executed scrapeNightScans in {formatted_duration} ")
+            self.stdout.write(self.style.SUCCESS('Successfully executed scrapeNightScans'))
         except ConnectionError:
             logger.error(f"Looks like the computer was not connected to the internet. \
-                         Abandoned this attempt to update server for AsuraScans books.")
+                         Abandoned this attempt to update server for NightScans books.")
         except Exception as e:
             logger.error(f"An error occurred during scraping: {e}")
             raise CommandError(f"Scraping failed due to an error: {e}")

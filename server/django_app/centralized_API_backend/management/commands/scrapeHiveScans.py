@@ -113,7 +113,6 @@ class HiveScansScraper:
                 return {'status': 'skipped', 'title': title}
 
             details = self.scrape_book_details(url)
-            details['newest_chapter'] = newest_chapter
 
             if len(json.dumps(details['chapters'])) == 0:
                 logger.warning(f"No chapters found for {title}. Skipping.")
@@ -281,6 +280,10 @@ class HiveScansScraper:
                 chapters[chapter_num] = chapter_url
 
             details['chapters'] = chapters
+
+            # Set newest_chapter to the first chapter number if available
+            if chapter_elements:
+                details['newest_chapter'] = chapter_elements[0]['data-num']
 
             return details
 

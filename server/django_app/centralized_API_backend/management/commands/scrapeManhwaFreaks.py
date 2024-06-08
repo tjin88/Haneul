@@ -32,8 +32,8 @@ def get_next_log_file_name(base_dir, base_filename):
         counter += 1
 
 # Setting up the logging configuration
-log_directory = "../out/AsuraScans"
-log_base_filename = "scrapeAsuraScans"
+log_directory = "../out/ManhwaFreaks"
+log_base_filename = "scrapeManhwaFreaks"
 log_file_path = get_next_log_file_name(log_directory, log_base_filename)
 
 # Ensure the log directory exists
@@ -49,12 +49,12 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-logger = logging.getLogger("AsuraScansScraper")
+logger = logging.getLogger("ManhwaFreaksScraper")
 
-class AsuraScansScraper:
-    def scrape_asura_scans(self):
+class ManhwaFreaksScraper:
+    def scrape_manhwa_freaks(self):
         # Define URLs for scraping
-        url = 'https://asuracomic.net/manga/list-mode/'
+        url = 'https://manhwafreaks.org/manga/list-mode/'
 
         # Initialize counters for book processing
         pushed_books, error_books = 0, 0
@@ -132,7 +132,7 @@ class AsuraScansScraper:
                 'rating': self.get_text_or_default(soup, ('div', {'itemprop': 'ratingValue'})),
                 'status': 'Not Available',
                 'novel_type': 'Manhwa',
-                'novel_source': 'AsuraScans',
+                'novel_source': 'ManhwaFreaks',
                 'followers': 'Not Available',
                 'chapters': {},
             }
@@ -324,7 +324,7 @@ class AsuraScansScraper:
             normalized_title = self.normalize_title(title)
 
             with connection.cursor() as cursor:
-                cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [normalized_title.strip(), 'AsuraScans'])
+                cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [normalized_title.strip(), 'ManhwaFreaks'])
                 existing_book = cursor.fetchone()
 
             newest_chapter = self.scrape_newest_chapter(url)
@@ -428,15 +428,15 @@ class AsuraScansScraper:
         return f"{hours}h {minutes}m {seconds}s"
 
 class Command(BaseCommand):
-    help = 'Scrapes books from AsuraScans and updates the database.'
+    help = 'Scrapes books from ManhwaFreaks and updates the database.'
 
     def handle(self, *args, **kwargs):
         """
-        Handles the command execution for scraping books from AsuraScans.
+        Handles the command execution for scraping books from ManhwaFreaks.
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape AsuraScans")
+        logger.info("Starting to scrape ManhwaFreaks")
 
         # Test database connection
         try:
@@ -449,18 +449,18 @@ class Command(BaseCommand):
             return
 
         start_time = datetime.datetime.now()
-        scraper = AsuraScansScraper()
+        scraper = ManhwaFreaksScraper()
         try:
-            scraper.scrape_asura_scans()
+            scraper.scrape_manhwa_freaks()
 
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
 
-            logger.info(f"Successfully executed scrapeAsuraScans in {formatted_duration} ")
-            self.stdout.write(self.style.SUCCESS('Successfully executed scrapeAsuraScans'))
+            logger.info(f"Successfully executed scrapeManhwaFreaks in {formatted_duration} ")
+            self.stdout.write(self.style.SUCCESS('Successfully executed scrapeManhwaFreaks'))
         except ConnectionError:
             logger.error(f"Looks like the computer was not connected to the internet. \
-                         Abandoned this attempt to update server for AsuraScans books.")
+                         Abandoned this attempt to update server for ManhwaFreaks books.")
         except Exception as e:
             logger.error(f"An error occurred during scraping: {e}")
             raise CommandError(f"Scraping failed due to an error: {e}")
