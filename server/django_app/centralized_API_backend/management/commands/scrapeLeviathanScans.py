@@ -39,8 +39,8 @@ def get_next_log_file_name(base_dir, base_filename):
         counter += 1
 
 # Setting up the logging configuration
-log_directory = "../out/MangaSushi"
-log_base_filename = "scrapeMangaSushi"
+log_directory = "../out/LeviathanScans"
+log_base_filename = "scrapeLeviathanScans"
 log_file_path = get_next_log_file_name(log_directory, log_base_filename)
 
 # Ensure the log directory exists
@@ -61,9 +61,9 @@ logging.basicConfig(
 logging.getLogger('WDM').setLevel(logging.WARNING)
 
 # Set logger for all other log messages
-logger = logging.getLogger("MangaSushiScraper")
+logger = logging.getLogger("LeviathanScansScraper")
 
-class MangaSushiScraper:
+class LeviathanScansScraper:
     def __init__(self):
         '''
         TODO: Test to see if this is the optimal number of threads
@@ -74,9 +74,9 @@ class MangaSushiScraper:
         Too many threads = server ban or system overload 
         Too little threads = slower scraping time
 
-        3 threads, all skipped = 0h 9m 36s  --> See out/MangaSushi/scrapeMangaSushi_45.txt
-        2 threads, all skipped = 0h 11m 35s --> See out/MangaSushi/scrapeMangaSushi_46.txt
-        5 threads, all skipped = 1h 2m 34s  --> See out/MangaSushi/scrapeMangaSushi_44.txt
+        3 threads, all skipped = 0h 9m 36s  --> See out/LeviathanScans/scrapeLeviathanScans_45.txt
+        2 threads, all skipped = 0h 11m 35s --> See out/LeviathanScans/scrapeLeviathanScans_46.txt
+        5 threads, all skipped = 1h 2m 34s  --> See out/LeviathanScans/scrapeLeviathanScans_44.txt
         '''
         # TODO: Test to see if this is the optimal number of threads
         # 3 > 2 > 5. Test 4 to see where it stands 
@@ -106,7 +106,7 @@ class MangaSushiScraper:
             start_time = datetime.datetime.now()
 
             with connection.cursor() as cursor:
-                cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [title, 'Manga Sushi'])
+                cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [title, 'Leviathan Scans'])
                 existing_book = cursor.fetchone()
 
             if existing_book:
@@ -118,6 +118,7 @@ class MangaSushiScraper:
                     return {'status': 'skipped', 'title': title}
 
             details = self.scrape_book_details(title, url, driver)
+            logger.info(details)
 
             # Attempt to update an existing book or create a new one
             # TODO: Come back to this --> May want to store then push at the end to avoid "concurrency issues" **
@@ -187,12 +188,12 @@ class MangaSushiScraper:
         finally:
             self.driver_pool.release_driver(driver)
 
-    def scrape_manga_sushi(self):
+    def scrape_leviathan_scans(self):
         """
-        Scrapes the Manga Sushi website for manga details and updates the database.
+        Scrapes the Leviathan Scans website for light novel details and updates the database.
         Uses multi-threading for faster scraping.
         """
-        base_url = 'https://mangasushi.org/manga/'
+        base_url = 'https://lscomic.com/manga/'
         try:
             driver = self.driver_pool.get_driver()
             books = self.scrape_main_page(base_url, driver=driver)
@@ -200,6 +201,7 @@ class MangaSushiScraper:
             self.driver_pool.release_driver(driver)
 
         logger.info(f"Found {len(books)} books. Starting to scrape details.")
+        # logger.info(books)
 
         results = {'processed': 0, 'skipped': 0, 'error': 0, 'cancelled': 0}
         book_number = 0
@@ -252,7 +254,7 @@ class MangaSushiScraper:
     def scrape_main_page(self, url, driver=None):
         """
         Scrapes the main listing page for book URLs using Selenium.
-        This method scrapes the main page of Manga Sushi to find all the books listed. 
+        This method scrapes the main page of Leviathan Scans to find all the books listed. 
         It uses Selenium's WebDriverWait to ensure that the page is loaded before attempting to find elements. 
 
         Args:
@@ -264,31 +266,25 @@ class MangaSushiScraper:
         """
         self.navigate_to_url(url, driver=driver)
         books = []
-        book_elements = []
 
         while True:
-            # Clicking the "Load More" button until it's no longer visible
+            book_elements = self.wait_for_elements(By.CLASS_NAME, 'page-item-detail', driver=driver)
+            for element in book_elements:
+                title = self.get_element_text(By.CSS_SELECTOR, '.post-title a', default_text='Title not available', element=element, driver=driver)
+                book_url = self.get_element_attribute(By.CSS_SELECTOR, '.post-title a', 'href', default_value=None, element=element, driver=driver)
+                books.append((title, book_url))
+            
             try:
-                next_page_element = self.wait_for_element(By.CLASS_NAME, 'load-ajax', timeout=5, driver=driver)
+                next_page_element = self.wait_for_element(By.CSS_SELECTOR, '.nav-previous a', timeout=10, driver=driver)
                 if next_page_element:
                     driver.execute_script("arguments[0].scrollIntoView(true);", next_page_element)
-                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CLASS_NAME, 'load-ajax')))
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, '.nav-previous a')))
                     driver.execute_script("arguments[0].click();", next_page_element)
                     time.sleep(3) # TODO: Wait for the page to load. I don't love this hardcoded, but it works for now.
                 else:
-                    break
+                    return books
             except TimeoutException:
-                break
-
-        # After loading all books, gather all book elements
-        book_elements = self.wait_for_elements(By.CLASS_NAME, 'page-item-detail', driver=driver)
-
-        for element in book_elements:
-            title = self.get_element_text(By.CSS_SELECTOR, '.post-title a', default_text='Title not available', element=element, driver=driver)
-            book_url = self.get_element_attribute(By.CSS_SELECTOR, '.post-title a', 'href', default_value=None, element=element, driver=driver)
-            books.append((title, book_url))
-
-        return books
+                return books
 
     def scrape_newest_chapter(self, book_url, driver):
         """
@@ -325,20 +321,34 @@ class MangaSushiScraper:
         try:
             self.navigate_to_url(book_url, driver=driver)
             
-            # Extract details
-            synopsis_str = self.wait_for_element(By.CSS_SELECTOR, '.description-summary .summary__content', driver=driver).get_attribute('textContent').replace('(adsbygoogle = window.adsbygoogle || []).push({});', '').strip()
-            synopsis = synopsis_str if synopsis_str else 'Synopsis not available'
-            authors = self.wait_for_elements(By.CSS_SELECTOR, '.summary-content .author-content a', driver=driver)
-            author = ', '.join([author.text.strip() for author in authors]) if authors else 'Author not available'
+            # Extract details --> using get_attribute('textContent') instead of .text because of hidden elements
+            synopsis = self.wait_for_element(By.CSS_SELECTOR, '.manga-summary p', driver=driver).get_attribute('textContent').strip()
+            authors = self.wait_for_elements(By.CSS_SELECTOR, '.manga-authors a', driver=driver)
+            author_names = []
+            for idx, author_element in enumerate(authors):
+                author_names.append(author_element.get_attribute('textContent').strip())
+            author = ', '.join(author_names) if author_names else 'Author not available'
+
             updated_on_text = self.get_element_text(By.CSS_SELECTOR, '.chapter-release-date i', driver=driver)
-            newest_chapter = self.get_element_text(By.CSS_SELECTOR, '.listing-chapters_wrap .wp-manga-chapter a', driver=driver)
-            genres = [genre.text.strip() for genre in self.wait_for_elements(By.CSS_SELECTOR, '.summary-content .genres-content a', driver=driver)]
-            image_url = self.get_element_attribute(By.CSS_SELECTOR, '.summary_image img', 'src', driver=driver)
-            rating = self.get_element_text(By.CSS_SELECTOR, '.post-total-rating .score', driver=driver)
-            status = self.get_value_based_on_heading("Status", driver)
-            followers_str = self.get_value_based_on_heading("Rank", driver)
-            followers = self.parse_followers(followers_str.split(' ')[-3]) if followers_str != 'N/A' else 'N/A'
             updated_on = self.parse_relative_date(updated_on_text).strftime('%Y-%m-%dT%H:%M:%S%z')
+            newest_chapter = self.get_element_text(By.CSS_SELECTOR, '.wp-manga-chapter a', driver=driver)
+            genres = [genre.get_attribute('textContent').strip() for genre in self.wait_for_elements(By.CSS_SELECTOR, '.genres-content a', driver=driver)]
+            default_image_url = "https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image"
+            image_url = self.get_element_attribute(By.CSS_SELECTOR, '.summary_image img', 'src', driver=driver) or default_image_url
+            rating = self.wait_for_element(By.CSS_SELECTOR, '.post-total-rating .score', driver=driver).get_attribute('textContent').strip()
+            status = "Ongoing"
+
+            followers_str = 'N/A'
+            items = driver.find_elements(By.CSS_SELECTOR, '.item')
+            for item in items:
+                try:
+                    i_element = item.find_element(By.CSS_SELECTOR, '.fa-eye')
+                    if i_element:
+                        followers_str = item.get_attribute('textContent').strip()
+                        break
+                except NoSuchElementException:
+                    pass
+            followers = self.parse_followers(followers_str) if followers_str.strip() not in ['N/A', ''] else 0
 
             try:
                 next_page_element = self.wait_for_element(By.CLASS_NAME, 'chapter-readmore', timeout=5, driver=driver)
@@ -372,8 +382,8 @@ class MangaSushiScraper:
                 'image_url': image_url,
                 'rating': float(rating) * 2.0 if rating else 0.0,
                 'status': status,
-                'novel_type': 'Manga',
-                'novel_source': 'Manga Sushi',
+                'novel_type': 'Manhwa',
+                'novel_source': 'Leviathan Scans',
                 'followers': followers,
                 'chapters': chapters
             }
@@ -440,11 +450,10 @@ class MangaSushiScraper:
                 EC.presence_of_element_located((by, value))
             )
         except (TimeoutException, WebDriverException) as e:
-            if value != "PagedList-skipToNext":
-                logger.error(f"Error waiting for element {value}: {e}")
-                raise
-            else:
+            if value in ["PagedList-skipToNext", ".nav-previous a"]:
                 return None
+            logger.error(f"Error waiting for element {value}: {e}")
+            raise
     
     def get_element_text(self, by, value, default_text='Not Available', element=None, driver=None):
         """
@@ -490,27 +499,6 @@ class MangaSushiScraper:
         except (TimeoutException, WebDriverException):
             logger.warning(f"Element {value} not found, using default value.")
             return default_value
-    
-    def get_value_based_on_heading(self, heading, driver):
-        """
-        Gets the value from the summary-content based on the given heading.
-
-        Args:
-            heading (str): The heading to look for (e.g., 'Status', 'Rank').
-            driver (webdriver): The WebDriver instance.
-
-        Returns:
-            str: The corresponding value from the summary-content.
-        """
-        try:
-            items = driver.find_elements(By.CSS_SELECTOR, '.post-content_item')
-            for item in items:
-                heading_text = item.find_element(By.CSS_SELECTOR, '.summary-heading h5').text.strip()
-                if heading_text == heading:
-                    return item.find_element(By.CSS_SELECTOR, '.summary-content').text.strip()
-            return 'N/A'
-        except NoSuchElementException:
-            return 'N/A'
 
     def process_chapter_element(self, chapter_element, driver):
         """
@@ -580,6 +568,8 @@ class MangaSushiScraper:
         Returns:
             int: The number of followers as an integer.
         """
+        if not followers_str or followers_str == "N/A":
+            return 0
         followers_str = followers_str.upper()
         if 'M' in followers_str:
             return int(float(followers_str.replace('M', '')) * 1_000_000)
@@ -639,25 +629,25 @@ class DriverPool:
             driver.quit()
 
 class Command(BaseCommand):
-    help = 'Scrapes manga from Manga Sushi and updates the database.'
+    help = 'Scrapes light novels from Leviathan Scans and updates the database.'
 
     def handle(self, *args, **kwargs):
         """
-        Handles the command execution for scraping manga.
+        Handles the command execution for scraping light novels.
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape Manga Sushi")
+        logger.info("Starting to scrape Leviathan Scans")
         start_time = datetime.datetime.now()
-        scraper = MangaSushiScraper()
+        scraper = LeviathanScansScraper()
         try:
-            scraper.scrape_manga_sushi()
+            scraper.scrape_leviathan_scans()
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
-            logger.info(f"Successfully executed scrapeMangaSushi in {formatted_duration} ")
-            self.stdout.write(self.style.SUCCESS('Successfully executed scrapeMangaSushi'))
+            logger.info(f"Successfully executed scrapeLeviathanScans in {formatted_duration} ")
+            self.stdout.write(self.style.SUCCESS('Successfully executed scrapeLeviathanScans'))
         except ConnectionError:
-            logger.error("Looks like the computer was not connected to the internet. Abandoned this attempt to update server for Manga Sushi books.")
+            logger.error("Looks like the computer was not connected to the internet. Abandoned this attempt to update server for Leviathan Scans books.")
         except Exception as e:
             logger.error(f"An error occurred during scraping: {e}")
             raise CommandError(f"Scraping failed due to an error: {e}")

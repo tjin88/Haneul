@@ -57,7 +57,7 @@ class HiveScansScraper:
         self.continue_scraping = True
 
     def scrape_hive_scans(self):
-        base_url = 'https://hivescans.com/az-list/'
+        base_url = 'https://hivetoon.com/az-list/'
         books = self.scrape_main_page(base_url)
 
         logger.info(f"Found {len(books)} books. Starting to scrape details.")
@@ -277,7 +277,8 @@ class HiveScansScraper:
             for chapter in chapter_elements:
                 chapter_num = chapter['data-num']
                 chapter_url = chapter.find('a')['href']
-                chapters[chapter_num] = chapter_url
+                if chapter_num and chapter_url:
+                    chapters[chapter_num] = chapter_url
 
             details['chapters'] = chapters
 

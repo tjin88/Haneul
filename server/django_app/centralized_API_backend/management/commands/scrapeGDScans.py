@@ -253,7 +253,7 @@ class GDScansScraper:
     def scrape_main_page(self, url, driver=None):
         """
         Scrapes the main listing page for book URLs using Selenium.
-        This method scrapes the main page of light novel pub to find all the books listed. 
+        This method scrapes the main page of Galaxy Degen Scans to find all the books listed. 
         It uses Selenium's WebDriverWait to ensure that the page is loaded before attempting to find elements. 
 
         Args:
@@ -283,9 +283,9 @@ class GDScansScraper:
                     driver.execute_script("arguments[0].click();", next_page_element)
                     time.sleep(3) # TODO: Wait for the page to load. I don't love this hardcoded, but it works for now.
                 else:
-                    return list(books)
+                    return books
             except TimeoutException:
-                return list(books)
+                return books
 
     def scrape_newest_chapter(self, book_url, driver):
         """
@@ -322,9 +322,9 @@ class GDScansScraper:
         try:
             self.navigate_to_url(book_url, driver=driver)
             
-            # Extract details using updated selectors
-            # TODO: Fix issues with extracting synopsis
-            synopsis = self.get_element_text(By.CSS_SELECTOR, '.description-summary .summary__content p', driver=driver)
+            # Extract details
+            synopsis_str = self.wait_for_element(By.CSS_SELECTOR, '.description-summary .summary__content', driver=driver).get_attribute('textContent').replace('(adsbygoogle = window.adsbygoogle || []).push({});', '').strip()
+            synopsis = synopsis_str if synopsis_str else 'Synopsis not available'
             authors = self.wait_for_elements(By.CSS_SELECTOR, '.summary-content .author-content a', driver=driver)
             author = ', '.join([author.text.strip() for author in authors]) if authors else 'Author not available'
             updated_on_text = self.get_element_text(By.CSS_SELECTOR, '.chapter-release-date i', 'Chapter not available', driver=driver)

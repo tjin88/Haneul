@@ -44,13 +44,16 @@ class HomeNovelGetView(views.APIView):
                            "Everyone Else is A Returnee", "Heavenly Inquisition Sword", "Solo Bug Player",
                            "Nano Machine", "Chronicles of the Demon Faction", "Academy’s Genius Swordmaster",
                            "Shadow Slave", "Reverend Insanity", "Super Gene (Web Novel)", "Martial World (Web Novel)")
+
+        issue_sites = ("HiveScans", "Animated Glitched Scans")
+        issue_sites_str = ", ".join([f"'{site}'" for site in issue_sites])
         
-        carousel_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter FROM all_books WHERE title IN {carousel_titles}")
-        recently_updated_books = fetch_books_as_dict("SELECT title, image_url, newest_chapter, rating FROM all_books ORDER BY updated_on DESC LIMIT 10")
-        manga_books = fetch_books_as_dict("SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manga' ORDER BY rating DESC LIMIT 10")
-        manhua_books = fetch_books_as_dict("SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manhua' ORDER BY rating DESC LIMIT 10")
-        manhwa_books = fetch_books_as_dict("SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manhwa' ORDER BY rating DESC LIMIT 10")
-        light_novel_books = fetch_books_as_dict("SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Light Novel' ORDER BY rating DESC LIMIT 10")
+        carousel_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter FROM all_books WHERE title IN {carousel_titles} AND novel_source NOT IN {issue_sites}")
+        recently_updated_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_source NOT IN {issue_sites} ORDER BY updated_on DESC LIMIT 10")
+        manga_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manga' AND novel_source NOT IN {issue_sites} ORDER BY rating DESC LIMIT 10")
+        manhua_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manhua' AND novel_source NOT IN {issue_sites} ORDER BY rating DESC LIMIT 10")
+        manhwa_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manhwa' AND novel_source NOT IN {issue_sites} ORDER BY rating DESC LIMIT 10")
+        light_novel_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Light Novel' AND novel_source NOT IN {issue_sites} ORDER BY rating DESC LIMIT 10")
 
         cursor = connection.cursor()
         cursor.execute("SELECT COUNT(*) FROM all_books WHERE novel_type='Manga'")

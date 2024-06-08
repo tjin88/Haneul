@@ -254,7 +254,7 @@ class LightNovelPubScraper:
     def scrape_main_page(self, url, driver=None):
         """
         Scrapes the main listing page for book URLs using Selenium.
-        This method scrapes the main page of light novel pub to find all the books listed. 
+        This method scrapes the main page of Light Novel Pub to find all the books listed. 
         It uses Selenium's WebDriverWait to ensure that the page is loaded before attempting to find elements. 
 
         Args:

@@ -327,8 +327,9 @@ class TritiniaScansScraper:
         try:
             self.navigate_to_url(book_url, driver=driver)
             
-            # Extract details using updated selectors
-            synopsis = self.get_element_text(By.CSS_SELECTOR, '.description-summary .summary__content p', driver=driver)
+            # Extract details
+            synopsis_str = self.wait_for_element(By.CSS_SELECTOR, '.description-summary .summary__content', driver=driver).get_attribute('textContent').replace('(adsbygoogle = window.adsbygoogle || []).push({});', '').strip()
+            synopsis = synopsis_str if synopsis_str else 'Synopsis not available'
             authors = self.wait_for_elements(By.CSS_SELECTOR, '.summary-content .author-content a', driver=driver)
             author = ', '.join([author.text.strip() for author in authors]) if authors else 'Author not available'
             updated_on_text = self.get_element_text(By.CSS_SELECTOR, '.chapter-release-date i', driver=driver)
@@ -358,7 +359,8 @@ class TritiniaScansScraper:
                 for chapter in chapter_elements:
                     chapter_title = chapter.text.strip()
                     chapter_url = chapter.get_attribute('href')
-                    chapters[chapter_title] = chapter_url
+                    if chapter_title and chapter_url:
+                        chapters[chapter_title] = chapter_url
             except TimeoutException:
                 chapters = {}
 

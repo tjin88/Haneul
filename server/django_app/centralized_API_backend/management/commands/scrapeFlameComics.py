@@ -163,7 +163,8 @@ class FlameComicsScraper:
             for chapter in chapter_elements:
                 chapter_num = chapter['data-num']
                 chapter_url = chapter.find('a')['href']
-                chapters[chapter_num] = chapter_url
+                if chapter_num and chapter_url:
+                    chapters[chapter_num] = chapter_url
 
             details['chapters'] = chapters
 

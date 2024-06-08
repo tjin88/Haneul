@@ -325,7 +325,7 @@ class SetsuScansScraper:
         try:
             self.navigate_to_url(book_url, driver=driver)
             
-            # Extract details using updated selectors
+            # Extract details
             synopsis = self.get_synopsis(driver)
             authors = self.wait_for_elements(By.CSS_SELECTOR, '.summary-content .author-content a', driver=driver)
             author = ', '.join([author.text.strip() for author in authors]) if authors else 'Author not available'
@@ -358,7 +358,8 @@ class SetsuScansScraper:
                 for chapter in chapter_elements:
                     chapter_title = chapter.text.strip()
                     chapter_url = chapter.get_attribute('href')
-                    chapters[chapter_title] = chapter_url
+                    if chapter_title and chapter_url:
+                        chapters[chapter_title] = chapter_url
             except TimeoutException:
                 chapters = {}
 
