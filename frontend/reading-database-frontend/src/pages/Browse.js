@@ -1,3 +1,6 @@
+// TODO: Stop fetching data when there are no more books to fetch
+// TODO: Add a loading spinner when fetching data
+// TODO: Make sure proper image gets displayed, rather than the old image from a previous book search
 import React, { useState, useEffect } from 'react';
 import { useInView } from 'react-intersection-observer';
 import Select from 'react-select';
@@ -79,18 +82,18 @@ const Browse = ({ lightMode }) => {
   }, [inView, isFetching, books.length, totalCount]);
 
   const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
     setPage(1);
+    setSearchTerm(e.target.value);
   };
 
   const handleGenreChange = (selectedOptions) => {
-    setGenreFilter(selectedOptions || []);
     setPage(1);
+    setGenreFilter(selectedOptions || []);
   };
 
   const handleSortChange = (selectedOption) => {
-    setSortType(selectedOption);
     setPage(1);
+    setSortType(selectedOption);
   };
 
   const sortOptions = [
@@ -136,7 +139,7 @@ const Browse = ({ lightMode }) => {
       }
       <div className="books-grid">
         {books && books.map((book, index) => (
-          <BookCard key={index} {...book} />
+          <BookCard key={index} image_url={book.image_url} title={book.title} newest_chapter={book.newest_chapter} />
         ))}
       </div>
       <div ref={ref} style={{ height: '1px' }}></div>

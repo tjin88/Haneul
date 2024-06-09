@@ -1,0 +1,82 @@
+.book-details-wrapper {
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .dropdown-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  
+  .novel-select {
+    width: 400px;
+  }
+  
+  .book-details {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .book-details .book-cover img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+  
+  .book-details .book-content {
+    margin-top: 20px;
+  }
+  
+  .book-details .book-title {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #333;
+  }
+  
+  .book-details .book-genres {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  
+  .book-details .book-genres .genre {
+    background: #e0e0e0;
+    border-radius: 20px;
+    padding: 5px 15px;
+  }
+  
+  .book-details .book-info p,
+  .book-details .book-synopsis p {
+    margin: 5px 0;
+  }
+  
+  .book-details .book-synopsis h2,
+  .book-details .book-chapters h2 {
+    margin-bottom: 10px;
+  }
+  
+  .book-details .chapter-table-container {
+    overflow-x: auto;
+  }
+  
+  .book-details .chapter-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .book-details .chapter-table th,
+  .book-details .chapter-table td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+  }
+  
+  .book-details .chapter-table th {
+    background: #f0f0f0;
+  }
+  

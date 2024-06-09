@@ -328,8 +328,8 @@ class ImmortalUpdatesScraper:
             self.navigate_to_url(book_url, driver=driver)
             
             # Extract details
-            synopsis_str = self.wait_for_element(By.CSS_SELECTOR, '.description-summary .summary__content', driver=driver).get_attribute('textContent').replace('(adsbygoogle = window.adsbygoogle || []).push({});', '').strip()
-            synopsis = synopsis_str if synopsis_str else 'Synopsis not available'
+            synopsis_str = self.wait_for_element(By.CSS_SELECTOR, '.description-summary .summary__content', driver=driver)
+            synopsis = synopsis_str.get_attribute('textContent').replace('(adsbygoogle = window.adsbygoogle || []).push({});', '').strip() if synopsis_str and synopsis_str.get_attribute('textContent') else 'Synopsis not available'
             authors = self.wait_for_elements(By.CSS_SELECTOR, '.summary-content .author-content a', driver=driver)
             author = ', '.join([author.text.strip() for author in authors]) if authors else 'Author not available'
             updated_on_text = self.get_element_text(By.CSS_SELECTOR, '.chapter-release-date i', driver=driver)
@@ -442,11 +442,10 @@ class ImmortalUpdatesScraper:
                 EC.presence_of_element_located((by, value))
             )
         except (TimeoutException, WebDriverException) as e:
-            if value != "PagedList-skipToNext":
-                logger.error(f"Error waiting for element {value}: {e}")
-                raise
-            else:
+            if value in ["PagedList-skipToNext", ".nav-previous a", ".description-summary .summary__content"]:
                 return None
+            logger.error(f"Error waiting for element {value}: {e}")
+            raise
     
     def get_element_text(self, by, value, default_text='Not Available', element=None, driver=None):
         """

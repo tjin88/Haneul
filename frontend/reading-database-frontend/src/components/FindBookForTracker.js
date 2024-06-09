@@ -6,6 +6,7 @@ const FindBookForTracker = ({ onBookSelect, onClose }) => {
     const [searchResults, setSearchResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const img_placeholder = "https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image";
 
     useEffect(() => {
         // Implementing a debounce function to reduce # of API calls
@@ -45,6 +46,10 @@ const FindBookForTracker = ({ onBookSelect, onClose }) => {
         onBookSelect(selectedBook);
     };
 
+    const handleImageError = (event) => {
+        event.target.src = img_placeholder;
+    };
+
     return (
         <div className="modalBackdrop">
             <div className="modalContent">
@@ -63,18 +68,18 @@ const FindBookForTracker = ({ onBookSelect, onClose }) => {
                         {error && <div>{error}</div>}
                         {!loading && searchResults && searchResults.map((book) => (
                             <div key={book.id} className="searchResultItem" onClick={() => handleSelectBook(book)}>
-                                <img src={book.image_url} alt={book.title} />
+                                <img src={book.image_url || img_placeholder} alt={book.title} onError={handleImageError} />
                                 <div className="book-details">
-                                <div className="book-title">{book.title}</div>
-                                <div className="book-chapters">
-                                    {book.novel_source !== "Light Novel Pub" && "Chapter"} {book.newest_chapter}
-                                </div>
-                                <div className="book-chapters">Source: {book.novel_source}</div>
-                                <div className="book-genres">
-                                    {book && book.genres && book.genres.map((genre, index) => (
-                                    <span key={index} className="genre">{genre}</span>
-                                    ))}
-                                </div>
+                                    <div className="book-title">{book.title}</div>
+                                    <div className="book-chapters">
+                                        {book.novel_source !== "Light Novel Pub" && "Chapter"} {book.newest_chapter}
+                                    </div>
+                                    <div className="book-chapters">Source: {book.novel_source}</div>
+                                    <div className="book-genres">
+                                        {book && book.genres && book.genres.map((genre, index) => (
+                                            <span key={index} className="genre">{genre}</span>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         ))}

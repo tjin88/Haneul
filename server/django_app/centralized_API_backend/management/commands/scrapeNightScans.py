@@ -120,6 +120,7 @@ class NightScansScraper:
             response = requests.get(book_url)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
+            default_image_url = "https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image"
 
             details = {
                 'title': self.get_text_or_default(soup, ('h1', {'class': 'entry-title'})),
@@ -128,7 +129,7 @@ class NightScansScraper:
                 'updated_on': self.get_text_or_default(soup, ('time', {'itemprop': 'dateModified'}), attribute='datetime'),
                 'newest_chapter': None,
                 'genres': [a.get_text().strip() for a in soup.find('span', class_='mgen').find_all('a')] if soup.find('span', class_='mgen') else [],
-                'image_url': self.get_text_or_default(soup, ('img', {'class': 'wp-post-image'}), attribute='src'),
+                'image_url': default_image_url,
                 'rating': self.get_text_or_default(soup, ('div', {'itemprop': 'ratingValue'})),
                 'status': 'Not Available',
                 'novel_type': 'Manhwa',
@@ -136,6 +137,19 @@ class NightScansScraper:
                 'followers': 'Not Available',
                 'chapters': {},
             }
+
+            info_left_img = soup.find_all('img',{'itemprop': 'image'})
+            for img in info_left_img:
+                if img and img.has_attr('src'):
+                    image_url = img['src'].strip()
+                    # Check if the image URL is not a placeholder
+                    if not image_url.startswith('data:image/svg+xml'):
+                        logger.info(f'Found image URL: {image_url}')
+                        details['image_url'] = image_url
+                        break
+
+            if not details['image_url'].startswith('https://via.placeholder.com'):
+                logger.info(f'Image found for {details["title"]}: {details["image_url"]}')
 
             imptdt_elements = soup.find_all('div', class_='imptdt')
             for element in imptdt_elements:
@@ -324,12 +338,12 @@ class NightScansScraper:
                 cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [normalized_title.strip(), 'Night Scans'])
                 existing_book = cursor.fetchone()
 
-            newest_chapter = self.scrape_newest_chapter(url)
-            if existing_book and newest_chapter == existing_book[0]:
-                # duration = datetime.datetime.now() - start_time
-                # formatted_duration = self.format_duration(duration)
-                # logger.info(f"{book_number}/{total_books} took {formatted_duration} to 'skip': {normalized_title}")
-                return {'status': 'skipped', 'title': normalized_title}
+            # newest_chapter = self.scrape_newest_chapter(url)
+            # if existing_book and newest_chapter == existing_book[0]:
+            #     # duration = datetime.datetime.now() - start_time
+            #     # formatted_duration = self.format_duration(duration)
+            #     # logger.info(f"{book_number}/{total_books} took {formatted_duration} to 'skip': {normalized_title}")
+            #     return {'status': 'skipped', 'title': normalized_title}
 
             details = self.scrape_book_details(url)
 

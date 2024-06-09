@@ -3,6 +3,8 @@ import AddBookToTracker from './AddBookToTracker';
 import './BookDetails.scss';
 
 const BookDetails = ({ bookDetails }) => {
+  const img_placeholder = "https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image";
+  const [imageUrl, setImageUrl] = useState(bookDetails.image_url || img_placeholder);
   const [showModal, setShowModal] = useState(false);
   const last_updated = new Date(bookDetails.updated_on);
 
@@ -12,6 +14,10 @@ const BookDetails = ({ bookDetails }) => {
 
   const handleCloseModal = () => {
     setShowModal(false);
+  };
+
+  const handleImageError = () => {
+    setImageUrl(img_placeholder);
   };
 
   // Check if chapters are in string format and parse if necessary
@@ -26,7 +32,7 @@ const BookDetails = ({ bookDetails }) => {
   return (
     <div className="book-details">
       <div className="book-cover">
-        <img src={bookDetails.image_url} alt={bookDetails.title} />
+        <img src={imageUrl} alt={bookDetails.title} onError={handleImageError} />
         <button className="add-dashboard-button" onClick={() => setShowModal(true)}>Add to your Dashboard</button>
         {showModal && <AddBookToTracker givenBook={bookDetails} sendBack={handleCloseModal} onClose={handleCloseModal} />}
       </div>

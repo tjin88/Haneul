@@ -12,6 +12,8 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
     const [bookDetails, setBookDetails] = useState(null);
     const { user } = useAuth();
     const [bookChapters, setBookChapters] = useState({});
+    const img_placeholder = "https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image";
+    const [imageUrl, setImageUrl] = useState(img_placeholder);
 
     const fetchBookDetails = async (title, source) => {
         try {
@@ -42,6 +44,10 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
         }
     };
 
+    const handleImageError = () => {
+        setImageUrl(img_placeholder);
+    };
+
     useEffect(() => {
         fetchTrackingList();
     }, [user]);
@@ -55,11 +61,13 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                     const book = await fetchBookDetails(givenBook.title, givenBook.novel_source);
                     if (book && book[0]) {
                         setBookDetails(book[0]);
+                        setImageUrl(book[0].image_url || img_placeholder);
                     } else {
                         console.error("Error setting book!");
                     }
                 } else {
                     setBookDetails(givenBook);
+                    setImageUrl(givenBook.image_url || img_placeholder);
                 }
             };
             loadBookDetails();
@@ -143,7 +151,7 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                 <form onSubmit={handleSubmit}>
                     {bookDetails
                         ? <div className="searchResultItem">
-                            <img src={bookDetails.image_url} alt={bookDetails.title} />
+                            <img src={imageUrl} alt={bookDetails.title} onError={handleImageError} />
                             <div className="book-details">
                             <div className="book-title">{bookDetails.title}</div>
                             <div className="book-chapters">

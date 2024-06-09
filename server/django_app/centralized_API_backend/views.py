@@ -20,18 +20,18 @@ import os
 
 load_dotenv()  # Load environment variables from .env file
 
-def fetch_books_as_dict(query):
+def fetch_books_as_dict(query, params=None):
     cursor = connection.cursor()
-    cursor.execute(query)
+    cursor.execute(query, params)
     columns = [col[0] for col in cursor.description]
     results = []
     for row in cursor.fetchall():
         results.append(dict(zip(columns, row)))
     return results
 
-def fetch_count(query):
+def fetch_count(query, params=None):
     cursor = connection.cursor()
-    cursor.execute(query)
+    cursor.execute(query, params)
     count = cursor.fetchone()[0]
     return count
 
@@ -44,16 +44,15 @@ class HomeNovelGetView(views.APIView):
                            "Everyone Else is A Returnee", "Heavenly Inquisition Sword", "Solo Bug Player",
                            "Nano Machine", "Chronicles of the Demon Faction", "Academy’s Genius Swordmaster",
                            "Shadow Slave", "Reverend Insanity", "Super Gene (Web Novel)", "Martial World (Web Novel)")
+        issue_sites = ("HiveScans", "Animated Glitched Scans", "Arya Scans")
+        issue_titles = ("The Greatest Sword Hero Returns After 69420 Years", "")
 
-        issue_sites = ("HiveScans", "Animated Glitched Scans")
-        issue_sites_str = ", ".join([f"'{site}'" for site in issue_sites])
-        
-        carousel_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter FROM all_books WHERE title IN {carousel_titles} AND novel_source NOT IN {issue_sites}")
-        recently_updated_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_source NOT IN {issue_sites} ORDER BY updated_on DESC LIMIT 10")
-        manga_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manga' AND novel_source NOT IN {issue_sites} ORDER BY rating DESC LIMIT 10")
-        manhua_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manhua' AND novel_source NOT IN {issue_sites} ORDER BY rating DESC LIMIT 10")
-        manhwa_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manhwa' AND novel_source NOT IN {issue_sites} ORDER BY rating DESC LIMIT 10")
-        light_novel_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Light Novel' AND novel_source NOT IN {issue_sites} ORDER BY rating DESC LIMIT 10")
+        carousel_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter FROM all_books WHERE title IN %s AND novel_source NOT IN %s", [carousel_titles, issue_sites])
+        recently_updated_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_source NOT IN %s ORDER BY updated_on DESC LIMIT 10", [issue_sites])
+        manga_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manga' AND novel_source NOT IN %s ORDER BY rating DESC LIMIT 10", [issue_sites])
+        manhua_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manhua' AND novel_source NOT IN %s AND title NOT IN %s ORDER BY rating DESC LIMIT 10", [issue_sites, issue_titles])
+        manhwa_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manhwa' AND novel_source NOT IN %s ORDER BY rating DESC LIMIT 10", [issue_sites])
+        light_novel_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Light Novel' AND novel_source NOT IN %s ORDER BY rating DESC LIMIT 10", [issue_sites])
 
         cursor = connection.cursor()
         cursor.execute("SELECT COUNT(*) FROM all_books WHERE novel_type='Manga'")
@@ -88,25 +87,29 @@ class AllNovelSearchView(views.APIView):
         novel_source = request.GET.get('novel_source', 'All')
 
         conditions = []
+        params = []
+
         if title_query:
-            conditions.append(f"title ILIKE '%{title_query}%'")
+            conditions.append("title ILIKE %s")
+            params.append(f"%{title_query}%")
         if genre:
-            conditions.append(f"genres ILIKE '%{genre}%'")
+            conditions.append("genres ILIKE %s")
+            params.append(f"%{genre}%")
 
         condition_str = " AND ".join(conditions) if conditions else "1=1"
 
-        results = []
-
         if novel_source in ['Light Novel Pub', 'AsuraScans']:
-            results = fetch_books_as_dict(f"SELECT * FROM all_books WHERE {condition_str} AND novel_source='{novel_source}'")
-        else:
-            results = fetch_books_as_dict(f"SELECT * FROM all_books WHERE {condition_str}")
+            condition_str += " AND novel_source = %s"
+            params.append(novel_source)
+
+        query = f"SELECT * FROM all_books WHERE {condition_str}"
+        results = fetch_books_as_dict(query, params)
 
         return Response(results)
 
 class AllNovelBrowseView(views.APIView):
     def get(self, request):
-        # TODO: Replace all ' with ’
+        # Replace all ' with ’
         title_query = request.GET.get('title', '').replace("'", "’")
         genres = request.GET.get('genre', '').split(',')
         sort_types = request.GET.get('sortType', '').split(',')
@@ -114,12 +117,15 @@ class AllNovelBrowseView(views.APIView):
         page_size = int(request.GET.get('page_size', 20))
 
         conditions = []
+        params = []
+
         if title_query:
-            conditions.append(f"ab.title ILIKE '%{title_query}%'")
+            conditions.append("ab.title ILIKE %s")
+            params.append(f"%{title_query}%")
         
         genre_conditions = []
         if genres and any(genres):
-            genre_conditions = [f"g.name = '{genre.strip().lower()}'" for genre in genres if genre.strip()]
+            genre_conditions = [f"g.name = %s" for genre in genres if genre.strip()]
             if genre_conditions:
                 genre_subquery = f"""
                     SELECT abg.allbooks_title, abg.allbooks_novel_source
@@ -130,14 +136,17 @@ class AllNovelBrowseView(views.APIView):
                     HAVING COUNT(DISTINCT g.name) = {len(genre_conditions)}
                 """
                 conditions.append(f"(ab.title, ab.novel_source) IN ({genre_subquery})")
+                params.extend([genre.strip().lower() for genre in genres if genre.strip()])
 
         # Novel type conditions
         novel_type_conditions = []
         for sort_type in sort_types:
             if sort_type in ['manga', 'manhua', 'manhwa']:
-                novel_type_conditions.append(f"ab.novel_type = '{sort_type.capitalize()}'")
+                novel_type_conditions.append("ab.novel_type = %s")
+                params.append(sort_type.capitalize())
             elif sort_type == 'light_novel':
-                novel_type_conditions.append("ab.novel_type = 'Light Novel'")
+                novel_type_conditions.append("ab.novel_type = %s")
+                params.append("Light Novel")
     
         if novel_type_conditions:
             conditions.append(f"({' OR '.join(novel_type_conditions)})")
@@ -173,6 +182,14 @@ class AllNovelBrowseView(views.APIView):
 
         select_columns = base_columns + additional_columns
 
+        count_query = f"""
+            SELECT COUNT(*)
+            FROM all_books ab
+            LEFT JOIN all_books_genres abg ON ab.title = abg.allbooks_title AND ab.novel_source = abg.allbooks_novel_source
+            LEFT JOIN genre g ON abg.genre_id = g.id
+            WHERE {condition_str}
+        """
+
         query = f"""
             SELECT {', '.join(select_columns)}
             FROM (
@@ -186,14 +203,18 @@ class AllNovelBrowseView(views.APIView):
             ) subquery
             WHERE row_num = 1
             ORDER BY {order_by if order_by else 'title'}
-            LIMIT {page_size} OFFSET {offset}
+            LIMIT %s OFFSET %s
         """
-        browse_results = fetch_books_as_dict(query)
+        params.extend([page_size, offset])
+
+        total_count = fetch_count(count_query, params[:-2])
+        browse_results = fetch_books_as_dict(query, params)
 
         response_data = {
             'page': page,
             'page_size': page_size,
-            'results': browse_results
+            'results': browse_results,
+            'total_count': total_count
         }
 
         return Response(response_data)
@@ -214,7 +235,7 @@ def register_view(request):
         payload = {
             'username': user.username,
             'profileName': user.first_name,
-            'exp': datetime.utcnow() + timedelta(days=2)
+            'exp': datetime.now() + timedelta(days=2)
         }
         jwt_token = jwt.encode(payload, settings.JWT_TOKEN, algorithm='HS256')
         return Response({
@@ -235,12 +256,13 @@ def login_view(request):
         payload = {
             'username': user.username,
             'profileName': user.first_name,
-            'exp': datetime.utcnow() + timedelta(days=2)
+            'exp': datetime.now() + timedelta(days=2)
         }
         jwt_token = jwt.encode(payload, settings.JWT_TOKEN, algorithm='HS256')
         return Response({
             "message": "Login successful",
             "token": jwt_token,
+            # TODO: PAUSE. This could be a huge security vulnerability!!
             "secret": os.getenv('EXTENSION_SECRET_KEY')
         }, status=status.HTTP_200_OK)
     else:
@@ -548,17 +570,22 @@ class BookDetailsView(views.APIView):
     def get(self, request, title):
         try:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT * FROM all_books WHERE title = %s", [title])
-                # TODO: Make this fetchall() --> then return all books, sorted by novel_type
-                book = cursor.fetchone()
-                if not book:
+                cursor.execute("SELECT * FROM all_books WHERE title = %s ORDER BY novel_type", [title])
+                books = cursor.fetchall()
+                if not books:
                     return Response({'message': 'Book not found'}, status=status.HTTP_404_NOT_FOUND)
 
                 # Fetch column names to construct the dictionary
                 columns = [col[0] for col in cursor.description]
-                book_dict = dict(zip(columns, book))
+                books_dict = {}
+                for book in books:
+                    book_dict = dict(zip(columns, book))
+                    novel_type = book_dict['novel_type']
+                    if novel_type not in books_dict:
+                        books_dict[novel_type] = []
+                    books_dict[novel_type].append(book_dict)
 
-            return Response(book_dict)
+            return Response(books_dict)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -590,6 +617,7 @@ def update_reading(request):
         novel_source = data.get('novel_source')
         user_email = request.headers.get('X-User-Email')
         token = request.headers.get('Authorization').split()[1]  # Assuming Bearer token
+        # TODO: Delete later --> using now for debug
         print(f'user_email: {user_email}, token: {token}, book_title: {book_title}, chapter: {chapter}, novel_source: {novel_source}')
 
         if not user_email or not token:
