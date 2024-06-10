@@ -1,5 +1,6 @@
 server/myenv/
 .env
+.vscode/
 server/issues.txt
 
 *.pyc

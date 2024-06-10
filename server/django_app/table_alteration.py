@@ -24,22 +24,31 @@ conn = psycopg2.connect(
 
 def execute_sql_statements():
     with conn.cursor() as cursor:
-        # Rename columns
-        cursor.execute("ALTER TABLE reading_list RENAME COLUMN title TO book_title;")
-        cursor.execute("ALTER TABLE reading_list RENAME COLUMN novel_source TO book_novel_source;")
+        # # Rename columns
+        # cursor.execute("ALTER TABLE reading_list RENAME COLUMN title TO book_title;")
+        # cursor.execute("ALTER TABLE reading_list RENAME COLUMN novel_source TO book_novel_source;")
         
-        # Drop unnecessary columns
-        cursor.execute("ALTER TABLE reading_list DROP COLUMN chapter_link;")
-        cursor.execute("ALTER TABLE reading_list DROP COLUMN novel_type;")
+        # # Drop unnecessary columns
+        # cursor.execute("ALTER TABLE reading_list DROP COLUMN chapter_link;")
+        # cursor.execute("ALTER TABLE reading_list DROP COLUMN novel_type;")
         
-        # Add unique constraint
-        cursor.execute("""
-            ALTER TABLE reading_list 
-            ADD CONSTRAINT unique_book_profile UNIQUE (book_title, book_novel_source, profile_id);
-        """)
+        # # Add unique constraint
+        # cursor.execute("""
+        #     ALTER TABLE reading_list 
+        #     ADD CONSTRAINT unique_book_profile UNIQUE (book_title, book_novel_source, profile_id);
+        # """)
         
-        # Change the column type of newest_chapter to TEXT
-        cursor.execute("ALTER TABLE all_books ALTER COLUMN newest_chapter TYPE TEXT;")
+        # # Change the column type of newest_chapter to TEXT
+        # cursor.execute("ALTER TABLE all_books ALTER COLUMN newest_chapter TYPE TEXT;")
+
+        # Add new columns to the profile table
+        # cursor.execute("""
+        #     ALTER TABLE profile 
+        #     ADD COLUMN is_paying_user BOOLEAN DEFAULT false,
+        #     ADD COLUMN dark_mode BOOLEAN DEFAULT false,
+        #     ADD COLUMN profile_image TEXT DEFAULT '',
+        #     ADD COLUMN email_notifications BOOLEAN DEFAULT false;
+        # """)
         
         # Commit the changes
         conn.commit()
@@ -59,7 +68,7 @@ execute_sql_statements()
 
 # List of tables to fetch data from
 tables = [
-    'all_books',
+    'profile',
 ]
 
 for table in tables:

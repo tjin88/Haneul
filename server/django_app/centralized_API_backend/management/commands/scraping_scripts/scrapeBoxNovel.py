@@ -39,8 +39,8 @@ def get_next_log_file_name(base_dir, base_filename):
         counter += 1
 
 # Setting up the logging configuration
-log_directory = "../out/LightNovelPub"
-log_base_filename = "scrapeLightNovelPub"
+log_directory = "../out/BoxNovel"
+log_base_filename = "scrapeBoxNovel"
 log_file_path = get_next_log_file_name(log_directory, log_base_filename)
 
 # Ensure the log directory exists
@@ -61,9 +61,9 @@ logging.basicConfig(
 logging.getLogger('WDM').setLevel(logging.WARNING)
 
 # Set logger for all other log messages
-logger = logging.getLogger("LightNovelPubScraper")
+logger = logging.getLogger("BoxNovelScraper")
 
-class LightNovelPubScraper:
+class BoxNovelScraper:
     def __init__(self):
         '''
         TODO: Test to see if this is the optimal number of threads
@@ -74,9 +74,9 @@ class LightNovelPubScraper:
         Too many threads = server ban or system overload 
         Too little threads = slower scraping time
 
-        3 threads, all skipped = 0h 9m 36s  --> See out/LightNovelPub/scrapeLightNovelPub_45.txt
-        2 threads, all skipped = 0h 11m 35s --> See out/LightNovelPub/scrapeLightNovelPub_46.txt
-        5 threads, all skipped = 1h 2m 34s  --> See out/LightNovelPub/scrapeLightNovelPub_44.txt
+        3 threads, all skipped = 0h 9m 36s  --> See out/BoxNovel/scrapeBoxNovel_45.txt
+        2 threads, all skipped = 0h 11m 35s --> See out/BoxNovel/scrapeBoxNovel_46.txt
+        5 threads, all skipped = 1h 2m 34s  --> See out/BoxNovel/scrapeBoxNovel_44.txt
         '''
         # TODO: Test to see if this is the optimal number of threads
         # 3 > 2 > 5. Test 4 to see where it stands 
@@ -99,6 +99,7 @@ class LightNovelPubScraper:
             return {'status': 'cancelled', 'title': title_url_tuple[0]}
     
         title, url = title_url_tuple
+        normalized_title = title.replace('(WN)', '').replace('Web Novel', '').strip()
         try:
             driver = self.driver_pool.get_driver()
             driver.get(url)
@@ -106,7 +107,7 @@ class LightNovelPubScraper:
             start_time = datetime.datetime.now()
 
             with connection.cursor() as cursor:
-                cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [title, 'Light Novel Pub'])
+                cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [normalized_title, 'Box Novel'])
                 existing_book = cursor.fetchone()
 
             if existing_book:
@@ -187,17 +188,15 @@ class LightNovelPubScraper:
         finally:
             self.driver_pool.release_driver(driver)
 
-    def scrape_light_novel_pub(self):
+    def scrape_box_novel(self):
         """
-        Scrapes the LightNovelPub website for light novel details and updates the database.
+        Scrapes the Box Novel website for light novel details and updates the database.
         Uses multi-threading for faster scraping.
         """
-        base_url = 'https://lightnovelpub.vip'
-        main_url = f'{base_url}/browse/genre-all-25060123/order-updated/status-all'
-
+        base_url = 'https://boxnovel.com/novel/'
         try:
             driver = self.driver_pool.get_driver()
-            books = self.scrape_main_page(main_url, driver=driver)
+            books = self.scrape_main_page(base_url, driver=driver)
         finally:
             self.driver_pool.release_driver(driver)
 
@@ -248,13 +247,13 @@ class LightNovelPubScraper:
         
         self.driver_pool.close_all_drivers()
         results['skipped'] += consecutive_skipped
-        logger.info(f"Books Processed: {results['processed']}, Skipped: {results['skipped'] + results['cancelled'] - 5 + self.MAX_THREADS}, Errors: {results['error']}")
+        logger.info(f"Books Processed: {results['processed']}, Skipped: {results['skipped'] + results['cancelled']}, Errors: {results['error']}")
         logger.info(f"There should be {total_books} books!")
 
     def scrape_main_page(self, url, driver=None):
         """
         Scrapes the main listing page for book URLs using Selenium.
-        This method scrapes the main page of Light Novel Pub to find all the books listed. 
+        This method scrapes the main page of Box Novel to find all the books listed. 
         It uses Selenium's WebDriverWait to ensure that the page is loaded before attempting to find elements. 
 
         Args:
@@ -268,17 +267,22 @@ class LightNovelPubScraper:
         books = []
 
         while True:
-            book_elements = self.wait_for_elements(By.CLASS_NAME, 'novel-item', driver=driver)
+            book_elements = self.wait_for_elements(By.CLASS_NAME, 'page-item-detail', driver=driver)
             for element in book_elements:
-                title = self.get_element_text(By.CLASS_NAME, 'novel-title', default_text='Title not available', element=element, driver=driver)
-                book_url = self.get_element_attribute(By.TAG_NAME, 'a', 'href', default_value=None, element=self.wait_for_element(By.CLASS_NAME, 'novel-title', element=element, driver=driver),  driver=driver)
+                title = self.get_element_text(By.CSS_SELECTOR, '.post-title a', default_text='Title not available', element=element, driver=driver)
+                book_url = self.get_element_attribute(By.CSS_SELECTOR, '.post-title a', 'href', default_value=None, element=element, driver=driver)
                 books.append((title, book_url))
             
-            next_page_element = self.wait_for_element(By.CLASS_NAME, 'PagedList-skipToNext', timeout=5, driver=driver)
-            if next_page_element:
-                next_page_url = self.get_element_attribute(By.TAG_NAME, 'a', 'href', default_value=None, element=next_page_element, driver=driver)
-                self.navigate_to_url(next_page_url, driver=driver)
-            else:
+            try:
+                next_page_element = self.wait_for_element(By.CSS_SELECTOR, '.nav-previous a', timeout=10, driver=driver)
+                if next_page_element:
+                    driver.execute_script("arguments[0].scrollIntoView(true);", next_page_element)
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, '.nav-previous a')))
+                    driver.execute_script("arguments[0].click();", next_page_element)
+                    time.sleep(3) # TODO: Wait for the page to load. I don't love this hardcoded, but it works for now.
+                else:
+                    return books
+            except TimeoutException:
                 return books
 
     def scrape_newest_chapter(self, book_url, driver):
@@ -293,7 +297,7 @@ class LightNovelPubScraper:
             str: The newest chapter of the book.
         """
         try:
-            return self.get_element_text(By.CSS_SELECTOR, 'nav.content-nav p.latest', 'Chapter not available', driver=driver)
+            return self.get_element_text(By.CSS_SELECTOR, '.listing-chapters_wrap .wp-manga-chapter a', 'Chapter not available', driver=driver)
         except NoSuchElementException as e:
             logger.warning(f"Element not found in {book_url}: {e}")
             return None
@@ -314,32 +318,59 @@ class LightNovelPubScraper:
             dict: A dictionary containing key details of the book.
         """
         try:
-            synopsis = self.get_element_text(By.CSS_SELECTOR, '.summary .content', driver=driver)
-            author = self.get_element_text(By.CSS_SELECTOR, '.author', 'Author not available', driver=driver).replace('Author:', '').strip()
-            updated_on = self.get_element_text(By.CSS_SELECTOR, 'nav.content-nav p.update', driver=driver)
-            newest_chapter = self.get_element_text(By.CSS_SELECTOR, 'nav.content-nav p.latest', driver=driver)
-            genres = [genre.text.strip() for genre in self.wait_for_elements(By.CSS_SELECTOR, 'div.categories a', driver=driver)]
-            image_url = self.get_element_attribute(By.CSS_SELECTOR, 'figure.cover img', 'src', driver=driver)
-            rating = self.get_element_text(By.CSS_SELECTOR, 'div.rating-star strong', driver=driver)
-            status = self.get_element_text(By.CSS_SELECTOR, 'div.header-stats span:nth-of-type(4) strong', driver=driver)
-            followers = self.get_element_text(By.CSS_SELECTOR, 'div.header-stats span:nth-of-type(3) strong', driver=driver)
+            self.navigate_to_url(book_url, driver=driver)
+            
+            # Extract details
+            normalized_title = title.replace('(WN)', '').replace('Web Novel', '').strip()
+            synopsis_str = self.wait_for_element(By.CSS_SELECTOR, '.description-summary .summary__content', driver=driver)
+            synopsis = synopsis_str.get_attribute('textContent').replace('(adsbygoogle = window.adsbygoogle || []).push({});', '').replace('B0XNʘVEL.C0M', '').strip() if synopsis_str and synopsis_str.get_attribute('textContent') else 'Synopsis not available'
+            authors = self.wait_for_elements(By.CSS_SELECTOR, '.summary-content .author-content a', driver=driver)
+            author = ', '.join([author.text.strip() for author in authors]) if authors else 'Author not available'
+            updated_on_text = self.get_element_text(By.CSS_SELECTOR, '.chapter-release-date i', driver=driver)
+            newest_chapter = self.get_element_text(By.CSS_SELECTOR, '.listing-chapters_wrap .wp-manga-chapter a', driver=driver)
+            genres = [genre.text.strip() for genre in self.wait_for_elements(By.CSS_SELECTOR, '.summary-content .genres-content a', driver=driver)]
+            default_image_url = "https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image"
+            image_url = self.get_element_attribute(By.CSS_SELECTOR, '.summary_image img', 'src', driver=driver) or default_image_url
+            rating = self.get_element_text(By.CSS_SELECTOR, '.post-total-rating .score', driver=driver)
+            status = self.get_value_based_on_heading("Status", driver)
+            followers_str = self.get_value_based_on_heading("Rank", driver)
+            followers = self.parse_followers(followers_str.split(' ')[-3]) if followers_str != 'N/A' else 'N/A'
+            updated_on = self.parse_relative_date(updated_on_text).strftime('%Y-%m-%dT%H:%M:%S%z')
 
-            timezone_aware_updated_on = self.parse_relative_date(updated_on)
+            try:
+                next_page_element = self.wait_for_element(By.CLASS_NAME, 'chapter-readmore', timeout=5, driver=driver)
+                if next_page_element:
+                    driver.execute_script("arguments[0].scrollIntoView(true);", next_page_element)
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CLASS_NAME, 'chapter-readmore')))
+                    driver.execute_script("arguments[0].click();", next_page_element)
+                    time.sleep(3) # TODO: Wait for the page to load. I don't love this hardcoded, but it works for now.
+            except TimeoutException:
+                # Yeah I guess keep going? It just means that there's less than 5 chapters ...
+                pass
 
-            chapters = self.extract_chapters(f'{book_url}/chapters', book_title=title, driver=driver)
+            chapters = {}
+            try:
+                chapter_elements = self.wait_for_elements(By.CSS_SELECTOR, 'ul.version-chap a', timeout=5, driver=driver)
+                for chapter in chapter_elements:
+                    chapter_title = chapter.text.strip()
+                    chapter_url = chapter.get_attribute('href')
+                    if chapter_title and chapter_url:
+                        chapters[chapter_title] = chapter_url
+            except TimeoutException:
+                chapters = {}
 
             book_details = {
-                'title': title,
+                'title': normalized_title,
                 'synopsis': synopsis,
                 'author': author,
-                'updated_on': timezone_aware_updated_on,
+                'updated_on': updated_on,
                 'newest_chapter': newest_chapter,
                 'genres': genres,
                 'image_url': image_url,
-                'rating': float(rating) * 2.0,
+                'rating': float(rating) * 2.0 if rating else 0.0,
                 'status': status,
                 'novel_type': 'Light Novel',
-                'novel_source': 'Light Novel Pub',
+                'novel_source': 'Box Novel',
                 'followers': followers,
                 'chapters': chapters
             }
@@ -351,7 +382,7 @@ class LightNovelPubScraper:
             logger.error(f"WebDriverException encountered for {title} at {book_url}: {e}")
         except Exception as e:
             logger.error(f"Unexpected error while processing {title}: {e}")
-    
+
     def navigate_to_url(self, url, driver=None):
         """
         Navigates to a specified URL using the WebDriver.
@@ -406,11 +437,10 @@ class LightNovelPubScraper:
                 EC.presence_of_element_located((by, value))
             )
         except (TimeoutException, WebDriverException) as e:
-            if value != "PagedList-skipToNext":
-                logger.error(f"Error waiting for element {value}: {e}")
-                raise
-            else:
+            if value in ["PagedList-skipToNext", ".nav-previous a", ".description-summary .summary__content"]:
                 return None
+            logger.error(f"Error waiting for element {value}: {e}")
+            raise
     
     def get_element_text(self, by, value, default_text='Not Available', element=None, driver=None):
         """
@@ -456,37 +486,27 @@ class LightNovelPubScraper:
         except (TimeoutException, WebDriverException):
             logger.warning(f"Element {value} not found, using default value.")
             return default_value
-
-    def extract_chapters(self, chapters_url, book_title, driver):
+    
+    def get_value_based_on_heading(self, heading, driver):
         """
-        Extracts chapter details from a given URL.
+        Gets the value from the summary-content based on the given heading.
 
         Args:
-            chapters_url (str): The URL to scrape chapters from.
-            driver (webdriver): The WebDriver instance for the thread.
+            heading (str): The heading to look for (e.g., 'Status', 'Rank').
+            driver (webdriver): The WebDriver instance.
 
         Returns:
-            dict: A dictionary where each key is a chapter title and each value is the corresponding chapter link.
+            str: The corresponding value from the summary-content.
         """
-        self.navigate_to_url(chapters_url, driver=driver)
-        book_chapters = {}
         try:
-            while True:
-                chapter_elements = self.wait_for_elements(By.CSS_SELECTOR, 'ul.chapter-list a', driver=driver)
-                for chapter in chapter_elements:                
-                    chapter_title, chapter_link = self.process_chapter_element(chapter, driver=driver)
-                    book_chapters[chapter_title] = chapter_link
-                
-                next_page_element = self.wait_for_element(By.CLASS_NAME, 'PagedList-skipToNext', timeout=5, driver=driver)
-                if next_page_element:
-                    next_page_url = self.get_element_attribute(By.TAG_NAME, 'a', 'href', default_value=None, element=next_page_element, driver=driver)
-                    self.navigate_to_url(next_page_url, driver=driver)
-                else:
-                    break
-        except Exception as e:
-            logger.error(f"An error occurred: {e}")
-
-        return book_chapters
+            items = driver.find_elements(By.CSS_SELECTOR, '.post-content_item')
+            for item in items:
+                heading_text = item.find_element(By.CSS_SELECTOR, '.summary-heading h5').text.strip()
+                if heading_text == heading:
+                    return item.find_element(By.CSS_SELECTOR, '.summary-content').text.strip()
+            return 'N/A'
+        except NoSuchElementException:
+            return 'N/A'
 
     def process_chapter_element(self, chapter_element, driver):
         """
@@ -521,16 +541,48 @@ class LightNovelPubScraper:
             datetime: A timezone-aware datetime object representing the parsed date.
         """
         today = timezone.now()
-        if time_str == "Updated yesterday":
-            return today - datetime.timedelta(days=1)
-        elif "days ago" in time_str:
-            days = int(re.search(r'(\d+) days ago', time_str).group(1))
+        
+        if "day ago" in time_str:
+            days = int(re.search(r'(\d+) day(?:s)? ago', time_str).group(1))
             return today - datetime.timedelta(days=days)
-        elif "years ago" in time_str:
-            years = int(re.search(r'(\d+) years ago', time_str).group(1))
+        elif "hour ago" in time_str:
+            hours = int(re.search(r'(\d+) hour(?:s)? ago', time_str).group(1))
+            return today - datetime.timedelta(hours=hours)
+        elif "minute ago" in time_str:
+            minutes = int(re.search(r'(\d+) minute(?:s)? ago', time_str).group(1))
+            return today - datetime.timedelta(minutes=minutes)
+        elif "year ago" in time_str:
+            years = int(re.search(r'(\d+) year(?:s)? ago', time_str).group(1))
             return today - datetime.timedelta(days=years * 365)
+        elif "month ago" in time_str:
+            months = int(re.search(r'(\d+) month(?:s)? ago', time_str).group(1))
+            return today - datetime.timedelta(days=months * 30)
+        elif re.match(r'\b\d{1,2} \w+ \d{4}\b', time_str):
+            # Parsing absolute dates like 'May 6, 2024'
+            return datetime.datetime.strptime(time_str, '%B %d, %Y').replace(tzinfo=timezone.utc)
         else:
+            # Default case returns current date and time
             return today
+    
+    @staticmethod
+    def parse_followers(followers_str):
+        """
+        Parses the followers string into an integer value.
+        The underscores are just for readability and do not affect the number.
+
+        Args:
+            followers_str (str): A string representing the number of followers (e.g., '1.2M', '3.4K', '500').
+
+        Returns:
+            int: The number of followers as an integer.
+        """
+        followers_str = followers_str.upper()
+        if 'M' in followers_str:
+            return int(float(followers_str.replace('M', '')) * 1_000_000)
+        elif 'K' in followers_str:
+            return int(float(followers_str.replace('K', '')) * 1_000)
+        else:
+            return int(followers_str)
     
     @staticmethod
     def format_duration(duration):
@@ -583,7 +635,7 @@ class DriverPool:
             driver.quit()
 
 class Command(BaseCommand):
-    help = 'Scrapes light novels from LightNovelPub and updates the database.'
+    help = 'Scrapes light novels from Box Novel and updates the database.'
 
     def handle(self, *args, **kwargs):
         """
@@ -591,17 +643,17 @@ class Command(BaseCommand):
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape LightNovelPub")
+        logger.info("Starting to scrape Box Novel")
         start_time = datetime.datetime.now()
-        scraper = LightNovelPubScraper()
+        scraper = BoxNovelScraper()
         try:
-            scraper.scrape_light_novel_pub()
+            scraper.scrape_box_novel()
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
-            logger.info(f"Successfully executed scrapeLightNovelPub in {formatted_duration} ")
-            self.stdout.write(self.style.SUCCESS('Successfully executed scrapeLightNovelPub'))
+            logger.info(f"Successfully executed scrapeBoxNovel in {formatted_duration} ")
+            self.stdout.write(self.style.SUCCESS('Successfully executed scrapeBoxNovel'))
         except ConnectionError:
-            logger.error("Looks like the computer was not connected to the internet. Abandoned this attempt to update server for Light Novel Pub books.")
+            logger.error("Looks like the computer was not connected to the internet. Abandoned this attempt to update server for Box Novel books.")
         except Exception as e:
             logger.error(f"An error occurred during scraping: {e}")
             raise CommandError(f"Scraping failed due to an error: {e}")

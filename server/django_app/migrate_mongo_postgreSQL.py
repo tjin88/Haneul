@@ -67,7 +67,11 @@ def create_tables():
     CREATE TABLE IF NOT EXISTS profile (
         id VARCHAR(24) PRIMARY KEY,
         user_id INTEGER REFERENCES auth_user(id) ON DELETE CASCADE,
-        reading_list JSONB DEFAULT '[]'::jsonb
+        reading_list JSONB DEFAULT '[]'::jsonb,
+        is_paying_user BOOLEAN DEFAULT false,
+        dark_mode BOOLEAN DEFAULT false,
+        profile_image TEXT DEFAULT '',
+        email_notifications BOOLEAN DEFAULT false
     );
     """)
 

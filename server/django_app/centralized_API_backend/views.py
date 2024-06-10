@@ -17,9 +17,11 @@ from django.db import connection
 from django.views.decorators.http import require_http_methods
 from dotenv import load_dotenv
 import os
+# import cloudinary
 
 load_dotenv()  # Load environment variables from .env file
 
+###################### HELPER FUNCTIONS ######################
 def fetch_books_as_dict(query, params=None):
     cursor = connection.cursor()
     cursor.execute(query, params)
@@ -35,6 +37,24 @@ def fetch_count(query, params=None):
     count = cursor.fetchone()[0]
     return count
 
+# TODO: Fix this!
+def parse_and_sort_chapters(chapters):
+    # Check if chapters is a JSON string and parse it
+    if isinstance(chapters, str):
+        try:
+            chapters = chapters.replace('\\"', '"')
+            chapters_dict = json.loads(chapters)
+        except json.JSONDecodeError as e:
+            print(f"Error parsing chapters: {e}")
+            chapters_dict = {}
+    else:
+        chapters_dict = chapters
+
+    # Sort chapters based on the first number found in the chapter key
+    sorted_chapters = {k: v for k, v in sorted(chapters_dict.items(), key=lambda item: int(re.findall(r'\d+', item[0])[0]) if re.findall(r'\d+', item[0]) else float('inf'))}
+    return sorted_chapters
+
+###################### MAIN FUNCTIONS ######################
 class HomeNovelGetView(views.APIView):
     def get(self, request):
         carousel_titles = ("Reaper of the Drifting Moon", "Solo Leveling", "The Strongest Player",
@@ -252,20 +272,35 @@ def login_view(request):
     password = data.get('password')
     user = authenticate(request, username=username, password=password)
 
-    if user is not None:
-        payload = {
-            'username': user.username,
-            'profileName': user.first_name,
-            'exp': datetime.now() + timedelta(days=2)
-        }
-        jwt_token = jwt.encode(payload, settings.JWT_TOKEN, algorithm='HS256')
-        return Response({
-            "message": "Login successful",
-            "token": jwt_token,
-            # TODO: PAUSE. This could be a huge security vulnerability!!
-            "secret": os.getenv('EXTENSION_SECRET_KEY')
-        }, status=status.HTTP_200_OK)
-    else:
+    if not user:
+        return Response({"message": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        with connection.cursor() as cursor:
+            # Fetch profile
+            cursor.execute("SELECT profile_image, dark_mode, email_notifications FROM profile WHERE user_id = %s", [user.id])
+            profile_result = cursor.fetchone()
+            if not profile_result:
+                return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
+            profile_image, dark_mode, email_notifications = profile_result
+
+            payload = {
+                'username': user.username,
+                'profileName': user.first_name,
+                'profileImage': profile_image,
+                # 'profileImage': 'https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image',
+                'darkMode': dark_mode,
+                'emailNotifications': email_notifications,
+                'exp': datetime.now() + timedelta(days=2)
+            }
+            jwt_token = jwt.encode(payload, settings.JWT_TOKEN, algorithm='HS256')
+            return Response({
+                "message": "Login successful",
+                "token": jwt_token,
+                # TODO: PAUSE. This could be a huge security vulnerability!!
+                "secret": os.getenv('EXTENSION_SECRET_KEY')
+            }, status=status.HTTP_200_OK)
+    except Exception as e:
         return Response({"message": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(['PUT'])
@@ -332,7 +367,6 @@ def update_reading_list(request):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 class UserProfileReadingListView(views.APIView):
     # TODO: Add tokens for user authentication
     # permission_classes = [IsAuthenticated]
@@ -370,7 +404,7 @@ class UserProfileReadingListView(views.APIView):
 
                     if isinstance(chapters_json, str):
                         try:
-                            chapters_json = chapters_json.replace('\\"', '"')  # Remove extra escape characters if necessary
+                            chapters_json = chapters_json.replace('\\"', '"')
                             chapters_dict = json.loads(chapters_json)
                         except json.JSONDecodeError:
                             chapters_dict = {}
@@ -417,64 +451,6 @@ class UserProfileReadingListView(views.APIView):
             except (ValueError, IndexError):
                 continue
         return max_link
-
-# class UserProfileReadingListView(views.APIView):
-#     # TODO: Add tokens for user authentication
-#     # permission_classes = [IsAuthenticated]
-
-#     def get(self, request, email):
-#         try:
-#             with connection.cursor() as cursor:
-#                 # Fetch user
-#                 cursor.execute("SELECT id FROM auth_user WHERE email = %s", [email])
-#                 user_result = cursor.fetchone()
-                
-#                 if not user_result:
-#                     return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-                
-#                 user_id = user_result[0]
-
-#                 # Fetch reading list
-#                 cursor.execute("""
-#                     SELECT rl.id, rl.reading_status, rl.user_tag, rl.latest_read_chapter, 
-#                            ab.title AS book_title, ab.novel_source, ab.novel_type, ab.newest_chapter, 
-#                            ab.chapters->>rl.latest_read_chapter AS latest_read_chapter_link, 
-#                            ab.chapters->>ab.newest_chapter AS newest_chapter_link
-#                     FROM reading_list rl
-#                     JOIN all_books ab ON rl.book_title = ab.title AND rl.book_novel_source = ab.novel_source
-#                     WHERE rl.profile_id = (
-#                         SELECT id FROM profile WHERE user_id = %s
-#                     )
-#                 """, [user_id])
-#                 reading_list_results = cursor.fetchall()
-
-#                 # Prepare the reading list response
-#                 reading_list = []
-#                 for row in reading_list_results:
-#                     reading_list.append({
-#                         'id': row[0],
-#                         'reading_status': row[1],
-#                         'user_tag': row[2],
-#                         'latest_read_chapter': row[3],
-#                         'title': row[4],
-#                         'novel_source': row[5],
-#                         'novel_type': row[6],
-#                         'newest_chapter': row[7],
-#                         'latest_read_chapter_link': row[8],
-#                         'newest_chapter_link': row[9]
-#                     })
-
-#             response = Response({'reading_list': reading_list})
-#             # TODO: Handle CORS better. 
-#             # Currently I am allowing all origins, which must be cha
-#             # \nged before deploying
-#             response["Access-Control-Allow-Origin"] = "*"
-#             response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-#             response["Access-Control-Allow-Headers"] = "Origin, Content-Type, Accept"
-#             return response
-
-#         except Exception as e:
-#             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['DELETE'])
 def delete_book_from_reading_list(request):
@@ -566,11 +542,22 @@ def update_to_max_chapter(request):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 class BookDetailsView(views.APIView):
     def get(self, request, title):
         try:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT * FROM all_books WHERE title = %s ORDER BY novel_type", [title])
+                # Fetch books with the given title
+                cursor.execute("""
+                    SELECT ab.*, 
+                           ARRAY_AGG(g.name) AS genres
+                    FROM all_books ab
+                    LEFT JOIN all_books_genres abg ON ab.title = abg.allbooks_title AND ab.novel_source = abg.allbooks_novel_source
+                    LEFT JOIN genre g ON abg.genre_id = g.id
+                    WHERE ab.title = %s
+                    GROUP BY ab.title, ab.novel_source, ab.synopsis, ab.author, ab.updated_on, ab.newest_chapter, ab.image_url, ab.rating, ab.status, ab.novel_type, ab.followers, ab.chapters
+                    ORDER BY ab.novel_type
+                """, [title])
                 books = cursor.fetchall()
                 if not books:
                     return Response({'message': 'Book not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -580,6 +567,12 @@ class BookDetailsView(views.APIView):
                 books_dict = {}
                 for book in books:
                     book_dict = dict(zip(columns, book))
+                    print(f"Debug: book_dict['chapters']: {book_dict['chapters']}")  # Debug statement
+
+                    # TODO: Send chapters as a sorted dictionary
+                    # if book_dict['chapters']:
+                    #     book_dict['chapters'] = parse_and_sort_chapters(book_dict['chapters'])
+
                     novel_type = book_dict['novel_type']
                     if novel_type not in books_dict:
                         books_dict[novel_type] = []
@@ -587,6 +580,7 @@ class BookDetailsView(views.APIView):
 
             return Response(books_dict)
         except Exception as e:
+            print(f"Debug: Exception: {e}")  # Debug statement
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class AllNovelGetGenres(views.APIView):
@@ -683,3 +677,11 @@ def update_reading(request):
         response = JsonResponse({'status': 'failure', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         response["Access-Control-Allow-Origin"] = "*"
         return response
+
+'''
+TODO: 
+- Update user.email
+- Update user.password
+- Update profile[userId].profileName
+- Update profileImage --> get photo, upload to cloudinary, save url in profile[userId].profileImage
+'''
