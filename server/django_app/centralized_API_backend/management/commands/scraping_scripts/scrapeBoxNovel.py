@@ -1,3 +1,5 @@
+# TODO: Look into optimizations. Took 1h 7m 12s to scrape 500 books (I did cap this at 500 manually).
+# To be fair, my computer was overloaded at that time, so the CPU could have been overloaded.
 import datetime
 import json
 import time
@@ -265,6 +267,7 @@ class BoxNovelScraper:
         """
         self.navigate_to_url(url, driver=driver)
         books = []
+        page_count = 1
 
         while True:
             book_elements = self.wait_for_elements(By.CLASS_NAME, 'page-item-detail', driver=driver)
@@ -275,7 +278,9 @@ class BoxNovelScraper:
             
             try:
                 next_page_element = self.wait_for_element(By.CSS_SELECTOR, '.nav-previous a', timeout=10, driver=driver)
-                if next_page_element:
+                if next_page_element and page_count < 50:
+                    page_count += 1
+                    print(f'Going to page {page_count}')
                     driver.execute_script("arguments[0].scrollIntoView(true);", next_page_element)
                     WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, '.nav-previous a')))
                     driver.execute_script("arguments[0].click();", next_page_element)

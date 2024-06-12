@@ -75,11 +75,10 @@ Easy Light Novels (Similar to AsuraScans):
 
 Medium Manga (Similar to MangaSushi)
 - https://yakshascans.com/manga/
-- https://paragonscans.com/mangax/ --> Aggregator ...
+- https://paragonscans.com/mangax/ --> Aggregator :(
 - https://stonescape.xyz/manhwaseries/
     - Also https://stonescape.xyz/novels/ for LN
 - https://kakuseiproject.com/manga/ --> Portugese ?
-- https://hiraethtranslation.com/novel-genre/web-novel-cn/
 - https://aryascans.com/manga/
 - https://ksgroupscans.com/?s=&post_type=wp-manga
 - https://blazescans.com/manga/list-mode/ --> Likely to be an aggregator

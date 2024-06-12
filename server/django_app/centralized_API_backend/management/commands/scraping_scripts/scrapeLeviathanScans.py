@@ -118,7 +118,7 @@ class LeviathanScansScraper:
                     return {'status': 'skipped', 'title': title}
 
             details = self.scrape_book_details(title, url, driver)
-            logger.info(details)
+            # logger.info(details)
 
             # Attempt to update an existing book or create a new one
             # TODO: Come back to this --> May want to store then push at the end to avoid "concurrency issues" **
@@ -224,11 +224,11 @@ class LeviathanScansScraper:
                     logger.error(f"Error processing {result['title']}: {result['message']}")
                 elif result['status'] == 'database_error':
                     consecutive_skipped += 1
-                    if consecutive_skipped >= 5:
-                        logger.info("5 books encountered a database error in a row. Exiting...")
-                        self.continue_scraping = False
-                        executor.shutdown(wait=False)
-                        break
+                    # if consecutive_skipped >= 5:
+                    #     logger.info("5 books encountered a database error in a row. Exiting...")
+                    #     self.continue_scraping = False
+                    #     executor.shutdown(wait=False)
+                    #     break
                 elif results['processed'] > 0 or results['skipped'] > self.skipped_threshold:
                     if result['status'] == 'skipped':
                         consecutive_skipped += 1
@@ -237,11 +237,11 @@ class LeviathanScansScraper:
                         Break if there are more than 5 books that haven't been updated.
                         This is because we would assume that the rest of the books are up to date.
                         '''
-                        if consecutive_skipped >= 5:
-                            logger.info("5 books skipped in a row after processing. Exiting...")
-                            self.continue_scraping = False
-                            executor.shutdown(wait=False)
-                            break
+                        # if consecutive_skipped >= 5:
+                        #     logger.info("5 books skipped in a row after processing. Exiting...")
+                        #     self.continue_scraping = False
+                        #     executor.shutdown(wait=False)
+                        #     break
                     elif result['status'] == 'processed':
                         results['skipped'] += consecutive_skipped
                         consecutive_skipped = 0

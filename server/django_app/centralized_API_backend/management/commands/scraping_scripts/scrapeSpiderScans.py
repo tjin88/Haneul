@@ -333,7 +333,7 @@ class SpiderScansScraper:
 
             details = self.scrape_book_details(url)
 
-            if len(details['chapters']) == 0:
+            if not details['chapters'] or len(details['chapters']) == 0:
                 logger.warning(f"No chapters found for {normalized_title}. Skipping.")
                 return {'status': 'skipped', 'title': normalized_title}
 

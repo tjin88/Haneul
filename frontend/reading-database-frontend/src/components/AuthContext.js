@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-// import jwtDecode from 'jwt-decode';
 
 const AuthContext = createContext();
 
@@ -26,7 +25,10 @@ export const AuthProvider = ({ children }) => {
       const decodedToken = parseJwt(storedToken);
       const user = {
         username: decodedToken.username,
-        profileName: decodedToken.profileName
+        profileName: decodedToken.profileName,
+        profileImage: decodedToken.profileImage,
+        darkMode: decodedToken.darkMode,
+        emailNotifications: decodedToken.emailNotifications,
       };
       
       setIsLoggedIn(true);
@@ -57,7 +59,10 @@ export const AuthProvider = ({ children }) => {
       const decodedToken = parseJwt(data.token);
       const user = {
         username: decodedToken.username,
-        profileName: decodedToken.profileName
+        profileName: decodedToken.profileName,
+        profileImage: decodedToken.profileImage,
+        darkMode: decodedToken.darkMode,
+        emailNotifications: decodedToken.emailNotifications,
       };
   
       setUser(user);
@@ -103,7 +108,6 @@ export const AuthProvider = ({ children }) => {
       throw err;
     }
   };
-  
 
   const logout = () => {
     setUser(null);
@@ -113,12 +117,68 @@ export const AuthProvider = ({ children }) => {
     window.location.href = window.location.origin;
   };
 
+  const deleteUserAccount = async () => {
+    try {
+      const response = await fetch(`/centralized_API_backend/api/delete_user/`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: user.username }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Delete account failed');
+      }
+
+      setUser(null);
+      setIsLoggedIn(false);
+      localStorage.removeItem('token');
+      console.log('Account deleted!')
+      window.location.href = window.location.origin;
+    } catch (err) {
+      console.error('Delete account error:', err);
+      throw err;
+    }
+  };
+  
+  const updateUserProfile = async (profileData) => {
+    try {
+      const token = localStorage.getItem('token');
+      const csrfToken = getCsrfToken();
+      const response = await fetch(`/centralized_API_backend/api/update_user_profile/`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-CSRFToken': csrfToken,
+        },
+        body: profileData,
+      });
+  
+      if (!response.ok) {
+        throw new Error('Profile update failed');
+      }
+  
+      const data = await response.json();
+      const updatedUser = {
+        ...user,
+        profileImage: data.profileImage,
+      };
+      setUser(updatedUser);
+    } catch (err) {
+      console.error('Profile update error:', err);
+      throw err;
+    }
+  };  
+
   const value = { 
     isLoggedIn,
     user, 
     login, 
     register, 
-    logout 
+    logout,
+    deleteUserAccount,
+    updateUserProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

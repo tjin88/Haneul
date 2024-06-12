@@ -1,15 +1,18 @@
-import re
+# TODO: Protect against SQL Injection attacks
+# TODO: Protect against Man-in-the-Middle attacks (Use HTTPS)
+# TODO: Protect against Clickjacking attacks
 from django.shortcuts import render
 from rest_framework import status, views
 from rest_framework.response import Response
 from django.contrib.auth import authenticate, login
-from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 import json
-from rest_framework.decorators import api_view
-from django.utils.decorators import method_decorator
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_protect, csrf_exempt
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 from django.http import JsonResponse
+from django.middleware.csrf import get_token
 import jwt
 from datetime import datetime, timedelta
 from django.conf import settings
@@ -17,7 +20,8 @@ from django.db import connection
 from django.views.decorators.http import require_http_methods
 from dotenv import load_dotenv
 import os
-# import cloudinary
+import cloudinary.uploader
+from django.middleware.csrf import CsrfViewMiddleware
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -37,6 +41,19 @@ def fetch_count(query, params=None):
     count = cursor.fetchone()[0]
     return count
 
+def get_newest_chapter_link(chapters):
+    max_chapter = -1
+    max_link = ""
+    for chapter_key, link in chapters.items():
+        try:
+            chapter_num = float(re.findall(r"[-+]?\d*\.\d+|\d+", chapter_key)[0])
+            if chapter_num > max_chapter:
+                max_chapter = chapter_num
+                max_link = link
+        except (ValueError, IndexError):
+            continue
+    return max_link
+
 # TODO: Fix this!
 def parse_and_sort_chapters(chapters):
     # Check if chapters is a JSON string and parse it
@@ -53,6 +70,13 @@ def parse_and_sort_chapters(chapters):
     # Sort chapters based on the first number found in the chapter key
     sorted_chapters = {k: v for k, v in sorted(chapters_dict.items(), key=lambda item: int(re.findall(r'\d+', item[0])[0]) if re.findall(r'\d+', item[0]) else float('inf'))}
     return sorted_chapters
+
+@ensure_csrf_cookie
+@api_view(['GET'])
+def csrf_token_view(request):
+    temp = get_token(request)
+    print(f'CSRF token view: {temp}')
+    return JsonResponse({'csrfToken': temp})
 
 ###################### MAIN FUNCTIONS ######################
 class HomeNovelGetView(views.APIView):
@@ -239,7 +263,6 @@ class AllNovelBrowseView(views.APIView):
 
         return Response(response_data)
 
-@method_decorator(csrf_exempt, name='dispatch')
 @api_view(['POST'])
 def register_view(request):
     data = request.data
@@ -264,7 +287,6 @@ def register_view(request):
         }, status=status.HTTP_201_CREATED)
     return Response({"error": "An unexpected error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@csrf_exempt
 @api_view(['POST'])
 def login_view(request):
     data = request.data
@@ -303,7 +325,10 @@ def login_view(request):
     except Exception as e:
         return Response({"message": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
+@csrf_exempt
 @api_view(['PUT'])
+# @permission_classes([IsAuthenticated])
+# @authentication_classes([SessionAuthentication, TokenAuthentication])
 def update_reading_list(request):
     data = request.data
     email = data.get('username')
@@ -316,10 +341,6 @@ def update_reading_list(request):
             if not user_result:
                 return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
             user_id = user_result[0]
-
-            # TODO: Get user authentication to work
-            # if not user or user.is_anonymous:
-            #     return Response({"error": "User not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
             # Fetch profile
             cursor.execute("SELECT id FROM profile WHERE user_id = %s", [user_id])
@@ -368,9 +389,6 @@ def update_reading_list(request):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class UserProfileReadingListView(views.APIView):
-    # TODO: Add tokens for user authentication
-    # permission_classes = [IsAuthenticated]
-
     def get(self, request, email):
         try:
             with connection.cursor() as cursor:
@@ -411,7 +429,7 @@ class UserProfileReadingListView(views.APIView):
                     else:
                         chapters_dict = chapters_json
 
-                    newest_chapter_link = self.get_newest_chapter_link(chapters_dict)
+                    newest_chapter_link = get_newest_chapter_link(chapters_dict)
                     
                     reading_list.append({
                         'id': row[0],
@@ -433,26 +451,15 @@ class UserProfileReadingListView(views.APIView):
             response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
             response["Access-Control-Allow-Headers"] = "Origin, Content-Type, Accept"
 
-            print(response)
             return response
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-    def get_newest_chapter_link(self, chapters):
-        max_chapter = -1
-        max_link = ""
-        for chapter_key, link in chapters.items():
-            try:
-                chapter_num = float(re.findall(r"[-+]?\d*\.\d+|\d+", chapter_key)[0])
-                if chapter_num > max_chapter:
-                    max_chapter = chapter_num
-                    max_link = link
-            except (ValueError, IndexError):
-                continue
-        return max_link
 
+@csrf_exempt
 @api_view(['DELETE'])
+# @permission_classes([IsAuthenticated])
+# @authentication_classes([SessionAuthentication, TokenAuthentication])
 def delete_book_from_reading_list(request):
     data = request.data
     email = data.get('username')
@@ -486,8 +493,12 @@ def delete_book_from_reading_list(request):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@csrf_exempt
 @api_view(['PUT'])
+# @permission_classes([IsAuthenticated])
+# @authentication_classes([SessionAuthentication, TokenAuthentication])
 def update_to_max_chapter(request):
+    print(f"CSRF Token from request: {request.META.get('HTTP_X_CSRFTOKEN')}")
     data = request.data
     email = data.get('username')
     title = data.get('title')
@@ -521,10 +532,12 @@ def update_to_max_chapter(request):
             chapters, novel_source = result
             chapters = json.loads(chapters)
 
-            # Since we using SQL queries, I can't use my built-in get_latest_chapter function. 
+            # Define chapter_key function to find latest chapter 
+            # TODO: might switch to using something similar to get_newest_chapter_link
             def chapter_key(chapter_str):
                 numbers = re.findall(r"\d+\.\d+|\d+", chapter_str)
                 return [float(num) for num in numbers]
+            
             latest_chapter = max(chapters.keys(), key=chapter_key) if chapters else None
 
             if latest_chapter:
@@ -541,7 +554,6 @@ def update_to_max_chapter(request):
 
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 class BookDetailsView(views.APIView):
     def get(self, request, title):
@@ -567,7 +579,7 @@ class BookDetailsView(views.APIView):
                 books_dict = {}
                 for book in books:
                     book_dict = dict(zip(columns, book))
-                    print(f"Debug: book_dict['chapters']: {book_dict['chapters']}")  # Debug statement
+                    # print(f"Debug: book_dict['chapters']: {book_dict['chapters']}")  # Debug statement
 
                     # TODO: Send chapters as a sorted dictionary
                     # if book_dict['chapters']:
@@ -593,7 +605,6 @@ class AllNovelGetGenres(views.APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@csrf_exempt
 @require_http_methods(["OPTIONS", "POST"])
 @api_view(['POST'])
 def update_reading(request):
@@ -611,8 +622,6 @@ def update_reading(request):
         novel_source = data.get('novel_source')
         user_email = request.headers.get('X-User-Email')
         token = request.headers.get('Authorization').split()[1]  # Assuming Bearer token
-        # TODO: Delete later --> using now for debug
-        print(f'user_email: {user_email}, token: {token}, book_title: {book_title}, chapter: {chapter}, novel_source: {novel_source}')
 
         if not user_email or not token:
             return JsonResponse({'status': 'failure', 'error': 'User email or token not provided'}, status=status.HTTP_400_BAD_REQUEST)
@@ -626,8 +635,6 @@ def update_reading(request):
             return JsonResponse({'status': 'failure', 'error': 'Token has expired'}, status=status.HTTP_401_UNAUTHORIZED)
         except jwt.InvalidTokenError:
             return JsonResponse({'status': 'failure', 'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
-
-        print(f'Valid token for user: {user_email}')
 
         with connection.cursor() as cursor:
             # Fetch user by email
@@ -652,8 +659,7 @@ def update_reading(request):
             existing_book_result = cursor.fetchone()
 
             if existing_book_result:
-                print(f'Existing book found. reading_list ID: {existing_book_result[0]}')
-                print(f'Updating the latest read chapter for book id {existing_book_result[0]} to {chapter}')
+                print(f'Updating the latest read chapter for book id {existing_book_result[0]} for user {profile_id} to {chapter}')
                 # Update the existing book
                 cursor.execute("""
                     UPDATE reading_list
@@ -661,7 +667,6 @@ def update_reading(request):
                     WHERE id = %s
                 """, [chapter, existing_book_result[0]])
             else:
-                print('New book. Adding to reading list')
                 print(f'Adding book {book_title} from {novel_source} at chapter {chapter} to reading list for user {user_email}')
                 # Add the new book to the reading list
                 cursor.execute("""
@@ -678,10 +683,49 @@ def update_reading(request):
         response["Access-Control-Allow-Origin"] = "*"
         return response
 
-'''
-TODO: 
-- Update user.email
-- Update user.password
-- Update profile[userId].profileName
-- Update profileImage --> get photo, upload to cloudinary, save url in profile[userId].profileImage
-'''
+@csrf_exempt
+@api_view(['PUT'])
+# @permission_classes([IsAuthenticated])
+# @authentication_classes([SessionAuthentication, TokenAuthentication])
+def update_user_profile(request):
+    print("Updating user profile")
+    user = request.user
+    data = request.data
+
+    cursor = connection.cursor()
+
+    # Fetch the current profile image
+    profile_image_url = ""
+    cursor.execute("SELECT profile_image FROM profile WHERE user_id = %s", [user.id])
+    current_profile_image = cursor.fetchone()
+    if current_profile_image:
+        profile_image_url = current_profile_image[0]
+
+    # Update email
+    if 'email' in data:
+        user.email = data['email']
+        user.username = data['email']  # Assuming username is same as email
+        user.save()
+
+    # Update password
+    if 'password' in data:
+        user.set_password(data['password'])
+        user.save()
+
+    # Update profileName
+    profile_name = data.get('profileName')
+    if profile_name:
+        cursor.execute("UPDATE profile SET profile_name = %s WHERE user_id = %s", [profile_name, user.id])
+
+    # Update profileImage
+    if 'profileImage' in request.FILES:
+        profile_image_file = request.FILES['profileImage']
+        upload_result = cloudinary.uploader.upload(profile_image_file)
+        profile_image_url = upload_result.get('url')
+        cursor.execute("UPDATE profile SET profile_image = %s WHERE user_id = %s", [profile_image_url, user.id])
+
+    return Response({"message": "Profile updated successfully", "profileImage": profile_image_url}, status=status.HTTP_200_OK)
+
+def csrf_failure(request, reason=""):
+    print("Hello")
+    return JsonResponse({'error': 'CSRF token missing or incorrect'}, status=403)

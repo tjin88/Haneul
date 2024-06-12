@@ -118,7 +118,7 @@ class GDScansScraper:
                     return {'status': 'skipped', 'title': title}
 
             details = self.scrape_book_details(title, url, driver)
-            logger.info(details)
+            # logger.info(details)
 
             # Attempt to update an existing book or create a new one
             # TODO: Come back to this --> May want to store then push at the end to avoid "concurrency issues" **
@@ -365,7 +365,7 @@ class GDScansScraper:
                 'chapters': chapters
             }
 
-            logger.info(f"Scraped details for {title}: {book_details}")
+            # logger.info(f"Scraped details for {title}: {book_details}")
 
             return book_details
         except NoSuchElementException as e:

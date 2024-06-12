@@ -18,6 +18,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('centralized_API_backend/', include('centralized_API_backend.urls')),  # This line includes the URLs defined in your app-level urls.py
+    path('centralized_API_backend/', include('centralized_API_backend.urls')),  # This line includes the URLs defined in the app-level urls.py
 ]
 

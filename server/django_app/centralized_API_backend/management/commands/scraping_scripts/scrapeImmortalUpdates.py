@@ -118,7 +118,7 @@ class ImmortalUpdatesScraper:
                     return {'status': 'skipped', 'title': title}
 
             details = self.scrape_book_details(title, url, driver)
-            logger.info(details)
+            # logger.info(details)
 
             # Attempt to update an existing book or create a new one
             # TODO: Come back to this --> May want to store then push at the end to avoid "concurrency issues" **
@@ -201,7 +201,7 @@ class ImmortalUpdatesScraper:
             self.driver_pool.release_driver(driver)
 
         logger.info(f"Found {len(books)} books. Starting to scrape details.")
-        logger.info(books)
+        # logger.info(books)
 
         results = {'processed': 0, 'skipped': 0, 'error': 0, 'cancelled': 0}
         book_number = 0
