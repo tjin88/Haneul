@@ -39,9 +39,13 @@ const BookDetails = ({ bookDetails }) => {
       <div className="book-content">
         <h1 className="book-title">{bookDetails.title}</h1>
         <div className="book-genres">
-          {bookDetails && bookDetails.genres && bookDetails.genres.map((genre, index) => (
-            <span key={index} className="genre">{genre}</span>
-          ))}
+          {bookDetails.genres && bookDetails.genres.length > 0 ? (
+            bookDetails.genres.map((genre, index) => (
+              <span key={index} className="genre">{genre}</span>
+            ))
+          ) : (
+            <span className="no-genres">No genres available</span>
+          )}
         </div>
         <div className="book-info">
           <p className="novel_source"><strong>Source:</strong> {bookDetails.novel_source}</p>

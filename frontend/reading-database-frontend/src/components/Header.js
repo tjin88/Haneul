@@ -32,7 +32,7 @@ const Header = ({ isLightMode, setLightMode }) => {
               </button>
               <a href="/user-profile" className="profile-button"> 
                 <h1 className="browse_redirect">{user.profileName}</h1>
-                <img src={user.image || ManColour} alt="Profile" className="browse_redirect" />
+                <img src={user.profileImage || ManColour} alt="Profile" className="browse_redirect" />
               </a>
               </>
           ) : (

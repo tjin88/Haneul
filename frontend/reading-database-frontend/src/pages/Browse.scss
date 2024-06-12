@@ -1,5 +1,12 @@
 .browse {
     padding: 10vh 10vw 0;
+
+    .spinner {
+      margin: 20px;
+      font-size: 18px;
+      color: #333;
+      text-align: center;
+    }    
   
     .search-input {
       width: 100%;

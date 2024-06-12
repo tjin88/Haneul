@@ -4,21 +4,19 @@ import './Welcome.scss';
 const Welcome = () => {
   return (
     <div className="welcome">
-      <h1>Hi there 👋 &nbsp;&nbsp; Welcome to Haneul!</h1>
+      <h1>Hi there 👋 &nbsp; Welcome to Haneul!</h1>
       <p>
-        This platform was born out of a personal necessity and a commitment to ethical technology.
-        As a consumer, I understand the challenges manga and light novel enthusiasts face
-        from keeping track of the latest chapters across various platforms.
-        Traditional methods like bookmarking on publisher sites means you've got at least 5 pinned websites, 
-        and relying on aggregator sites is equally disappointing due to the aggregator 
-        profiting while the original publisher drops the book due to lack of support.
+        This platform was born out of a personal necessity and a commitment to supporting authors and translators.
+        As someone who enjoys reading manga and light novels, I've always struggled to keep track of the latest chapters.
+        While I'm not proud of it, that does come in the form of either having 10+ tabs open or relying on aggregator sites.
         <br /><br />
-        To address these challenges, I've built a centralized Manga and Light Novel Tracking 
-        platform where you can easily access, manage, and track your manga and light novel collections.
-        My goal is to offer a reliable and ethical service for fellow enthusiasts while supporting 
-        original publishers.
+        Since the latter is slowly killing the translators and authors,
+        I've decided to take matters into my own hands.
         <br /><br />
-        Please create an account to browse the novels on this database and start tracking your favorite series!
+        Haneul is a platform that aims to provide a centralized database for manga and light novels.
+        That's it! Just a simple, easy-to-use platform to keep track of your favorite series.
+        <br /><br />
+        Please join me in re-introducing the world to the joy of reading and supporting the creators.
       </p>
     </div>
   );

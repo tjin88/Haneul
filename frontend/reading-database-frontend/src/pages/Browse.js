@@ -1,6 +1,3 @@
-// TODO: Stop fetching data when there are no more books to fetch
-// TODO: Add a loading spinner when fetching data
-// TODO: Make sure proper image gets displayed, rather than the old image from a previous book search
 import React, { useState, useEffect } from 'react';
 import { useInView } from 'react-intersection-observer';
 import Select from 'react-select';
@@ -18,6 +15,7 @@ const Browse = ({ lightMode }) => {
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [hasMoreBooks, setHasMoreBooks] = useState(true);
   const animatedComponents = makeAnimated();
 
   const { ref, inView } = useInView({
@@ -40,23 +38,29 @@ const Browse = ({ lightMode }) => {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (isFetching || !hasMoreBooks) return;
+
       setIsFetching(true);
       const title = encodeURIComponent(searchTerm).replace("'", "’");
       const genre = encodeURIComponent(genreFilter.map(g => g.value).join(','));
       const sort = encodeURIComponent(sortType.map(g => g.value).join(','));
       const response = await fetch(`/centralized_API_backend/api/all-novels/browse?title=${title}&genre=${genre}&page=${page}&sortType=${sort}`);
       const data = await response.json();
+
       if (page === 1) {
         setBooks(data.results);
       } else {
         setBooks(prevBooks => [...prevBooks, ...data.results]);
       }
+
       if (data.results.length === 0 && page === 1) {
         setError('No books matching the search criteria found!');
       } else {
         setError('');
       }
+
       setTotalCount(data.total_count);
+      setHasMoreBooks(data.results.length > 0);
       setIsFetching(false);
     };
 
@@ -72,27 +76,33 @@ const Browse = ({ lightMode }) => {
       }
     }, 300); // 300ms delay
 
-    return () => clearTimeout(debounceFetchData); 
+    return () => clearTimeout(debounceFetchData);
   }, [searchTerm, genreFilter, sortType, page]);
 
   useEffect(() => {
-    if (inView && !isFetching && books.length < totalCount) {
+    if (inView && !isFetching && books.length < totalCount && hasMoreBooks) {
       setPage(prevPage => prevPage + 1);
     }
-  }, [inView, isFetching, books.length, totalCount]);
+  }, [inView, isFetching, books.length, totalCount, hasMoreBooks]);
 
   const handleSearchChange = (e) => {
     setPage(1);
+    // setBooks([]);
+    setHasMoreBooks(true);
     setSearchTerm(e.target.value);
   };
 
   const handleGenreChange = (selectedOptions) => {
     setPage(1);
+    // setBooks([]);
+    setHasMoreBooks(true);
     setGenreFilter(selectedOptions || []);
   };
 
   const handleSortChange = (selectedOption) => {
     setPage(1);
+    // setBooks([]);
+    setHasMoreBooks(true);
     setSortType(selectedOption);
   };
 
@@ -133,10 +143,7 @@ const Browse = ({ lightMode }) => {
         className="select"
         placeholder="Sort by..."
       />
-      {isFetching 
-        ? <div>Loading...</div> 
-        : <p>{error}</p>
-      }
+      {isFetching ? <div className="spinner">Loading...</div> : <p>{error}</p>}
       <div className="books-grid">
         {books && books.map((book, index) => (
           <BookCard key={index} image_url={book.image_url} title={book.title} newest_chapter={book.newest_chapter} />

@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../components/AuthContext';
+import ManColour from '../assets/ManColour.png';
 import './UserProfile.scss';
 
 const UserProfile = ({ lightMode, setLightMode }) => {
   const { isLoggedIn, user, updateUserProfile, changeUserPassword, deleteUserAccount } = useAuth();
   const [editingProfile, setEditingProfile] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
-  const [emailNotifications, setEmailNotifications] = useState(user ? user.emailNotifications : false);
-  const [pushNotifications, setPushNotifications] = useState(user ? user.pushNotifications : false);
-  const [language, setLanguage] = useState(user ? user.language : 'en');
 
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
-    profilePicture: ''
+    profileImage: '',
+    emailNotifications: false,
+    pushNotifications: false,
+    language: 'en',
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -23,17 +24,16 @@ const UserProfile = ({ lightMode, setLightMode }) => {
   });
 
   const [importList, setImportList] = useState(null);
+  const [profileImageFile, setProfileImageFile] = useState(null);
 
   useEffect(() => {
     if (user) {
       setProfileData({
-        name: user.name,
-        email: user.email,
-        profilePicture: user.profilePicture
+        name: user.profileName,
+        email: user.username,
+        profileImage: user.profileImage,
+        emailNotifications: user.emailNotifications,
       });
-      setEmailNotifications(user.emailNotifications);
-      setPushNotifications(user.pushNotifications);
-      setLanguage(user.language);
     }
   }, [user]);
 
@@ -47,7 +47,15 @@ const UserProfile = ({ lightMode, setLightMode }) => {
 
   const handleProfileSubmit = (e) => {
     e.preventDefault();
-    updateUserProfile(profileData, emailNotifications, pushNotifications, language);
+    const formData = new FormData();
+    formData.append('name', profileData.name);
+    formData.append('email', profileData.email);
+    formData.append('emailNotifications', profileData.emailNotifications);
+    if (profileImageFile) {
+      formData.append('profileImage', profileImageFile);
+    }
+
+    updateUserProfile(formData);
     setEditingProfile(false);
   };
 
@@ -61,27 +69,38 @@ const UserProfile = ({ lightMode, setLightMode }) => {
     }
   };
 
-  const handleImportList = (e) => {
-    setImportList(e.target.files[0]);
-    // TODO: Implement logic for MAL, Kenmei, AniList, Kitsu, and other sites
-  };
-
-  const handleEmailNotificationsToggle = () => {
-    setEmailNotifications(!emailNotifications);
-  };
-
-  const handlePushNotificationsToggle = () => {
-    setPushNotifications(!pushNotifications);
-  };
-
   const handleDeleteAccount = () => {
     if (window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
       deleteUserAccount();
     }
   };
 
-  const handleLanguageChange = (e) => {
-    setLanguage(e.target.value);
+  const handleImportList = (e) => {
+    setImportList(e.target.files[0]);
+    // TODO: Implement logic for MAL, Kenmei, AniList, Kitsu, and other sites
+  };
+
+  const handleEmailNotificationsToggle = () => {
+    setProfileData(prevState => ({
+      ...prevState,
+      emailNotifications: !prevState.emailNotifications
+    }));
+  };
+
+  const handleDarkModeToggle = () => {
+    setLightMode(!lightMode);
+  };
+
+  const handleProfileImageChange = (e) => {
+    setProfileImageFile(e.target.files[0]);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setProfileData(prevState => ({
+        ...prevState,
+        profileImage: reader.result
+      }));
+    };
+    reader.readAsDataURL(e.target.files[0]);
   };
 
   if (!isLoggedIn) {
@@ -90,42 +109,35 @@ const UserProfile = ({ lightMode, setLightMode }) => {
 
   return (
     <div className={`user-profile ${lightMode ? 'light' : 'dark'}`}>
-      <div className="profile-info">
-        <img src={profileData.profilePicture} alt="Profile" className="profile-picture" />
-        <h2>{profileData.name}</h2>
-        <p>{profileData.email}</p>
-        <button onClick={() => setEditingProfile(true)}>Edit Profile</button>
-        <button onClick={() => setChangingPassword(true)}>Change Password</button>
-        <label className="mode-switch">
-          <span>Dark Mode</span>
-          <input type="checkbox" checked={lightMode} onChange={() => setLightMode(!lightMode)} />
-          <span className="slider"></span>
-        </label>
-        <label className="notifications-toggle">
-          <span>Email Notifications</span>
-          <input type="checkbox" checked={emailNotifications} onChange={handleEmailNotificationsToggle} />
-          <span className="slider"></span>
-        </label>
-        <label className="notifications-toggle">
-          <span>Push Notifications</span>
-          <input type="checkbox" checked={pushNotifications} onChange={handlePushNotificationsToggle} />
-          <span className="slider"></span>
-        </label>
-        <label className="import-list">
-          Import list from:
-          <input type="file" accept=".csv, .xlsx" onChange={handleImportList} />
-        </label>
-        <label className="language-select">
-          <span>Language:</span>
-          <select value={language} onChange={handleLanguageChange}>
-            <option value="en">English</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-            <option value="zh">Chinese</option>
-          </select>
-        </label>
-        <button className="delete-account" onClick={handleDeleteAccount}>Delete Account</button>
+      <nav className="profile-nav">
+        <ul>
+          <li><button onClick={() => setEditingProfile(!editingProfile)}>Edit Profile</button></li>
+          <li><button onClick={() => setChangingPassword(!changingPassword)}>Change Password</button></li>
+          <li><button onClick={handleDeleteAccount} className="delete-account">Delete Account</button></li>
+        </ul>
+      </nav>
+      <div className="profile-content">
+        <div className="profile-left">
+          <img src={profileData.profileImage || ManColour} alt="Profile" className="profile-picture" />
+          <h2>{profileData.name}</h2>
+          <p>{profileData.email}</p>
+        </div>
+        <div className="profile-right">
+          <label className="mode-switch">
+            <span>Dark Mode</span>
+            <input type="checkbox" checked={lightMode} onChange={handleDarkModeToggle} />
+            <span className="slider"></span>
+          </label>
+          <label className="notifications-toggle">
+            <span>Email Notifications</span>
+            <input type="checkbox" checked={profileData.emailNotifications} onChange={handleEmailNotificationsToggle} />
+            <span className="slider"></span>
+          </label>
+          <label className="import-list">
+            Import list from:
+            <input type="file" accept=".csv, .xlsx, .json" onChange={handleImportList} />
+          </label>
+        </div>
       </div>
 
       {editingProfile && (
@@ -139,8 +151,8 @@ const UserProfile = ({ lightMode, setLightMode }) => {
             <input type="email" name="email" value={profileData.email} onChange={handleProfileChange} />
           </label>
           <label>
-            Profile Picture URL:
-            <input type="text" name="profilePicture" value={profileData.profilePicture} onChange={handleProfileChange} />
+            Profile Picture:
+            <input type="file" name="profileImage" accept="image/*" onChange={handleProfileImageChange} />
           </label>
           <button type="submit">Save</button>
           <button type="button" onClick={() => setEditingProfile(false)}>Cancel</button>
