@@ -77,7 +77,7 @@ const Browse = ({ lightMode }) => {
     }, 300); // 300ms delay
 
     return () => clearTimeout(debounceFetchData);
-  }, [searchTerm, genreFilter, sortType, page]);
+  }, [searchTerm, genreFilter, sortType, page, isFetching, hasMoreBooks]);
 
   useEffect(() => {
     if (inView && !isFetching && books.length < totalCount && hasMoreBooks) {

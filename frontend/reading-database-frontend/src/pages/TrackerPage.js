@@ -67,6 +67,7 @@ const TrackerPage = () => {
 
   useEffect(() => {
     fetchTrackingList();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleBookChanged = () => {

@@ -30,37 +30,39 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
         }
     };
 
-    const fetchTrackingList = async () => {
-        if (user) {
-            try {
-                // await getCsrfToken();
-                const encodedEmail = encodeURIComponent(user.username);
-                const token = localStorage.getItem('token');
-                const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list/`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        // 'X-CSRFToken': csrfToken,
-                        'Content-Type': 'application/json'
-                    },
-                    credentials: 'include'
-                });
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                setTrackingList(data.reading_list);
-            } catch (error) {
-                console.error('Error fetching tracking list:', error);
-            }
-        }
-    };    
+    
 
     const handleImageError = () => {
         setImageUrl(img_placeholder);
     };
 
     useEffect(() => {
+        const fetchTrackingList = async () => {
+            if (user) {
+                try {
+                    // await getCsrfToken();
+                    const encodedEmail = encodeURIComponent(user.username);
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list/`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            // 'X-CSRFToken': csrfToken,
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'include'
+                    });
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    setTrackingList(data.reading_list);
+                } catch (error) {
+                    console.error('Error fetching tracking list:', error);
+                }
+            }
+        };
+
         fetchTrackingList();
     }, [user]);
 

@@ -20,26 +20,26 @@ export const AuthProvider = ({ children }) => {
     return JSON.parse(jsonPayload);
   }
 
-  // Function to load user data from localStorage
-  const loadUserFromLocalStorage = () => {
-    const storedToken = localStorage.getItem('token');
-    if (storedToken) {
-      const decodedToken = parseJwt(storedToken);
-      const user = {
-        username: decodedToken.username,
-        profileName: decodedToken.profileName,
-        profileImage: decodedToken.profileImage,
-        darkMode: decodedToken.darkMode,
-        emailNotifications: decodedToken.emailNotifications,
-      };
-      
-      setIsLoggedIn(true);
-      setUser(user);
-    }
-  };
-
   // Check local storage for user data on initial load
   useEffect(() => {
+    // Function to load user data from localStorage
+    const loadUserFromLocalStorage = () => {
+      const storedToken = localStorage.getItem('token');
+      if (storedToken) {
+        const decodedToken = parseJwt(storedToken);
+        const user = {
+          username: decodedToken.username,
+          profileName: decodedToken.profileName,
+          profileImage: decodedToken.profileImage,
+          darkMode: decodedToken.darkMode,
+          emailNotifications: decodedToken.emailNotifications,
+        };
+        
+        setIsLoggedIn(true);
+        setUser(user);
+      }
+    };
+
     // getCsrfToken();
     loadUserFromLocalStorage();
   }, []);
