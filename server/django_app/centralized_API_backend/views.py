@@ -91,7 +91,7 @@ class HomeNovelGetView(views.APIView):
                            "Everyone Else is A Returnee", "Heavenly Inquisition Sword", "Solo Bug Player",
                            "Nano Machine", "Chronicles of the Demon Faction", "Academy’s Genius Swordmaster",
                            "Shadow Slave", "Reverend Insanity", "Super Gene (Web Novel)", "Martial World (Web Novel)")
-        issue_sites = ("HiveScans", "Animated Glitched Scans", "Arya Scans")
+        issue_sites = ("HiveScans", "Animated Glitched Scans", "Arya Scans", "Hiraeth Translation")
         issue_titles = ("The Greatest Sword Hero Returns After 69420 Years", "")
 
         carousel_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter FROM all_books WHERE title IN %s AND novel_source NOT IN %s", [carousel_titles, issue_sites])
