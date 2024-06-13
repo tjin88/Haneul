@@ -35,7 +35,7 @@ JWT_TOKEN = quote_plus(os.getenv('JWT_TOKEN'))
 DEBUG = True
 
 # TODO: Add domain here when deploying
-ALLOWED_HOSTS = ['127.0.0.1']
+ALLOWED_HOSTS = ['127.0.0.1', 'haneul.onrender.com']
 
 # Application definition
 
