@@ -1,6 +1,8 @@
 # TODO: Protect against SQL Injection attacks
 # TODO: Protect against Man-in-the-Middle attacks (Use HTTPS)
 # TODO: Protect against Clickjacking attacks
+# Using csrf_exempt as tokens are stored in localStorage and not in cookies
+# Thus, at the moment, the program is not vulnerable to CSRF attacks
 from django.shortcuts import render
 from rest_framework import status, views
 from rest_framework.response import Response
@@ -20,6 +22,7 @@ from django.db import connection
 from django.views.decorators.http import require_http_methods
 from dotenv import load_dotenv
 import os
+import re
 import cloudinary.uploader
 from django.middleware.csrf import CsrfViewMiddleware
 

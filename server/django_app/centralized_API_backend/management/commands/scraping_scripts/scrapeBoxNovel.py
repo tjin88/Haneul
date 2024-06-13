@@ -278,7 +278,8 @@ class BoxNovelScraper:
             
             try:
                 next_page_element = self.wait_for_element(By.CSS_SELECTOR, '.nav-previous a', timeout=10, driver=driver)
-                if next_page_element and page_count < 50:
+                # if next_page_element and page_count < 50:
+                if next_page_element:
                     page_count += 1
                     print(f'Going to page {page_count}')
                     driver.execute_script("arguments[0].scrollIntoView(true);", next_page_element)

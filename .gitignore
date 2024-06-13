@@ -2,6 +2,7 @@ server/myenv/
 .env
 .vscode/
 server/issues.txt
+server/django_app/out/
 
 *.pyc
 *~

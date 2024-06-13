@@ -1,3 +1,6 @@
+# Took 1h 7m 12s to scrape BoxNovel
+# Took 1h 32m 59s for the full master scraper to complete
+# Thus, took 25m 47s to scrape everything except BoxNovel (31 sources)
 import datetime
 import subprocess
 import os
@@ -61,7 +64,6 @@ class Command(BaseCommand):
         for script in all_runnable_scripts:
             script_path = os.path.join(scripts_folder, script)
             try:
-                start_time = datetime.datetime.now()
                 logger.info(f"Starting to scrape {script}")
                 result = subprocess.run(
                     ["python", script_path],

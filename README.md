@@ -26,7 +26,7 @@ Thank you for your interest in Haneul! Let's enhance our reading experiences tog
 ## Tech Stack:
 - frontend: REACT
 - backend: Django
-- database: PostgreSQL (Currently localhost, but can store on AWS RDS or Render's SQL database)
-- server-hosting: Render (Took this down since I am using the free-tier, but simple plug and play)
-- frontend-hosting: Firebase (Took this down since my database is localhost)
+- database: PostgreSQL --> Supabase
+- server-hosting: Render
+- frontend-hosting: Firebase
 - extensions: Coming soon to Chrome, Firefox, and Edge!

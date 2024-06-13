@@ -139,12 +139,21 @@ WSGI_APPLICATION = "django_app.wsgi.application"
 #     }
 # }
 
-postgresql_name = os.getenv('postgresql_name')
-postgresql_user = os.getenv('postgresql_user')
-postgresql_password = os.getenv('postgresql_password')
-postgresql_host = os.getenv('postgresql_host')
-postgresql_port = os.getenv('postgresql_port')
+# # PostgreSQL (Local)
+# postgresql_name = os.getenv('postgresql_local_name')
+# postgresql_user = os.getenv('postgresql_local_user')
+# postgresql_password = os.getenv('postgresql_local_password')
+# postgresql_host = os.getenv('postgresql_local_host')
+# postgresql_port = os.getenv('postgresql_local_port')
 
+# PostgreSQL (Supabase)
+postgresql_name = os.getenv('postgresql_supabase_name')
+postgresql_user = os.getenv('postgresql_supabase_user')
+postgresql_password = os.getenv('postgresql_supabase_password')
+postgresql_host = os.getenv('postgresql_supabase_host')
+postgresql_port = os.getenv('postgresql_supabase_port')
+
+# PostgreSQL (regardless of local or Supabase)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
