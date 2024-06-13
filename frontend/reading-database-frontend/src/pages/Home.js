@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Welcome from '../components/Welcome.js';
+import PreRelease from '../components/PreRelease.js';
 import BookCarousel from '../components/BookCarousel.js';
 import TopTenBooks from '../components/TopTenBooks.js';
 import Statistic from '../components/Statistic.js';
@@ -37,7 +38,7 @@ const Home = ({ lightMode }) => {
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        const response = await fetch(`/centralized_API_backend/api/home-novels/`);
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/home-novels/`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -98,6 +99,7 @@ const Home = ({ lightMode }) => {
       {renderBanner()}
       <main>
         {books && <BookCarousel books={books.carousel} />}
+        {!isLoggedIn && <PreRelease />}
         {!isLoggedIn && <Welcome />}
         {!isLoggedIn && <CookieNotice />}
         {!isLoggedIn && <Statistic label="Total Number of Books" value={numBooks.total} label2="Number of Supported Sites" value2={numBooks.numSources} />}

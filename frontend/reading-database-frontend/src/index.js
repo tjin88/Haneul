@@ -4,14 +4,17 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { AuthProvider } from './components/AuthContext';
+// import { CsrfProvider } from './components/CsrfContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <AuthProvider>
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  </AuthProvider>
+  <React.StrictMode>
+    {/* <CsrfProvider> */}
+      <AuthProvider>
+          <App />
+      </AuthProvider>
+    {/* </CsrfProvider> */}
+  </React.StrictMode>
 );
 
 // If you want to start measuring performance in your app, pass a function

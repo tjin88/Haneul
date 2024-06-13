@@ -25,7 +25,7 @@ const Browse = ({ lightMode }) => {
   useEffect(() => {
     const fetchGenres = async () => {
       try {
-        const response = await fetch(`/centralized_API_backend/api/genres`);
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/genres`);
         const data = await response.json();
         setGenres(data.map(genre => ({ value: genre, label: genre })));
       } catch (error) {
@@ -44,7 +44,7 @@ const Browse = ({ lightMode }) => {
       const title = encodeURIComponent(searchTerm).replace("'", "’");
       const genre = encodeURIComponent(genreFilter.map(g => g.value).join(','));
       const sort = encodeURIComponent(sortType.map(g => g.value).join(','));
-      const response = await fetch(`/centralized_API_backend/api/all-novels/browse?title=${title}&genre=${genre}&page=${page}&sortType=${sort}`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/all-novels/browse?title=${title}&genre=${genre}&page=${page}&sortType=${sort}`);
       const data = await response.json();
 
       if (page === 1) {

@@ -3,15 +3,13 @@
 2. Run Scraper
 3. Run Frontend
 
-### Manually run any scraper
+### Run all scrapers
 cd server
 python -m venv myenv --> only on first run
 source myenv/bin/activate
 pip install -r requirements.txt  --> only on first run
 cd django_app
-python manage.py scrape<Novel_Source>
-
-Ex. python manage.py scrapeAsuraScans
+python manage.py master_scraper
 
 ### Django App API Endpoints
 cd server

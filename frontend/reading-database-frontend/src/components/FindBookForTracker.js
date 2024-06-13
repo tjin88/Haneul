@@ -25,7 +25,7 @@ const FindBookForTracker = ({ onBookSelect, onClose }) => {
         setLoading(true);
         setError('');
         try {
-            const response = await fetch(`/centralized_API_backend/api/all-novels/search?title=${title}`);
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/all-novels/search?title=${title}`);
             const data = await response.json();
             // TODO: Could handle this differently (maybe most popular books?)
             // setSearchResults(response.data.slice(0, 5));

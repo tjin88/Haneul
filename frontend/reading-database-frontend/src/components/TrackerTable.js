@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from './AuthContext';
+// import { useCsrf } from './CsrfContext';
 import AddBookToTracker from './AddBookToTracker';
 import FindBookForTracker from './FindBookForTracker';
 import './TrackerTable.scss';
@@ -11,14 +12,24 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
   const [selectAll, setSelectAll] = useState(false);
 
   const { user } = useAuth();
+  // const { csrfToken, getCsrfToken } = useCsrf();
   
   const updateToMaxChapter = async (bookTitle, source) => {
     try {
-      const response = await fetch(`/centralized_API_backend/api/update-to-max-chapter/`, {
+      const token = localStorage.getItem('token');
+      // const newCsrfToken = await getCsrfToken();
+
+      console.log('token:', token);
+      // console.log('CSRFTOKEN:', newCsrfToken);
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/update-to-max-chapter/`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          // 'X-CSRFToken': newCsrfToken,
+          'Authorization': `Bearer ${token}`,
         },
+        credentials: 'include',
         body: JSON.stringify({
           username: user.username,
           title: bookTitle,
@@ -52,10 +63,15 @@ const TrackerTable = ({ books, fetchTrackingList, onBookEdited }) => {
 
   const deleteBook = async (bookTitle, source) => {
     try {
-      const response = await fetch(`/centralized_API_backend/api/delete-book-from-reading-list/`, {
+      const token = localStorage.getItem('token');
+      // await getCsrfToken();
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/delete-book-from-reading-list/`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          // 'X-CSRFToken': csrfToken,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           username: user.username,

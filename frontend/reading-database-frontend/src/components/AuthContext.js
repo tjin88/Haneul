@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+// import { useCsrf } from './CsrfContext';
 
 const AuthContext = createContext();
 
@@ -7,6 +8,7 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // const { csrfToken, getCsrfToken } = useCsrf();
 
   const parseJwt = (token) => {
     var base64Url = token.split('.')[1];
@@ -38,16 +40,20 @@ export const AuthProvider = ({ children }) => {
 
   // Check local storage for user data on initial load
   useEffect(() => {
+    // getCsrfToken();
     loadUserFromLocalStorage();
   }, []);
 
   const login = async (email, password) => {
     try {
-      const response = await fetch(`/centralized_API_backend/api/login/`, {
+      // await getCsrfToken();
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          // 'X-CSRFToken': csrfToken,
         },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
   
@@ -76,11 +82,14 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (email, password, profileName ) => {
     try {
-      const response = await fetch(`/centralized_API_backend/api/register/`, {
+      // await getCsrfToken();
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/register/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          // 'X-CSRFToken': csrfToken,
         },
+        credentials: 'include',
         body: JSON.stringify({ email, password, profileName }),
       });
   
@@ -119,11 +128,14 @@ export const AuthProvider = ({ children }) => {
 
   const deleteUserAccount = async () => {
     try {
-      const response = await fetch(`/centralized_API_backend/api/delete_user/`, {
+      // await getCsrfToken();
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/delete_user/`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          // 'X-CSRFToken': csrfToken,
         },
+        credentials: 'include',
         body: JSON.stringify({ email: user.username }),
       });
 
@@ -145,14 +157,16 @@ export const AuthProvider = ({ children }) => {
   const updateUserProfile = async (profileData) => {
     try {
       const token = localStorage.getItem('token');
-      const csrfToken = getCsrfToken();
-      const response = await fetch(`/centralized_API_backend/api/update_user_profile/`, {
+      // await getCsrfToken();
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/update_user_profile/`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'X-CSRFToken': csrfToken,
+          // 'X-CSRFToken': csrfToken,
+          'Content-Type': 'application/json',
         },
-        body: profileData,
+        credentials: 'include',
+        body: JSON.stringify(profileData),
       });
   
       if (!response.ok) {

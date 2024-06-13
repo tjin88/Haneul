@@ -14,7 +14,7 @@ const BookDetailsWrapper = () => {
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        const response = await fetch(`/centralized_API_backend/api/book-details/${encodeURIComponent(bookTitle)}`);
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/book-details/${encodeURIComponent(bookTitle)}`);
         let data = await response.json();
         if (data.message === 'Book not found') {
           setError('Book not found');

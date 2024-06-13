@@ -4,6 +4,14 @@ server/myenv/
 server/issues.txt
 server/django_app/out/
 render.yaml
+.env.production
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+haneuL_database.sql
+haneuL_database.*.sql
+postgres.sql
+postgres.*.sql
 
 *.pyc
 *~

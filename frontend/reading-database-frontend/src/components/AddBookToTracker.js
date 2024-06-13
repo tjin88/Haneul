@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+// import { useCsrf } from './CsrfContext';
 import './AddBookToTracker.scss';
 
 const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
@@ -11,13 +12,14 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
     const [isEditting, setIsEditting] = useState(false);
     const [bookDetails, setBookDetails] = useState(null);
     const { user } = useAuth();
+    // const { csrfToken, getCsrfToken } = useCsrf();
     const [bookChapters, setBookChapters] = useState({});
     const img_placeholder = "https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image";
     const [imageUrl, setImageUrl] = useState(img_placeholder);
 
     const fetchBookDetails = async (title, source) => {
         try {
-            const response = await fetch(`/centralized_API_backend/api/all-novels/search?title=${encodeURIComponent(title)}&novel_source=${encodeURIComponent(source)}`);
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/all-novels/search?title=${encodeURIComponent(title)}&novel_source=${encodeURIComponent(source)}`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -31,8 +33,18 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
     const fetchTrackingList = async () => {
         if (user) {
             try {
+                // await getCsrfToken();
                 const encodedEmail = encodeURIComponent(user.username);
-                const response = await fetch(`/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list`);
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list/`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        // 'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -42,7 +54,7 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                 console.error('Error fetching tracking list:', error);
             }
         }
-    };
+    };    
 
     const handleImageError = () => {
         setImageUrl(img_placeholder);
@@ -106,11 +118,16 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
 
         if (user) {
             try {
-                const response = await fetch(`/centralized_API_backend/api/profiles/update_reading_list/`, {
+                // await getCsrfToken();
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/profiles/update_reading_list/`, {
                     method: 'PUT',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                        // 'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/json'
                     },
+                    credentials: 'include',
                     body: JSON.stringify({
                         username: user.username,
                         title: bookTitle,

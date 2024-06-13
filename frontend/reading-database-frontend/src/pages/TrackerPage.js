@@ -3,6 +3,7 @@ import TrackerTable from '../components/TrackerTable';
 import Select from 'react-select';
 import makeAnimated from 'react-select/animated';
 import { useAuth } from '../components/AuthContext';
+// import { useCsrf } from '../components/CsrfContext';
 import './TrackerPage.scss';
 
 const TrackerPage = () => {
@@ -18,6 +19,7 @@ const TrackerPage = () => {
   const [readingStatus, setReadingStatus] = useState([]);
   const [userTags, setUserTags] = useState([]);
 
+  // const { csrfToken, getCsrfToken } = useCsrf();
   const { user } = useAuth();
   const animatedComponents = makeAnimated();
 
@@ -37,8 +39,17 @@ const TrackerPage = () => {
   const fetchTrackingList = async () => {
     if (user) {
       try {
+        // await getCsrfToken();
         const encodedEmail = encodeURIComponent(user.username);
-        const response = await fetch(`/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list`);
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/profiles/${encodedEmail}/tracking_list/`, {
+          method: 'GET',
+          headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+          },
+          credentials: 'include'
+        });
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
