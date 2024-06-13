@@ -10,7 +10,7 @@ import "slick-carousel/slick/slick-theme.css";
 // import BannerDark from '../assets/BannerDark.png';
 import BannerBoyVideo from '../assets/BannerBoyVideo.mp4';
 import BannerBoyBook from '../assets/BannerBoyBook.png';
-import BannerSunset from '../assets/BannerSunset.png';
+// import BannerSunset from '../assets/BannerSunset.png';
 import { useAuth } from '../components/AuthContext';
 import './Home.scss';
 
@@ -87,7 +87,8 @@ const Home = ({ lightMode }) => {
         )}
         <img
           className={`banner ${videoEnded ? 'visible' : 'hidden'}`}
-          src={lightMode ? BannerBoyBook : BannerSunset}
+          src={BannerBoyBook}
+          // src={lightMode ? BannerBoyBook : BannerSunset}
           alt="Home banner with a character reading"
         />
       </div>
