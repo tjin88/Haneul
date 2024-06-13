@@ -18,3 +18,4 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_HANEUL_2AA43 }}'
           channelId: live
           projectId: haneul-2aa43
+          entryPoint: frontend/reading-database-frontend

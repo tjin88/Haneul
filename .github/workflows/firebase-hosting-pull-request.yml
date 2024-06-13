@@ -15,3 +15,4 @@ jobs:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_HANEUL_2AA43 }}'
           projectId: haneul-2aa43
+          entryPoint: frontend/reading-database-frontend
