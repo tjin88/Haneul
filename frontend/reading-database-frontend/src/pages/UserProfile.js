@@ -23,7 +23,7 @@ const UserProfile = ({ lightMode, setLightMode }) => {
     confirmPassword: ''
   });
 
-  const [importList, setImportList] = useState(null);
+  // const [importList, setImportList] = useState(null);
   const [profileImageFile, setProfileImageFile] = useState(null);
 
   useEffect(() => {
@@ -75,10 +75,10 @@ const UserProfile = ({ lightMode, setLightMode }) => {
     }
   };
 
-  const handleImportList = (e) => {
-    setImportList(e.target.files[0]);
-    // TODO: Implement logic for MAL, Kenmei, AniList, Kitsu, and other sites
-  };
+  // const handleImportList = (e) => {
+  //   setImportList(e.target.files[0]);
+  //   // TODO: Implement logic for MAL, Kenmei, AniList, Kitsu, and other sites
+  // };
 
   const handleEmailNotificationsToggle = () => {
     setProfileData(prevState => ({
@@ -133,10 +133,10 @@ const UserProfile = ({ lightMode, setLightMode }) => {
             <input type="checkbox" checked={profileData.emailNotifications} onChange={handleEmailNotificationsToggle} />
             <span className="slider"></span>
           </label>
-          <label className="import-list">
+          {/* <label className="import-list">
             Import list from:
             <input type="file" accept=".csv, .xlsx, .json" onChange={handleImportList} />
-          </label>
+          </label> */}
         </div>
       </div>
 
