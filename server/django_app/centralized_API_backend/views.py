@@ -84,6 +84,7 @@ def csrf_token_view(request):
 ###################### MAIN FUNCTIONS ######################
 class HomeNovelGetView(views.APIView):
     def get(self, request):
+        num_carousel_books = 15
         carousel_titles = ("Reaper of the Drifting Moon", "Solo Leveling", "The Strongest Player",
                            "Swordmaster’s Youngest Son", "Damn Reincarnation", "My Daughter is the Final Boss",
                            "Talent-Swallowing Magician", "Revenge of the Iron-Blooded Sword Hound", "Villain To Kill",
@@ -94,7 +95,35 @@ class HomeNovelGetView(views.APIView):
         issue_sites = ("HiveScans", "Animated Glitched Scans", "Arya Scans", "Hiraeth Translation")
         issue_titles = ("The Greatest Sword Hero Returns After 69420 Years", "")
 
-        carousel_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter FROM all_books WHERE title IN %s AND novel_source NOT IN %s", [carousel_titles, issue_sites])
+        # Preferred titles for the carousel. Does not include those without images
+        carousel_books = fetch_books_as_dict("""
+            SELECT title, image_url, newest_chapter 
+            FROM all_books 
+            WHERE title IN %s 
+            AND novel_source NOT IN %s
+            AND image_url != 'https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image'
+            ORDER BY rating DESC
+        """, [carousel_titles, issue_sites])
+
+        # Supplemented books to ensure we have num_carousel_books books in the carousel
+        if len(carousel_books) < num_carousel_books:
+            additional_books = fetch_books_as_dict("""
+                SELECT title, image_url, newest_chapter 
+                FROM all_books 
+                WHERE novel_source NOT IN %s
+                AND image_url != 'https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image'
+                AND title NOT IN (SELECT title FROM (
+                    SELECT DISTINCT title 
+                    FROM all_books 
+                    WHERE title IN %s
+                ) AS existing_titles)
+                ORDER BY rating DESC
+                LIMIT %s
+            """, [issue_sites, carousel_titles, num_carousel_books - len(carousel_books)])
+            
+            carousel_books.extend(additional_books)
+
+        # carousel_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter FROM all_books WHERE title IN %s AND novel_source NOT IN %s", [carousel_titles, issue_sites])
         recently_updated_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_source NOT IN %s ORDER BY updated_on DESC LIMIT 10", [issue_sites])
         manga_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manga' AND novel_source NOT IN %s ORDER BY rating DESC LIMIT 10", [issue_sites])
         manhua_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manhua' AND novel_source NOT IN %s AND title NOT IN %s ORDER BY rating DESC LIMIT 10", [issue_sites, issue_titles])

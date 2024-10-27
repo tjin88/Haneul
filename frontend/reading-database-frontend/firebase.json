@@ -1,6 +1,9 @@
 {
   "hosting": {
     "public": "build",
+    "environment": {
+      "REACT_APP_API_URL": "https://haneul.onrender.com"
+    },
     "ignore": [
       "firebase.json",
       "**/.*",

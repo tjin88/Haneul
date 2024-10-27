@@ -3,13 +3,14 @@
 2. Run Scraper
 3. Run Frontend
 
-### Run all scrapers
+### Run scrapers
 cd server
 python -m venv myenv --> only on first run
 source myenv/bin/activate
 pip install -r requirements.txt  --> only on first run
 cd django_app
-python manage.py master_scraper
+python manage.py master_scraper  --> Test all scrapers
+python manage.py test_individual_scraper scrapeMangaSushi.py --> Test only 1 scraper
 
 ### Django App API Endpoints
 cd server

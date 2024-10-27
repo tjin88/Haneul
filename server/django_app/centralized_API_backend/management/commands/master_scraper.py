@@ -7,6 +7,9 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 from django.core.management.base import BaseCommand, CommandError
+from dotenv import load_dotenv
+
+load_dotenv()  # Load environment variables from .env file
 
 class Command(BaseCommand):
     help = 'Runs all scraping scripts and updates the database.'
@@ -42,15 +45,42 @@ class Command(BaseCommand):
 
         # List of scripts that should not be run
         scripts_to_ignore = [
-            "scrapeAryaScans.py",
-            "scrapeYakshaScans.py",
+            # "scrapeAryaScans.py",
+            "scrapeAsuraScans.py",      # To fix! (Priority: High)
+            "scrapeHelScans.py",        # To fix! (Priority: Low) --> Changed website layout to other style
+            "scrapeMagusManga.py",      # To fix! (Priority: Low) --> Same as HelScans
+            "scrapeFreakScans.py",      # These guys might be out of business now
+            "scrapeLuminousComics.py",  # Received a DMCA takedown notice
+            "scrapeSuryaScans.py",      # Down
+            "scrapeImmortalUpdates.py", # Down
+            "scrapeMangaGalaxy.py",     # Merged with Vortex Scans
+
+            # "scrapeYakshaScans.py",
             "scrapeRizzFables.py",
             "scrapeRizzFablesSelenium.py",
-            # "scrapeBoxNovel.py",
+
+            "scrapeBoxNovel.py",
+            "scrapeLightNovelPub.py",
         ]
 
         # Get all Python scripts in the child folder
         all_runnable_scripts = [f for f in os.listdir(scripts_folder) if f.endswith('.py') and f not in scripts_to_ignore]
+
+        # For testing purposes, run the below to only invoke certain scripts
+        # all_runnable_scripts = [
+        #     # "scrapeLightNovelPub.py",
+        #     "scrapeBoxNovel.py"
+        # ]
+
+        # all_runnable_scripts = [
+        #                         # 'scrapeBoxNovel.py', 'scrapeSetsuScans.py', 'scrapeFlameComics.py', 'scrapeFreakScans.py', 
+        #                         # 'scrapeResetScans.py', 'scrapeLuminousComics.py', 'scrapeManhwaFreaks.py', 'scrapeAnimatedGlitchedScans2.py', 
+        #                         # 'scrapeTritiniaScans.py', 'scrapeLeviathanScans.py', 'scrapeSpiderScans.py', 'scrapeCulturedWorks.py', 
+        #                         # 'scrapeMangaGalaxy.py', 'scrapeRavenScans.py', 'scrapeKalango.py', 'scrapeHelScans.py', 'scrapeNightScans.py', 
+        #                         # 'scrapeDrakeScans.py', 'scrapeMangaSushi.py', 'scrapeMagusManga.py', 'scrapeGDScans.py', 'scrapeLightNovelPub.py', 
+        #                         'scrapeHiveScans.py', 'scrapeSuryaScans.py', 'scrapeHiraethTranslation.py', 'scrapeArvenComics.py', 'scrapeAsuraScans.py', 
+        #                         'scrapeAnimatedGlitchedScans.py', 'scrapeLHTranslation.py', 'scrapePlatinumCrown.py', 'scrapeImmortalUpdates.py'
+        #                     ]
 
         logger.info(f"Order of runnable scripts: {all_runnable_scripts}")
 
