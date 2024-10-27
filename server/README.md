@@ -18,6 +18,9 @@ pip install -r requirements.txt  --> only on first run
 cd django_app
 python manage.py runserver
 
+### See all files in a tree format
+tree -I "node_modules|.git|out|migrations|myenv|__pycache__|static" --prune --> I excludes directories, prune gets rid of empty directories
+
 ### When making changes to the Django Models
 cd server
 source myenv/bin/activate
@@ -42,10 +45,11 @@ pip freeze > requirements.txt
 # Current Tech Stack
 - Frontend: REACT
 - Backend: Django
-- Database: PostgreSQL (hosted locally, will host on same platform as server later)
-- Server: Local. Planning on using either AWS or Render (Render is nice since free tier)
-- Extension: Available on Chrome, Firefox, and Edge
+- Database: Supabase (free tier)
+- Server: Render (free tier)
+- Extension: Releasing soon on on Chrome, Firefox, and Edge
 - Cron Jobs: Locally scraping 25 sources every 2 hours, and Light Novel Pub every 4 hours
+- Future implementation: Redis
 
 # Next steps:
 
@@ -70,8 +74,21 @@ On Pause:
 Easy Light Novels (Similar to AsuraScans):
 - https://tanooki.team/series/list-mode/
 - https://arcanetranslations.com/series/list-mode/ --> Change "Korean Novel" to "Light Novel"
+- https://donghuastream.org/anime/list-mode/ --> Anime not LN or Manga
+
+Easy Manga:
+- GET https://api.mangadex.org/manga?limit=100&offset=100
+    - 76742 books. Site where scanslators upload their work
+    - Instead of getting all data from this API, then storing it myself,
+      can I, on the frontend, test if the book is in mangadex?
+        - Yes this is possible:
+        - GET https://api.mangadex.org/manga?title=solo%20leveling&limit=100
+        - Returns all books that match this with their title OR alt title
+            - IF going this route, check exact match to the title or alt title
+            - https://api.mangadex.org/manga?title=reincarnator returns 6 books ...
 
 Medium Manga (Similar to MangaSushi)
+https://novelmic.com/comic/ --> Same as BoxNovel
 - https://yakshascans.com/manga/
 - https://paragonscans.com/mangax/ --> Aggregator :(
 - https://stonescape.xyz/manhwaseries/
@@ -82,6 +99,8 @@ Medium Manga (Similar to MangaSushi)
 - https://blazescans.com/manga/list-mode/ --> Likely to be an aggregator
 - https://darkscans.com/mangas/ --> Likely to be an aggregator
 - https://dragontea.ink/manga/ --> Good but protection
+- https://kunmanga.com/page/8/ --> Likely to be an aggregator
+- https://coffeemanga.io/page/20/ --> Likely to be an aggregator
 
 Not the worst:
 - https://lightnovelstranslations.com/read/page/14/
@@ -92,7 +111,9 @@ Medium but worth:
 
 Hard but worth:
 - https://tcbscans.me/projects --> One Piece, Demon Slayer, Attack on Titan, Bleach, Chainsaw Man, Hunter x Hunter, Haikyuu, Jujutsu Kaisen Spy x Family
-- https://mangadex.org/titles/latest --> 10,000 books! --> Even though it's an aggregator, official sites are the ones to upload
+- https://likemanga.io/?act=home&pageNum=2#pages
+- https://www.tappytoon.com/en/comics/home
+- https://tapas.io/menu/2/subtab/7
 
 Hard:
 - https://zetrotranslation.com/novel/i-hope-youre-still-alive-when-tomorrow-comes/
