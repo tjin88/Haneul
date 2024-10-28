@@ -26,13 +26,15 @@ const Home = ({ lightMode }) => {
     manga: [],
     lightNovel: [],
   });
+
+  // Hardcoded total/numSources to account for the initial load time
   const [numBooks, setNumBooks] = useState({
     manga: 0,
     manhua: 0,
     manhwa: 0,
     lightNovel: 0,
-    total: 0,
-    numSources: 0,
+    total: 5071,
+    numSources: 31,
   });
 
   useEffect(() => {

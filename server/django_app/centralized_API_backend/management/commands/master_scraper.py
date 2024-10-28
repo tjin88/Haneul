@@ -1,6 +1,9 @@
 # Took 1h 7m 12s to scrape BoxNovel
 # Took 1h 32m 59s for the full master scraper to complete
 # Thus, took 25m 47s to scrape everything except BoxNovel (31 sources)
+# TODO: In this script, once we've run all scrapers, 
+# TODO: we should run a script to ensure there are no invalid chapter links or books w 0 chapters.
+# TODO: Also check the book images, and replace all invalid images with null for faster indexing.
 import datetime
 import subprocess
 import os
@@ -55,12 +58,12 @@ class Command(BaseCommand):
             "scrapeImmortalUpdates.py", # Down
             "scrapeMangaGalaxy.py",     # Merged with Vortex Scans
 
-            # "scrapeYakshaScans.py",
+            "scrapeYakshaScans.py",     # An error occurred during scraping: 'WebElement' object has no attribute 'outer_html'
             "scrapeRizzFables.py",
             "scrapeRizzFablesSelenium.py",
 
-            "scrapeBoxNovel.py",
-            "scrapeLightNovelPub.py",
+            # "scrapeBoxNovel.py",
+            # "scrapeLightNovelPub.py",
         ]
 
         # Get all Python scripts in the child folder
