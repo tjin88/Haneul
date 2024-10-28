@@ -28,6 +28,9 @@ from django.middleware.csrf import CsrfViewMiddleware
 import requests
 from urllib.parse import urlparse
 import logging
+from django.db import transaction
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 
 load_dotenv()  # Load environment variables from .env file
 logging.basicConfig(
@@ -458,26 +461,75 @@ class AllNovelBrowseView(views.APIView):
 @api_view(['POST'])
 def register_view(request):
     data = request.data
-    username = data.get('email')
-    password = data.get('password')
-    profileName = data.get('profileName')
+    username = data.get('email', '').strip()
+    password = data.get('password', '').strip()
+    profile_name = data.get('profileName', '').strip()
 
+    # Input validation
     try:
-        if User.objects.get(username=username):
-            return Response({"error": "User already exists"}, status=status.HTTP_409_CONFLICT)
-    except User.DoesNotExist:
-        user = User.objects.create_user(username=username, email=username, password=password, first_name=profileName)
-        payload = {
-            'username': user.username,
-            'profileName': user.first_name,
-            'exp': datetime.now() + timedelta(days=2)
-        }
-        jwt_token = jwt.encode(payload, settings.JWT_TOKEN, algorithm='HS256')
-        return Response({
-            "message": "User created successfully",
-            "token": jwt_token
-        }, status=status.HTTP_201_CREATED)
-    return Response({"error": "An unexpected error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # Validate required fields
+        if not all([username, password, profile_name]):
+            return Response(
+                {"error": "All fields are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate email format
+        validate_email(username)
+
+        # Validate password length and complexity
+        if len(password) < 8:
+            return Response(
+                {"error": "Password must be at least 8 characters long"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if user exists
+        if User.objects.filter(username=username).exists():
+            return Response(
+                {"error": "User already exists"},
+                status=status.HTTP_409_CONFLICT
+            )
+
+        # Create user and profile in a transaction
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=username,
+                email=username,
+                password=password,
+                first_name=profile_name
+            )
+            
+            # Profile creation is handled by the signal
+            # The signal will create the profile with the correct ID format
+
+            # Generate JWT token
+            payload = {
+                'username': user.username,
+                'profileName': user.first_name,
+                'exp': datetime.now() + timedelta(days=2)
+            }
+            jwt_token = jwt.encode(payload, settings.JWT_TOKEN, algorithm='HS256')
+
+            logger.info(f"Successfully registered user: {username}")
+            
+            return Response({
+                "message": "User created successfully",
+                "token": jwt_token
+            }, status=status.HTTP_201_CREATED)
+
+    except ValidationError as e:
+        logger.error(f"Email validation error for {username}: {str(e)}")
+        return Response(
+            {"error": "Invalid email format"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        logger.error(f"Registration error for {username}: {str(e)}")
+        return Response(
+            {"error": "An unexpected error occurred during registration"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 @api_view(['POST'])
 def login_view(request):

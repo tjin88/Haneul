@@ -1,5 +1,6 @@
 from django.db import models
 import re
+import uuid
 from django.contrib.auth.models import User
 
 class Genre(models.Model):
@@ -16,6 +17,10 @@ class Profile(models.Model):
     id = models.CharField(max_length=24, primary_key=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     reading_list = models.JSONField(default=list)
+    dark_mode = models.BooleanField(default=False)
+    profile_image = models.CharField(max_length=255, default='')
+    email_notifications = models.BooleanField(default=False)
+    is_paying_user = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'profile'
