@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 // import { useCsrf } from './CsrfContext';
+import Image_Placeholder from '../assets/placeholder.png';
 import './AddBookToTracker.scss';
 
 const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
@@ -14,8 +15,7 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
     const { user } = useAuth();
     // const { csrfToken, getCsrfToken } = useCsrf();
     const [bookChapters, setBookChapters] = useState({});
-    const img_placeholder = "https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image";
-    const [imageUrl, setImageUrl] = useState(img_placeholder);
+    const [imageUrl, setImageUrl] = useState(Image_Placeholder);
 
     const fetchBookDetails = async (title, source) => {
         try {
@@ -33,7 +33,7 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
     
 
     const handleImageError = () => {
-        setImageUrl(img_placeholder);
+        setImageUrl(Image_Placeholder);
     };
 
     useEffect(() => {
@@ -75,13 +75,13 @@ const AddBookToTracker = ({ onBookAdded, onClose, sendBack, givenBook }) => {
                     const book = await fetchBookDetails(givenBook.title, givenBook.novel_source);
                     if (book && book[0]) {
                         setBookDetails(book[0]);
-                        setImageUrl(book[0].image_url || img_placeholder);
+                        setImageUrl(book[0].image_url || Image_Placeholder);
                     } else {
                         console.error("Error setting book!");
                     }
                 } else {
                     setBookDetails(givenBook);
-                    setImageUrl(givenBook.image_url || img_placeholder);
+                    setImageUrl(givenBook.image_url || Image_Placeholder);
                 }
             };
             loadBookDetails();

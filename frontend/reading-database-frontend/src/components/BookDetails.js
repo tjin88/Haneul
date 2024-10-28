@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import AddBookToTracker from './AddBookToTracker';
+import Image_Placeholder from '../assets/placeholder.png';
 import './BookDetails.scss';
 
 const BookDetails = ({ bookDetails }) => {
-  const img_placeholder = "https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image";
-  const [imageUrl, setImageUrl] = useState(bookDetails.image_url || img_placeholder);
+  const [imageUrl, setImageUrl] = useState(bookDetails.image_url || Image_Placeholder);
   const [showModal, setShowModal] = useState(false);
   const last_updated = new Date(bookDetails.updated_on);
 
@@ -17,7 +17,7 @@ const BookDetails = ({ bookDetails }) => {
   };
 
   const handleImageError = () => {
-    setImageUrl(img_placeholder);
+    setImageUrl(Image_Placeholder);
   };
 
   // Check if chapters are in string format and parse if necessary

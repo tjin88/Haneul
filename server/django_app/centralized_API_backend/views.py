@@ -25,6 +25,8 @@ import os
 import re
 import cloudinary.uploader
 from django.middleware.csrf import CsrfViewMiddleware
+import requests
+from urllib.parse import urlparse
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -56,6 +58,22 @@ def get_newest_chapter_link(chapters):
         except (ValueError, IndexError):
             continue
     return max_link
+
+def is_valid_image_url(url):
+    try:
+        # Basic URL format validation
+        result = urlparse(url)
+        if not all([result.scheme, result.netloc]):
+            return False
+        
+        # Try to get just the headers to check if image exists
+        response = requests.head(url, timeout=2)
+        content_type = response.headers.get('content-type', '')
+        
+        return (response.status_code == 200 and 
+                content_type.startswith('image/'))
+    except:
+        return False
 
 # TODO: Fix this!
 def parse_and_sort_chapters(chapters):
@@ -95,35 +113,27 @@ class HomeNovelGetView(views.APIView):
         issue_sites = ("HiveScans", "Animated Glitched Scans", "Arya Scans", "Hiraeth Translation")
         issue_titles = ("The Greatest Sword Hero Returns After 69420 Years", "")
 
-        # Preferred titles for the carousel. Does not include those without images
-        carousel_books = fetch_books_as_dict("""
-            SELECT title, image_url, newest_chapter 
-            FROM all_books 
-            WHERE title IN %s 
-            AND novel_source NOT IN %s
-            AND image_url != 'https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image'
-            ORDER BY rating DESC
-        """, [carousel_titles, issue_sites])
+        # Preferred titles for the carousel
+        carousel_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter FROM all_books WHERE title IN %s AND novel_source NOT IN %s", [carousel_titles, issue_sites])
+
+        # Filter out books with invalid images
+        valid_carousel_books = [book for book in carousel_books if book['image_url'] and is_valid_image_url(book['image_url'])]
 
         # Supplemented books to ensure we have num_carousel_books books in the carousel
-        if len(carousel_books) < num_carousel_books:
+        if len(valid_carousel_books) < num_carousel_books:
             additional_books = fetch_books_as_dict("""
                 SELECT title, image_url, newest_chapter 
                 FROM all_books 
                 WHERE novel_source NOT IN %s
-                AND image_url != 'https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image'
-                AND title NOT IN (SELECT title FROM (
-                    SELECT DISTINCT title 
-                    FROM all_books 
-                    WHERE title IN %s
-                ) AS existing_titles)
+                AND title NOT IN %s
                 ORDER BY rating DESC
                 LIMIT %s
-            """, [issue_sites, carousel_titles, num_carousel_books - len(carousel_books)])
+            """, [issue_sites, carousel_titles, 30])
             
-            carousel_books.extend(additional_books)
+            # Filter these too
+            valid_additional_books = [book for book in additional_books if book['image_url'] and is_valid_image_url(book['image_url'])]
+            valid_carousel_books.extend(valid_additional_books[:num_carousel_books - len(valid_carousel_books)])
 
-        # carousel_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter FROM all_books WHERE title IN %s AND novel_source NOT IN %s", [carousel_titles, issue_sites])
         recently_updated_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_source NOT IN %s ORDER BY updated_on DESC LIMIT 10", [issue_sites])
         manga_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manga' AND novel_source NOT IN %s ORDER BY rating DESC LIMIT 10", [issue_sites])
         manhua_books = fetch_books_as_dict(f"SELECT title, image_url, newest_chapter, rating FROM all_books WHERE novel_type='Manhua' AND novel_source NOT IN %s AND title NOT IN %s ORDER BY rating DESC LIMIT 10", [issue_sites, issue_titles])
@@ -143,7 +153,7 @@ class HomeNovelGetView(views.APIView):
         total_number_of_sources = cursor.fetchone()[0]
 
         return Response({
-            "carousel_books": carousel_books,
+            "carousel_books": valid_carousel_books,
             "recently_updated_books": recently_updated_books,
             "manga_books": manga_books,
             "manhua_books": manhua_books,

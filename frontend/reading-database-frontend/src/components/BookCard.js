@@ -1,18 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../components/AuthContext';
+import Image_Placeholder from '../assets/placeholder.png';
 import './BookCard.scss';
 
 const BookCard = ({ image_url, title, newest_chapter }) => {
   const { isLoggedIn } = useAuth();
-  const img_placeholder = "https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image";
-  const [imageUrl, setImageUrl] = useState(image_url || img_placeholder);
+  const [imageUrl, setImageUrl] = useState(image_url);
+  if (image_url === undefined || image_url === null || image_url === "" || image_url === "https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image") { 
+    setImageUrl(Image_Placeholder); 
+  }
 
   useEffect(() => {
-    setImageUrl(image_url || img_placeholder);
+    setImageUrl(image_url || Image_Placeholder);
+    if (image_url === undefined || image_url === null || image_url === "" || image_url === "https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image") { 
+      setImageUrl(Image_Placeholder); 
+    }
   }, [image_url]);
 
   const handleImageError = () => {
-    setImageUrl(img_placeholder);
+    setImageUrl(Image_Placeholder);
   };
 
   const CardContent = (
