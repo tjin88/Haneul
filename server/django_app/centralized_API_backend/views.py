@@ -48,6 +48,7 @@ def fetch_books_as_dict(query, params=None, image_url_required=False, upper_limi
     Args:
         query (str): SQL query
         params (tuple): Query parameters
+        validate (bool): Whether to validate the books
         image_url_required (bool): Whether to validate image URLs
         upper_limit (int): Maximum number of valid books to return
         paginated (bool): Whether the query already includes pagination
@@ -85,7 +86,7 @@ def fetch_books_as_dict(query, params=None, image_url_required=False, upper_limi
                 for row in rows:
                     try:
                         book = dict(zip(columns, row))
-                        if is_valid_book(book, image_url_required):
+                        if not validate or is_valid_book(book, image_url_required):
                             results.append(book)
                             if upper_limit and len(results) >= upper_limit:
                                 return results
@@ -349,18 +350,18 @@ class HomeNovelUnloggedGetView(views.APIView):
         """
 
         # Preferred titles for the carousel
-        valid_carousel_books = fetch_books_as_dict(f"{base_query} AND title IN %s", [issue_sites, carousel_titles], image_url_required=True)
+        valid_carousel_books = fetch_books_as_dict(f"{base_query} AND title IN %s", [issue_sites, carousel_titles], image_url_required=True, validate=False)
         logger.info(f"Valid carousel books: {[book['title'] for book in valid_carousel_books]}")
 
         # Supplemented books to ensure we have num_carousel_books books in the carousel
         if len(valid_carousel_books) < num_carousel_books:
-            valid_additional_books = fetch_books_as_dict(f"{base_query} AND title NOT IN %s ORDER BY updated_on DESC",[issue_sites, carousel_titles], image_url_required=True, upper_limit=num_carousel_books - len(valid_carousel_books))
+            valid_additional_books = fetch_books_as_dict(f"{base_query} AND title NOT IN %s ORDER BY updated_on DESC",[issue_sites, carousel_titles], image_url_required=True, upper_limit=num_carousel_books - len(valid_carousel_books), validate=False)
             # logger.info(f"Additional carousel books: {[book['title'] for book in additional_books]}")
 
             valid_carousel_books.extend(valid_additional_books[:num_carousel_books - len(valid_carousel_books)])
 
         cursor = connection.cursor()
-        
+
         cursor.execute("SELECT COUNT(*) FROM all_books")
         total_number_of_books = cursor.fetchone()[0]
         cursor.execute("SELECT COUNT(DISTINCT novel_source) FROM all_books")
