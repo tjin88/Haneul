@@ -48,22 +48,33 @@ class Command(BaseCommand):
 
         # List of scripts that should not be run
         scripts_to_ignore = [
-            # "scrapeAryaScans.py",
+            # Current Errors:
             "scrapeAsuraScans.py",      # To fix! (Priority: High)
             "scrapeHelScans.py",        # To fix! (Priority: Low) --> Changed website layout to other style
-            "scrapeMagusManga.py",      # To fix! (Priority: Low) --> Same as HelScans
+            "scrapeMagusManga.py",      # To fix! (Priority: Low) --> Changed website layout to other style. Same as HelScans
+
+            # Could Remove:
             "scrapeFreakScans.py",      # These guys might be out of business now
             "scrapeLuminousComics.py",  # Received a DMCA takedown notice
             "scrapeSuryaScans.py",      # Down
             "scrapeImmortalUpdates.py", # Down
             "scrapeMangaGalaxy.py",     # Merged with Vortex Scans
 
-            "scrapeYakshaScans.py",     # An error occurred during scraping: 'WebElement' object has no attribute 'outer_html'
+            # Found 0 books
+            "scrapeResetScans.py",
+            "scrapeAnimatedGlitchedScans2.py",
+            "scrapeLeviathanScans.py",
+            "scrapeAryaScans.py",
+
+            # Still Developing
+            "scrapeHiveScans.py",       # Looks like we're using both Selenium and Beautiful soup, but Selenium not used correctly
+            "scrapeYakshaScans.py",     # Look at server/out/YakshaScans/scrapeYakshaScans_7.txt for full details
             "scrapeRizzFables.py",
             "scrapeRizzFablesSelenium.py",
 
-            # "scrapeBoxNovel.py",
-            # "scrapeLightNovelPub.py",
+            # Takes a long time to scrape
+            "scrapeBoxNovel.py",
+            "scrapeLightNovelPub.py",
         ]
 
         # Get all Python scripts in the child folder

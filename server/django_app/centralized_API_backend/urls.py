@@ -1,8 +1,9 @@
 from django.urls import path, re_path
-from .views import HomeNovelGetView, AllNovelGetGenres, AllNovelSearchView, login_view, register_view, UserProfileReadingListView, update_reading_list, delete_book_from_reading_list, update_to_max_chapter, BookDetailsView, AllNovelBrowseView, update_reading, update_user_profile, csrf_token_view
+from .views import HomeNovelUnloggedGetView, HomeNovelLoggedGetView, AllNovelGetGenres, AllNovelSearchView, login_view, register_view, UserProfileReadingListView, update_reading_list, delete_book_from_reading_list, update_to_max_chapter, BookDetailsView, AllNovelBrowseView, update_reading, update_user_profile, csrf_token_view
 
 urlpatterns = [
-    path('api/home-novels/', HomeNovelGetView.as_view(), name='get_all_novels'),
+    path('api/home-novels/unlogged', HomeNovelUnloggedGetView.as_view(), name='get_home_carousel_novels'),
+    path('api/home-novels/logged', HomeNovelLoggedGetView.as_view(), name='get_all_home_novels'),
     path('api/genres/', AllNovelGetGenres.as_view(), name='get_all_genres'),
     path('api/book-details/<str:title>/', BookDetailsView.as_view(), name='book-details'),
     path('api/all-novels/search', AllNovelSearchView.as_view(), name='search_all_novels'),

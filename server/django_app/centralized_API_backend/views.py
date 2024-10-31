@@ -247,10 +247,15 @@ def csrf_token_view(request):
     return JsonResponse({'csrfToken': temp})
 
 ###################### MAIN FUNCTIONS ######################
-class HomeNovelGetView(views.APIView):
+class HomeNovelLoggedGetView(views.APIView):
     def get(self, request):
         num_carousel_books = 15
-        carousel_titles = ("The Novel’s Extra (Remake)", "Nano Machine", "Reverend Insanity")
+        carousel_titles = ("The Novel’s Extra (Remake)", "Nano Machine", "Reverend Insanity",
+                           "My Wife Is Actually The Empress?", "Sweetest Top Actress in My Home",
+                           "Glory [e-sports]", "2000 Years Of Magic History In My Head",
+                           "A Barbaric Proposal", "Academy’s Second Seat", "Absolute Sword Sense",
+                           "Adopting Disaster", "Another World in Japan", "Apotheosis", "Apotheosis of a Demon",
+                           "A Sword Master Childhood Friend Power Harassed Me Harshly, so I Broke off Our Relationship and Made a Fresh Start at the Frontier as a Magic Swordsman")
         # carousel_titles = ("Reaper of the Drifting Moon", "Solo Leveling", "The Strongest Player",
         #                    "Swordmaster’s Youngest Son", "Damn Reincarnation", "My Daughter is the Final Boss",
         #                    "Talent-Swallowing Magician", "Revenge of the Iron-Blooded Sword Hound", "Villain To Kill",
@@ -258,6 +263,8 @@ class HomeNovelGetView(views.APIView):
         #                    "Everyone Else is A Returnee", "Heavenly Inquisition Sword", "Solo Bug Player",
         #                    "Nano Machine", "Chronicles of the Demon Faction", "Academy’s Genius Swordmaster",
         #                    "Shadow Slave", "Reverend Insanity", "Super Gene (Web Novel)", "Martial World (Web Novel)")
+
+        # TODO: This should correlate with the issue sites in the master scraper
         issue_sites = ("HiveScans", "Animated Glitched Scans", "Arya Scans", "Hiraeth Translation", 
                        "FreakScans", "Manga Galaxy", "Magus Manga", "Immortal Updates",
                        "Reset Scans", "AsuraScans")
@@ -309,6 +316,59 @@ class HomeNovelGetView(views.APIView):
             "numLightNovel": total_number_of_light_novels,
             "numManhwa": total_number_of_manhwa,
             "numManhua": total_number_of_manhua,
+            "numSources": total_number_of_sources
+        })
+
+class HomeNovelUnloggedGetView(views.APIView):
+    def get(self, request):
+        num_carousel_books = 15
+        carousel_titles = ("The Novel’s Extra (Remake)", "Nano Machine", "Reverend Insanity",
+                           "My Wife Is Actually The Empress?", "Sweetest Top Actress in My Home",
+                           "Glory [e-sports]", "2000 Years Of Magic History In My Head",
+                           "A Barbaric Proposal", "Academy’s Second Seat", "Absolute Sword Sense",
+                           "Adopting Disaster", "Another World in Japan", "Apotheosis", "Apotheosis of a Demon",
+                           "A Sword Master Childhood Friend Power Harassed Me Harshly, so I Broke off Our Relationship and Made a Fresh Start at the Frontier as a Magic Swordsman")
+        # carousel_titles = ("Reaper of the Drifting Moon", "Solo Leveling", "The Strongest Player",
+        #                    "Swordmaster’s Youngest Son", "Damn Reincarnation", "My Daughter is the Final Boss",
+        #                    "Talent-Swallowing Magician", "Revenge of the Iron-Blooded Sword Hound", "Villain To Kill",
+        #                    "The Novel’s Extra (Remake)", "Chronicles Of The Martial God’s Return", "Academy’s Undercover Professor",
+        #                    "Everyone Else is A Returnee", "Heavenly Inquisition Sword", "Solo Bug Player",
+        #                    "Nano Machine", "Chronicles of the Demon Faction", "Academy’s Genius Swordmaster",
+        #                    "Shadow Slave", "Reverend Insanity", "Super Gene (Web Novel)", "Martial World (Web Novel)")
+
+        # TODO: This should correlate with the issue sites in the master scraper
+        issue_sites = ("HiveScans", "Animated Glitched Scans", "Arya Scans", "Hiraeth Translation", 
+                       "FreakScans", "Manga Galaxy", "Magus Manga", "Immortal Updates",
+                       "Reset Scans", "AsuraScans")
+        issue_titles = ("The Greatest Sword Hero Returns After 69420 Years", "")
+
+        base_query = """
+            SELECT title, image_url, newest_chapter, novel_source, novel_type, chapters
+            FROM all_books
+            WHERE novel_source NOT IN %s
+        """
+
+        # Preferred titles for the carousel
+        valid_carousel_books = fetch_books_as_dict(f"{base_query} AND title IN %s", [issue_sites, carousel_titles], image_url_required=True)
+        logger.info(f"Valid carousel books: {[book['title'] for book in valid_carousel_books]}")
+
+        # Supplemented books to ensure we have num_carousel_books books in the carousel
+        if len(valid_carousel_books) < num_carousel_books:
+            valid_additional_books = fetch_books_as_dict(f"{base_query} AND title NOT IN %s ORDER BY updated_on DESC",[issue_sites, carousel_titles], image_url_required=True, upper_limit=num_carousel_books - len(valid_carousel_books))
+            # logger.info(f"Additional carousel books: {[book['title'] for book in additional_books]}")
+
+            valid_carousel_books.extend(valid_additional_books[:num_carousel_books - len(valid_carousel_books)])
+
+        cursor = connection.cursor()
+        
+        cursor.execute("SELECT COUNT(*) FROM all_books")
+        total_number_of_books = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(DISTINCT novel_source) FROM all_books")
+        total_number_of_sources = cursor.fetchone()[0]
+
+        return Response({
+            "carousel_books": valid_carousel_books,
+            "numBooks": total_number_of_books,
             "numSources": total_number_of_sources
         })
 

@@ -38,9 +38,29 @@ const Home = ({ lightMode }) => {
   });
 
   useEffect(() => {
-    const fetchBooks = async () => {
+    const fetchCarouselBooks = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/home-novels/`);
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/home-novels/unlogged`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setBooks(prevState => ({
+          ...prevState,
+          carousel: data.carousel_books,
+        }));
+        setNumBooks(prevState => ({
+          ...prevState,
+          total: data.numBooks,
+          numSources: data.numSources,
+        }));
+      } catch (error) {
+        console.error('Error fetching books:', error);
+      }
+    };
+    const fetchAllBooks = async () => {
+      try {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/centralized_API_backend/api/home-novels/logged`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -65,7 +85,8 @@ const Home = ({ lightMode }) => {
         console.error('Error fetching books:', error);
       }
     };
-    fetchBooks();
+    fetchCarouselBooks();
+    fetchAllBooks();
   }, []);
 
   const handleVideoEnd = () => {
