@@ -318,7 +318,7 @@ def get_home_books(is_logged_in=False):
             "numLightNovel": counts.get('Light Novel', 0),
             "numManhwa": counts.get('Manhwa', 0),
             "numManhua": counts.get('Manhua', 0),
-            "numSources": cursor.fetchone()[2] if cursor.rowcount > 0 else 0
+            "numSources": counts.get('total_sources', 0)
         })
     else:
         cursor.execute("""
