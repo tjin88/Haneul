@@ -5,7 +5,7 @@
 
 ### Run scrapers
 cd server
-python -m venv myenv --> only on first run
+python -m venv myenv --> only on first run --> Built on Python 3.8.2
 source myenv/bin/activate
 pip install -r requirements.txt  --> only on first run
 cd django_app

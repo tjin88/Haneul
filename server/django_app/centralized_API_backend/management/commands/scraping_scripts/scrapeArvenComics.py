@@ -54,7 +54,7 @@ logger = logging.getLogger("ArvenComicsScraper")
 class ArvenComicsScraper:
     def scrape_arven_comics(self):
         # Define URLs for scraping
-        url = 'https://arvencomics.com/project/'
+        url = 'https://arvencomics.com/series/'
 
         # Initialize counters for book processing
         pushed_books, error_books = 0, 0
@@ -440,7 +440,7 @@ class Command(BaseCommand):
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape ArvenComics")
+        # logger.info("Starting to scrape ArvenComics")
 
         # Test database connection
         try:

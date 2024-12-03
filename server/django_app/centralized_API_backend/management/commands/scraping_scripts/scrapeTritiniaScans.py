@@ -25,6 +25,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
+from centralized_API_backend.management.commands.utils.driver_pool import DriverPool
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_app.django_app.settings')
 django.setup()
@@ -120,6 +121,11 @@ class TritiniaScansScraper:
             details = self.scrape_book_details(title, url, driver)
             # logger.info(details)
 
+            if not details['chapters'] or len(details['chapters']) == 0:
+                formatted_duration = self.format_duration(duration)
+                logger.warning(f"{book_number}/{total_books} - book: {title} took {formatted_duration} to return {len(details['chapters'])} chapters")
+                return {'status': 'skipped', 'title': title}
+
             # Attempt to update an existing book or create a new one
             # TODO: Come back to this --> May want to store then push at the end to avoid "concurrency issues" **
             # Look into batching --> bulk create or bulk update
@@ -168,7 +174,6 @@ class TritiniaScansScraper:
 
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
-
             logger.info(f"{book_number}/{total_books} took {formatted_duration} to {'create' if not existing_book else 'update'} {title}, with {len(details['chapters'])} chapters")
             return {'status': 'processed', 'title': title}
         except DatabaseError as e:
@@ -188,7 +193,7 @@ class TritiniaScansScraper:
         finally:
             self.driver_pool.release_driver(driver)
 
-    def scrape_manga_sushi(self):
+    def scrape_tritinia_scans(self):
         """
         Scrapes the Tritinia Scans website for manga details and updates the database.
         Uses multi-threading for faster scraping.
@@ -201,7 +206,6 @@ class TritiniaScansScraper:
             self.driver_pool.release_driver(driver)
 
         logger.info(f"Found {len(books)} books. Starting to scrape details.")
-        # logger.info(books)
 
         results = {'processed': 0, 'skipped': 0, 'error': 0, 'cancelled': 0}
         book_number = 0
@@ -221,8 +225,10 @@ class TritiniaScansScraper:
                 results[result['status']] += 1
 
                 if result['status'] == 'error':
+                    results['error'] += 1 
                     logger.error(f"Error processing {result['title']}: {result['message']}")
                 elif result['status'] == 'database_error':
+                    results['error'] += 1 
                     consecutive_skipped += 1
                     if consecutive_skipped >= 5:
                         logger.info("5 books encountered a database error in a row. Exiting...")
@@ -609,36 +615,6 @@ class TritiniaScansScraper:
             return f"{minutes}m {seconds}s {milliseconds}ms"
         return f"{hours}h {minutes}m {seconds}s"
 
-class DriverPool:
-    def __init__(self, size):
-        self.available_drivers = Queue()
-        self.lock = threading.Lock()
-        for _ in range(size):
-            driver = self.create_webdriver_instance()
-            self.available_drivers.put(driver)
-
-    def get_driver(self):
-        driver = self.available_drivers.get(block=True)
-        return driver
-
-    def release_driver(self, driver):
-        self.available_drivers.put(driver)
-
-    def create_webdriver_instance(self):
-        options = Options()
-        # options.add_argument('--disable-gpu')  # According to the documentation, this is becessary for headless mode
-        # options.add_argument('--no-sandbox')  # Used to bypass OS security model
-        # options.add_argument('--disable-dev-shm-usage')  # Used to overcome limited resource problems
-        options.add_argument("--headless")  # Make the scraping happen as a background process rather than an active window
-
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        return driver
-
-    def close_all_drivers(self):
-        while not self.available_drivers.empty():
-            driver = self.available_drivers.get()
-            driver.quit()
-
 class Command(BaseCommand):
     help = 'Scrapes manga from Tritinia Scans and updates the database.'
 
@@ -652,7 +628,7 @@ class Command(BaseCommand):
         start_time = datetime.datetime.now()
         scraper = TritiniaScansScraper()
         try:
-            scraper.scrape_manga_sushi()
+            scraper.scrape_tritinia_scans()
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
             logger.info(f"Successfully executed scrapeTritiniaScans in {formatted_duration} ")

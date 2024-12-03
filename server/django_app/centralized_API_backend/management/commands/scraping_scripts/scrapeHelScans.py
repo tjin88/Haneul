@@ -54,7 +54,8 @@ logger = logging.getLogger("HelScansScraper")
 class HelScansScraper:
     def scrape_hel_scans(self):
         # Define URLs for scraping
-        url = 'https://helscans.com/manga/list-mode/'
+        # url = 'https://helscans.com/manga/list-mode/'
+        url = 'https://helheimscans.com/latest/'
 
         # Initialize counters for book processing
         pushed_books, error_books = 0, 0
@@ -439,7 +440,7 @@ class Command(BaseCommand):
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape HelScans")
+        # logger.info("Starting to scrape HelScans")
 
         # Test database connection
         try:

@@ -437,7 +437,7 @@ class Command(BaseCommand):
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape Animated Glitched Scans")
+        # logger.info("Starting to scrape Animated Glitched Scans")
 
         # Test database connection
         try:

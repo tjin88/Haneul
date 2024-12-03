@@ -54,7 +54,7 @@ logger = logging.getLogger("MagusMangaScraper")
 class MagusMangaScraper:
     def scrape_magus_manga(self):
         # Define URLs for scraping
-        url = 'https://dmvdepot.com/series/list-mode/'
+        url = 'https://magustoon.com/latest/'
 
         # Initialize counters for book processing
         pushed_books, error_books = 0, 0
@@ -431,7 +431,7 @@ class Command(BaseCommand):
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape MagusManga")
+        # logger.info("Starting to scrape MagusManga")
 
         # Test database connection
         try:

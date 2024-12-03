@@ -22,9 +22,11 @@ from selenium.common.exceptions import NoSuchElementException, WebDriverExceptio
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.core.os_manager import ChromeType
 from selenium.common.exceptions import TimeoutException
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
+from centralized_API_backend.management.commands.utils.driver_pool import DriverPool
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_app.django_app.settings')
 django.setup()
@@ -97,13 +99,11 @@ class MangaSushiScraper:
         if not self.continue_scraping:
             # logger.info(f"{book_number}/{total_books} was 'cancelled': {title_url_tuple[0]}")
             return {'status': 'cancelled', 'title': title_url_tuple[0]}
-    
+        start_time = datetime.datetime.now()
         title, url = title_url_tuple
         try:
             driver = self.driver_pool.get_driver()
             driver.get(url)
-            
-            start_time = datetime.datetime.now()
 
             with connection.cursor() as cursor:
                 cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [title, 'Manga Sushi'])
@@ -220,7 +220,9 @@ class MangaSushiScraper:
 
                 if result['status'] == 'error':
                     logger.error(f"Error processing {result['title']}: {result['message']}")
+                    results['error'] += 1
                 elif result['status'] == 'database_error':
+                    results['error'] += 1
                     consecutive_skipped += 1
                     if consecutive_skipped >= 5:
                         logger.info("5 books encountered a database error in a row. Exiting...")
@@ -607,36 +609,6 @@ class MangaSushiScraper:
             return f"{minutes}m {seconds}s {milliseconds}ms"
         return f"{hours}h {minutes}m {seconds}s"
 
-class DriverPool:
-    def __init__(self, size):
-        self.available_drivers = Queue()
-        self.lock = threading.Lock()
-        for _ in range(size):
-            driver = self.create_webdriver_instance()
-            self.available_drivers.put(driver)
-
-    def get_driver(self):
-        driver = self.available_drivers.get(block=True)
-        return driver
-
-    def release_driver(self, driver):
-        self.available_drivers.put(driver)
-
-    def create_webdriver_instance(self):
-        options = Options()
-        # options.add_argument('--disable-gpu')  # According to the documentation, this is becessary for headless mode
-        # options.add_argument('--no-sandbox')  # Used to bypass OS security model
-        # options.add_argument('--disable-dev-shm-usage')  # Used to overcome limited resource problems
-        options.add_argument("--headless")  # Make the scraping happen as a background process rather than an active window
-
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        return driver
-
-    def close_all_drivers(self):
-        while not self.available_drivers.empty():
-            driver = self.available_drivers.get()
-            driver.quit()
-
 class Command(BaseCommand):
     help = 'Scrapes manga from Manga Sushi and updates the database.'
 
@@ -646,7 +618,7 @@ class Command(BaseCommand):
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape Manga Sushi")
+        # logger.info("Starting to scrape Manga Sushi")
         start_time = datetime.datetime.now()
         scraper = MangaSushiScraper()
         try:

@@ -1,3 +1,5 @@
+# TODO: Look into optimizations. Took 1h 7m 12s to scrape 500 books (I did cap this at 500 manually).
+# To be fair, my computer was overloaded at that time, so the CPU could have been overloaded.
 import datetime
 import json
 import time
@@ -40,8 +42,8 @@ def get_next_log_file_name(base_dir, base_filename):
         counter += 1
 
 # Setting up the logging configuration
-log_directory = "../out/GDScans"
-log_base_filename = "scrapeGDScans"
+log_directory = "../out/BoxNovel"
+log_base_filename = "scrapeBoxNovel"
 log_file_path = get_next_log_file_name(log_directory, log_base_filename)
 
 # Ensure the log directory exists
@@ -62,9 +64,9 @@ logging.basicConfig(
 logging.getLogger('WDM').setLevel(logging.WARNING)
 
 # Set logger for all other log messages
-logger = logging.getLogger("GDScansScraper")
+logger = logging.getLogger("BoxNovelScraper")
 
-class GDScansScraper:
+class BoxNovelScraper:
     def __init__(self):
         '''
         TODO: Test to see if this is the optimal number of threads
@@ -75,9 +77,9 @@ class GDScansScraper:
         Too many threads = server ban or system overload 
         Too little threads = slower scraping time
 
-        3 threads, all skipped = 0h 9m 36s  --> See out/GDScans/scrapeGDScans_45.txt
-        2 threads, all skipped = 0h 11m 35s --> See out/GDScans/scrapeGDScans_46.txt
-        5 threads, all skipped = 1h 2m 34s  --> See out/GDScans/scrapeGDScans_44.txt
+        3 threads, all skipped = 0h 9m 36s  --> See out/BoxNovel/scrapeBoxNovel_45.txt
+        2 threads, all skipped = 0h 11m 35s --> See out/BoxNovel/scrapeBoxNovel_46.txt
+        5 threads, all skipped = 1h 2m 34s  --> See out/BoxNovel/scrapeBoxNovel_44.txt
         '''
         # TODO: Test to see if this is the optimal number of threads
         # 3 > 2 > 5. Test 4 to see where it stands 
@@ -86,7 +88,7 @@ class GDScansScraper:
         self.MAX_THREADS = 3 # max thread count (or number of concurrent windows used for scraping)
         self.driver_pool = DriverPool(size=self.MAX_THREADS)
         self.continue_scraping = True
-        self.skipped_threshold = 1600
+        self.skipped_threshold = 200
 
     def scrape_book_and_update_db(self, title_url_tuple, book_number, total_books):
         """
@@ -98,16 +100,16 @@ class GDScansScraper:
         if not self.continue_scraping:
             # logger.info(f"{book_number}/{total_books} was 'cancelled': {title_url_tuple[0]}")
             return {'status': 'cancelled', 'title': title_url_tuple[0]}
-    
+
+        start_time = datetime.datetime.now()
         title, url = title_url_tuple
+        normalized_title = title.replace('(WN)', '').replace('Web Novel', '').strip()
         try:
             driver = self.driver_pool.get_driver()
             driver.get(url)
-            
-            start_time = datetime.datetime.now()
 
             with connection.cursor() as cursor:
-                cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [title, 'Galaxy Degen Scans'])
+                cursor.execute("SELECT newest_chapter FROM all_books WHERE title = %s AND novel_source = %s", [normalized_title, 'Box Novel'])
                 existing_book = cursor.fetchone()
 
             if existing_book:
@@ -119,7 +121,6 @@ class GDScansScraper:
                     return {'status': 'skipped', 'title': title}
 
             details = self.scrape_book_details(title, url, driver)
-            # logger.info(details)
 
             # Attempt to update an existing book or create a new one
             # TODO: Come back to this --> May want to store then push at the end to avoid "concurrency issues" **
@@ -189,19 +190,19 @@ class GDScansScraper:
         finally:
             self.driver_pool.release_driver(driver)
 
-    def scrape_gd_scans(self):
+    def scrape_box_novel(self):
         """
-        Scrapes the Galaxy Degen Scans website for light novel details and updates the database.
+        Scrapes the Box Novel website for light novel details and updates the database.
         Uses multi-threading for faster scraping.
         """
-        base_url = 'https://gdscans.com/'
+        base_url = 'https://boxnovel.com/novel/'
         try:
             driver = self.driver_pool.get_driver()
             books = self.scrape_main_page(base_url, driver=driver)
         finally:
             self.driver_pool.release_driver(driver)
 
-        logger.info(f"Found {len(books)} books. Starting to scrape details.")
+        # logger.info(f"Found {len(books)} books. Starting to scrape details.")
 
         results = {'processed': 0, 'skipped': 0, 'error': 0, 'cancelled': 0}
         book_number = 0
@@ -215,16 +216,14 @@ class GDScansScraper:
                     break
                 book_number += 1
                 futures.append(executor.submit(self.scrape_book_and_update_db, book, book_number, total_books))
-
+                       
             for future in as_completed(futures):
                 result = future.result()
                 results[result['status']] += 1
 
                 if result['status'] == 'error':
-                    results['error'] += 1
                     logger.error(f"Error processing {result['title']}: {result['message']}")
                 elif result['status'] == 'database_error':
-                    results['error'] += 1
                     consecutive_skipped += 1
                     if consecutive_skipped >= 5:
                         logger.info("5 books encountered a database error in a row. Exiting...")
@@ -256,7 +255,7 @@ class GDScansScraper:
     def scrape_main_page(self, url, driver=None):
         """
         Scrapes the main listing page for book URLs using Selenium.
-        This method scrapes the main page of Galaxy Degen Scans to find all the books listed. 
+        This method scrapes the main page of Box Novel to find all the books listed. 
         It uses Selenium's WebDriverWait to ensure that the page is loaded before attempting to find elements. 
 
         Args:
@@ -268,6 +267,7 @@ class GDScansScraper:
         """
         self.navigate_to_url(url, driver=driver)
         books = []
+        page_count = 1
 
         while True:
             book_elements = self.wait_for_elements(By.CLASS_NAME, 'page-item-detail', driver=driver)
@@ -278,9 +278,10 @@ class GDScansScraper:
             
             try:
                 next_page_element = self.wait_for_element(By.CSS_SELECTOR, '.nav-previous a', timeout=10, driver=driver)
+                # if next_page_element and page_count < 50:
                 if next_page_element:
-                    # logger.info('Found next_page_element: ')
-                    # logger.info(next_page_element)
+                    page_count += 1
+                    print(f'Going to page {page_count}')
                     driver.execute_script("arguments[0].scrollIntoView(true);", next_page_element)
                     WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, '.nav-previous a')))
                     driver.execute_script("arguments[0].click();", next_page_element)
@@ -326,34 +327,46 @@ class GDScansScraper:
             self.navigate_to_url(book_url, driver=driver)
             
             # Extract details
+            normalized_title = title.replace('(WN)', '').replace('Web Novel', '').strip()
             synopsis_str = self.wait_for_element(By.CSS_SELECTOR, '.description-summary .summary__content', driver=driver)
-            synopsis = synopsis_str.get_attribute('textContent').replace('(adsbygoogle = window.adsbygoogle || []).push({});', '').strip() if synopsis_str and synopsis_str.get_attribute('textContent') else 'Synopsis not available'
+            synopsis = synopsis_str.get_attribute('textContent').replace('(adsbygoogle = window.adsbygoogle || []).push({});', '').replace('B0XNʘVEL.C0M', '').strip() if synopsis_str and synopsis_str.get_attribute('textContent') else 'Synopsis not available'
             authors = self.wait_for_elements(By.CSS_SELECTOR, '.summary-content .author-content a', driver=driver)
             author = ', '.join([author.text.strip() for author in authors]) if authors else 'Author not available'
-            updated_on_text = self.get_element_text(By.CSS_SELECTOR, '.chapter-release-date i', 'Chapter not available', driver=driver)
-            newest_chapter = self.get_element_text(By.CSS_SELECTOR, '.listing-chapters_wrap .wp-manga-chapter a', 'Chapter not available', driver=driver)
+            updated_on_text = self.get_element_text(By.CSS_SELECTOR, '.chapter-release-date i', driver=driver)
+            newest_chapter = self.get_element_text(By.CSS_SELECTOR, '.listing-chapters_wrap .wp-manga-chapter a', driver=driver)
             genres = [genre.text.strip() for genre in self.wait_for_elements(By.CSS_SELECTOR, '.summary-content .genres-content a', driver=driver)]
-            image_url = self.get_element_attribute(By.CSS_SELECTOR, '.summary_image img', 'src', driver=driver)
+            default_image_url = "https://via.placeholder.com/400x600/CCCCCC/FFFFFF?text=No+Image"
+            image_url = self.get_element_attribute(By.CSS_SELECTOR, '.summary_image img', 'src', driver=driver) or default_image_url
             rating = self.get_element_text(By.CSS_SELECTOR, '.post-total-rating .score', driver=driver)
             status = self.get_value_based_on_heading("Status", driver)
             followers_str = self.get_value_based_on_heading("Rank", driver)
-            followers = self.parse_followers(followers_str.split(' ')[-2]) if followers_str != 'N/A' else 0
+            followers = self.parse_followers(followers_str.split(' ')[-3]) if followers_str != 'N/A' else 'N/A'
             updated_on = self.parse_relative_date(updated_on_text).strftime('%Y-%m-%dT%H:%M:%S%z')
-            tags = self.get_value_based_on_heading("Type", driver).lower()
-            novel_type = 'Manga' if 'Manga' in tags else 'Manhwa' if 'Manhwa' in tags else 'Manhua' if 'Manhua' in tags else 'Manga',
+
+            try:
+                next_page_element = self.wait_for_element(By.CLASS_NAME, 'chapter-readmore', timeout=5, driver=driver)
+                if next_page_element:
+                    driver.execute_script("arguments[0].scrollIntoView(true);", next_page_element)
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CLASS_NAME, 'chapter-readmore')))
+                    driver.execute_script("arguments[0].click();", next_page_element)
+                    time.sleep(3) # TODO: Wait for the page to load. I don't love this hardcoded, but it works for now.
+            except TimeoutException:
+                # Yeah I guess keep going? It just means that there's less than 5 chapters ...
+                pass
 
             chapters = {}
             try:
-                chapter_elements = self.wait_for_elements(By.CSS_SELECTOR, 'ul.sub-chap-list li.wp-manga-chapter a', timeout=5, driver=driver)
+                chapter_elements = self.wait_for_elements(By.CSS_SELECTOR, 'ul.version-chap a', timeout=5, driver=driver)
                 for chapter in chapter_elements:
                     chapter_title = chapter.text.strip()
                     chapter_url = chapter.get_attribute('href')
-                    chapters[chapter_title] = chapter_url
+                    if chapter_title and chapter_url:
+                        chapters[chapter_title] = chapter_url
             except TimeoutException:
                 chapters = {}
 
             book_details = {
-                'title': title,
+                'title': normalized_title,
                 'synopsis': synopsis,
                 'author': author,
                 'updated_on': updated_on,
@@ -362,13 +375,11 @@ class GDScansScraper:
                 'image_url': image_url,
                 'rating': float(rating) * 2.0 if rating else 0.0,
                 'status': status,
-                'novel_type': novel_type,
-                'novel_source': 'Galaxy Degen Scans',
+                'novel_type': 'Light Novel',
+                'novel_source': 'Box Novel',
                 'followers': followers,
                 'chapters': chapters
             }
-
-            # logger.info(f"Scraped details for {title}: {book_details}")
 
             return book_details
         except NoSuchElementException as e:
@@ -410,7 +421,7 @@ class GDScansScraper:
                 EC.presence_of_all_elements_located((by, value))
             )
         except (TimeoutException, WebDriverException) as e:
-            logger.warning(f"Error waiting for elements {value}")
+            logger.error(f"Error waiting for elements {value}: {e}")
             return []
 
     def wait_for_element(self, by, value, timeout=10, element=None, driver=None):
@@ -600,7 +611,7 @@ class GDScansScraper:
         return f"{hours}h {minutes}m {seconds}s"
 
 class Command(BaseCommand):
-    help = 'Scrapes light novels from Galaxy Degen Scans and updates the database.'
+    help = 'Scrapes light novels from Box Novel and updates the database.'
 
     def handle(self, *args, **kwargs):
         """
@@ -608,17 +619,17 @@ class Command(BaseCommand):
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        # logger.info("Starting to scrape Galaxy Degen Scans")
+        logger.info("Starting to scrape Box Novel")
         start_time = datetime.datetime.now()
-        scraper = GDScansScraper()
+        scraper = BoxNovelScraper()
         try:
-            scraper.scrape_gd_scans()
+            scraper.scrape_box_novel()
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
-            logger.info(f"Successfully executed scrapeGDScans in {formatted_duration} ")
-            self.stdout.write(self.style.SUCCESS('Successfully executed scrapeGDScans'))
+            logger.info(f"Successfully executed scrapeBoxNovel in {formatted_duration} ")
+            self.stdout.write(self.style.SUCCESS('Successfully executed scrapeBoxNovel'))
         except ConnectionError:
-            logger.error("Looks like the computer was not connected to the internet. Abandoned this attempt to update server for Galaxy Degen Scans books.")
+            logger.error("Looks like the computer was not connected to the internet. Abandoned this attempt to update server for Box Novel books.")
         except Exception as e:
             logger.error(f"An error occurred during scraping: {e}")
             raise CommandError(f"Scraping failed due to an error: {e}")

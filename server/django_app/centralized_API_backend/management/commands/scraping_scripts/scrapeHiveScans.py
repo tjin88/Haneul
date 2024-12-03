@@ -18,6 +18,7 @@ from django.core.exceptions import ValidationError
 from bson import ObjectId, Decimal128
 import traceback
 import sys
+from centralized_API_backend.management.commands.utils.driver_pool import DriverPool
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_app.django_app.settings')
 django.setup()
@@ -54,7 +55,9 @@ logger = logging.getLogger("HiveScansScraper")
 class HiveScansScraper:
     def __init__(self):
         self.MAX_THREADS = 3 # max thread count (or number of concurrent windows used for scraping)
+        self.driver_pool = DriverPool(size=self.MAX_THREADS)
         self.continue_scraping = True
+        self.skipped_threshold = 200
 
     def scrape_hive_scans(self):
         base_url = 'https://hivetoon.com/az-list/'
@@ -79,9 +82,36 @@ class HiveScansScraper:
                 results[result['status']] += 1
 
                 if result['status'] == 'error':
+                    results['error'] += 1
                     logger.error(f"Error processing {result['title']}: {result['message']}")
+                elif result['status'] == 'database_error':
+                    results['error'] += 1
+                    consecutive_skipped += 1
+                    if consecutive_skipped >= 5:
+                        logger.info("5 books encountered a database error in a row. Exiting...")
+                        self.continue_scraping = False
+                        executor.shutdown(wait=False)
+                        break
+                elif results['processed'] > 0 or results['skipped'] > self.skipped_threshold:
+                    if result['status'] == 'skipped':
+                        consecutive_skipped += 1
 
-        logger.info(f"Books Processed: {results['processed']}, Skipped: {results['skipped']}, Errors: {results['error']}")
+                        ''' 
+                        Break if there are more than 5 books that haven't been updated.
+                        This is because we would assume that the rest of the books are up to date.
+                        '''
+                        if consecutive_skipped >= 5:
+                            logger.info("5 books skipped in a row after processing. Exiting...")
+                            self.continue_scraping = False
+                            executor.shutdown(wait=False)
+                            break
+                    elif result['status'] == 'processed':
+                        results['skipped'] += consecutive_skipped
+                        consecutive_skipped = 0
+
+        self.driver_pool.close_all_drivers()
+        results['skipped'] += consecutive_skipped
+        logger.info(f"Books Processed: {results['processed']}, Skipped: {results['skipped'] + results['cancelled']}, Errors: {results['error']}")
         logger.info(f"There should be {total_books} books!")
 
     def scrape_book_and_update_db(self, title_url_tuple, book_number, total_books):
@@ -339,7 +369,7 @@ class Command(BaseCommand):
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape HiveScans")
+        # logger.info("Starting to scrape HiveScans")
 
         try:
             with connection.cursor() as cursor:

@@ -25,6 +25,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
+from centralized_API_backend.management.commands.utils.driver_pool import DriverPool
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_app.django_app.settings')
 django.setup()
@@ -193,7 +194,8 @@ class ResetScansScraper:
         Scrapes the Reset Scans website for light novel details and updates the database.
         Uses multi-threading for faster scraping.
         """
-        urls_to_scrape = ['https://reset-scans.xyz/mangas/', 'https://reset-scans.xyz/mangas/page/2/', 'https://reset-scans.xyz/mangas/page/3/']
+        # urls_to_scrape = ['https://reset-scans.xyz/mangas/', 'https://reset-scans.xyz/mangas/page/2/', 'https://reset-scans.xyz/mangas/page/3/']
+        urls_to_scrape = ['https://reset-scans.xyz/public/manga']
         try:
             driver = self.driver_pool.get_driver()
             books = self.scrape_main_page(urls_to_scrape, driver=driver)
@@ -201,7 +203,6 @@ class ResetScansScraper:
             self.driver_pool.release_driver(driver)
 
         logger.info(f"Found {len(books)} books. Starting to scrape details.")
-        # logger.info(books)
 
         results = {'processed': 0, 'skipped': 0, 'error': 0, 'cancelled': 0}
         book_number = 0
@@ -221,8 +222,10 @@ class ResetScansScraper:
                 results[result['status']] += 1
 
                 if result['status'] == 'error':
+                    results['error'] += 1
                     logger.error(f"Error processing {result['title']}: {result['message']}")
                 elif result['status'] == 'database_error':
+                    results['error'] += 1
                     consecutive_skipped += 1
                     if consecutive_skipped >= 5:
                         logger.info("5 books encountered a database error in a row. Exiting...")
@@ -587,36 +590,6 @@ class ResetScansScraper:
             return f"{minutes}m {seconds}s {milliseconds}ms"
         return f"{hours}h {minutes}m {seconds}s"
 
-class DriverPool:
-    def __init__(self, size):
-        self.available_drivers = Queue()
-        self.lock = threading.Lock()
-        for _ in range(size):
-            driver = self.create_webdriver_instance()
-            self.available_drivers.put(driver)
-
-    def get_driver(self):
-        driver = self.available_drivers.get(block=True)
-        return driver
-
-    def release_driver(self, driver):
-        self.available_drivers.put(driver)
-
-    def create_webdriver_instance(self):
-        options = Options()
-        # options.add_argument('--disable-gpu')  # According to the documentation, this is becessary for headless mode
-        # options.add_argument('--no-sandbox')  # Used to bypass OS security model
-        # options.add_argument('--disable-dev-shm-usage')  # Used to overcome limited resource problems
-        options.add_argument("--headless")  # Make the scraping happen as a background process rather than an active window
-
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        return driver
-
-    def close_all_drivers(self):
-        while not self.available_drivers.empty():
-            driver = self.available_drivers.get()
-            driver.quit()
-
 class Command(BaseCommand):
     help = 'Scrapes light novels from Reset Scans and updates the database.'
 
@@ -626,7 +599,7 @@ class Command(BaseCommand):
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape Reset Scans")
+        # logger.info("Starting to scrape Reset Scans")
         start_time = datetime.datetime.now()
         scraper = ResetScansScraper()
         try:

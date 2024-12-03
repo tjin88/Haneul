@@ -54,7 +54,7 @@ logger = logging.getLogger("FlameComicsScraper")
 class FlameComicsScraper:
     def scrape_flame_comics(self):
         # Define URLs for scraping
-        url = 'https://flamecomics.me/series/list-mode/'
+        url = 'https://flamecomics.xyz/series/list-mode/'
 
         # Initialize counters for book processing
         pushed_books, error_books = 0, 0
@@ -430,7 +430,7 @@ class Command(BaseCommand):
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape FlameComics")
+        # logger.info("Starting to scrape FlameComics")
 
         # Test database connection
         try:

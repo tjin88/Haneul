@@ -405,7 +405,7 @@ class AsuraScansScraper:
                 logger.error(f"Validation error for {book_title}: {e}")
                 return -1
             except DatabaseError:
-                logger.error(f"Database error for {book_title}. Please ensure the MongoDB connection is properly established and the computer's IP is connected to the database.")
+                logger.error(f"Database error for {book_title}. Please ensure the db connection is properly established and the computer's IP is connected to the database.")
                 return -1
             except Exception as e:
                 logger.error(f"Unexpected error while processing book '{book_title}': {e}")

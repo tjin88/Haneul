@@ -31,6 +31,7 @@ import logging
 from django.db import transaction
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 
 load_dotenv()  # Load environment variables from .env file
 logging.basicConfig(
@@ -223,6 +224,116 @@ def is_valid_image_url(url):
         logger.error(f"Error checking image URL {url}: {str(e)}")
         return False
 
+def get_home_books(is_logged_in=False):
+    """Get all necessary books for home page with caching"""
+    cache_key = 'home_books_logged' if is_logged_in else 'home_books_unlogged'
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return cached_data
+
+    carousel_titles = ("The Novel’s Extra (Remake)", "Nano Machine", "Reverend Insanity",
+                    "My Wife Is Actually The Empress?", "Sweetest Top Actress in My Home",
+                    "Glory [e-sports]", "2000 Years Of Magic History In My Head",
+                    "A Barbaric Proposal", "Academy’s Second Seat", "Absolute Sword Sense",
+                    "Adopting Disaster", "Another World in Japan", "Apotheosis", "Apotheosis of a Demon",
+                    "A Sword Master Childhood Friend Power Harassed Me Harshly, so I Broke off Our Relationship and Made a Fresh Start at the Frontier as a Magic Swordsman")
+    # carousel_titles = ("Reaper of the Drifting Moon", "Solo Leveling", "The Strongest Player",
+    #                    "Swordmaster’s Youngest Son", "Damn Reincarnation", "My Daughter is the Final Boss",
+    #                    "Talent-Swallowing Magician", "Revenge of the Iron-Blooded Sword Hound", "Villain To Kill",
+    #                    "The Novel’s Extra (Remake)", "Chronicles Of The Martial God’s Return", "Academy’s Undercover Professor",
+    #                    "Everyone Else is A Returnee", "Heavenly Inquisition Sword", "Solo Bug Player",
+    #                    "Nano Machine", "Chronicles of the Demon Faction", "Academy’s Genius Swordmaster",
+    #                    "Shadow Slave", "Reverend Insanity", "Super Gene (Web Novel)", "Martial World (Web Novel)")
+
+    # TODO: This should correlate with the issue sites in the master scraper
+    issue_sites = ("HiveScans", "Animated Glitched Scans", "Arya Scans", "Hiraeth Translation", 
+                    "FreakScans", "Manga Galaxy", "Magus Manga", "Immortal Updates",
+                    "Reset Scans", "AsuraScans")
+    issue_titles = ("The Greatest Sword Hero Returns After 69420 Years", "")
+
+    base_query = """
+        SELECT title, image_url, newest_chapter, novel_source, novel_type, chapters
+        FROM all_books WHERE novel_source NOT IN %s
+    """
+
+    result = {}
+    
+    # Fetch carousel books
+    carousel_books = fetch_books_as_dict(
+        f"{base_query} AND title IN %s", 
+        [issue_sites, carousel_titles], 
+        image_url_required=True
+    )
+
+    if len(carousel_books) < 15:
+        additional_books = fetch_books_as_dict(
+            f"{base_query} AND title NOT IN %s ORDER BY updated_on DESC",
+            [issue_sites, carousel_titles], 
+            image_url_required=True, 
+            upper_limit=15 - len(carousel_books)
+        )
+        carousel_books.extend(additional_books)
+    
+    result["carousel_books"] = carousel_books
+
+    cursor = connection.cursor()
+    
+    if is_logged_in:
+        result.update({
+            "recently_updated_books": fetch_books_as_dict(
+                f"{base_query} ORDER BY updated_on DESC", 
+                [issue_sites], image_url_required=True, upper_limit=10
+            ),
+            "manga_books": fetch_books_as_dict(
+                f"{base_query} AND novel_type='Manga' ORDER BY rating DESC", 
+                [issue_sites], image_url_required=True, upper_limit=10
+            ),
+            "manhua_books": fetch_books_as_dict(
+                f"{base_query} AND novel_type='Manhua' AND title NOT IN %s ORDER BY rating DESC", 
+                [issue_sites, issue_titles], image_url_required=True, upper_limit=10
+            ),
+            "manhwa_books": fetch_books_as_dict(
+                f"{base_query} AND novel_type='Manhwa' ORDER BY rating DESC", 
+                [issue_sites], image_url_required=True, upper_limit=10
+            ),
+            "light_novel_books": fetch_books_as_dict(
+                f"{base_query} AND novel_type='Light Novel' ORDER BY rating DESC", 
+                [issue_sites], image_url_required=True, upper_limit=10
+            )
+        })
+
+        cursor.execute("""
+            SELECT 
+                novel_type,
+                COUNT(*) as count,
+                (SELECT COUNT(DISTINCT novel_source) FROM all_books) as total_sources
+            FROM all_books 
+            GROUP BY novel_type
+            HAVING novel_type IN ('Manga', 'Manhua', 'Manhwa', 'Light Novel')
+        """)
+        counts = {row[0]: row[1] for row in cursor.fetchall()}
+        result.update({
+            "numManga": counts.get('Manga', 0),
+            "numLightNovel": counts.get('Light Novel', 0),
+            "numManhwa": counts.get('Manhwa', 0),
+            "numManhua": counts.get('Manhua', 0),
+            "numSources": cursor.fetchone()[2] if cursor.rowcount > 0 else 0
+        })
+    else:
+        cursor.execute("""
+            SELECT COUNT(*) as total_books,
+                    COUNT(DISTINCT novel_source) as total_sources
+            FROM all_books
+        """)
+        total_books, total_sources = cursor.fetchone()
+        result.update({
+            "numBooks": total_books,
+            "numSources": total_sources
+        })
+
+    cache.set(cache_key, result, 86400)  # Cache for 1 day
+    return result
+
 # TODO: Fix this!
 def parse_and_sort_chapters(chapters):
     # Check if chapters is a JSON string and parse it
@@ -249,129 +360,12 @@ def csrf_token_view(request):
 
 ###################### MAIN FUNCTIONS ######################
 class HomeNovelLoggedGetView(views.APIView):
-    def get(self, request):
-        num_carousel_books = 15
-        carousel_titles = ("The Novel’s Extra (Remake)", "Nano Machine", "Reverend Insanity",
-                           "My Wife Is Actually The Empress?", "Sweetest Top Actress in My Home",
-                           "Glory [e-sports]", "2000 Years Of Magic History In My Head",
-                           "A Barbaric Proposal", "Academy’s Second Seat", "Absolute Sword Sense",
-                           "Adopting Disaster", "Another World in Japan", "Apotheosis", "Apotheosis of a Demon",
-                           "A Sword Master Childhood Friend Power Harassed Me Harshly, so I Broke off Our Relationship and Made a Fresh Start at the Frontier as a Magic Swordsman")
-        # carousel_titles = ("Reaper of the Drifting Moon", "Solo Leveling", "The Strongest Player",
-        #                    "Swordmaster’s Youngest Son", "Damn Reincarnation", "My Daughter is the Final Boss",
-        #                    "Talent-Swallowing Magician", "Revenge of the Iron-Blooded Sword Hound", "Villain To Kill",
-        #                    "The Novel’s Extra (Remake)", "Chronicles Of The Martial God’s Return", "Academy’s Undercover Professor",
-        #                    "Everyone Else is A Returnee", "Heavenly Inquisition Sword", "Solo Bug Player",
-        #                    "Nano Machine", "Chronicles of the Demon Faction", "Academy’s Genius Swordmaster",
-        #                    "Shadow Slave", "Reverend Insanity", "Super Gene (Web Novel)", "Martial World (Web Novel)")
-
-        # TODO: This should correlate with the issue sites in the master scraper
-        issue_sites = ("HiveScans", "Animated Glitched Scans", "Arya Scans", "Hiraeth Translation", 
-                       "FreakScans", "Manga Galaxy", "Magus Manga", "Immortal Updates",
-                       "Reset Scans", "AsuraScans")
-        issue_titles = ("The Greatest Sword Hero Returns After 69420 Years", "")
-
-        base_query = """
-            SELECT title, image_url, newest_chapter, novel_source, novel_type, chapters
-            FROM all_books
-            WHERE novel_source NOT IN %s
-        """
-
-        # Preferred titles for the carousel
-        valid_carousel_books = fetch_books_as_dict(f"{base_query} AND title IN %s", [issue_sites, carousel_titles], image_url_required=True)
-        logger.info(f"Valid carousel books: {[book['title'] for book in valid_carousel_books]}")
-
-        # Supplemented books to ensure we have num_carousel_books books in the carousel
-        if len(valid_carousel_books) < num_carousel_books:
-            valid_additional_books = fetch_books_as_dict(f"{base_query} AND title NOT IN %s ORDER BY updated_on DESC",[issue_sites, carousel_titles], image_url_required=True, upper_limit=num_carousel_books - len(valid_carousel_books))
-            # logger.info(f"Additional carousel books: {[book['title'] for book in additional_books]}")
-
-            valid_carousel_books.extend(valid_additional_books[:num_carousel_books - len(valid_carousel_books)])
-
-        recently_updated_books = fetch_books_as_dict(f"{base_query} ORDER BY updated_on DESC", [issue_sites], image_url_required=True, upper_limit=10)
-        manga_books = fetch_books_as_dict(f"{base_query} AND novel_type='Manga' ORDER BY rating DESC", [issue_sites], image_url_required=True, upper_limit=10)
-        manhua_books = fetch_books_as_dict(f"{base_query} AND novel_type='Manhua' AND title NOT IN %s ORDER BY rating DESC", [issue_sites, issue_titles], image_url_required=True, upper_limit=10)
-        manhwa_books = fetch_books_as_dict(f"{base_query} AND novel_type='Manhwa' ORDER BY rating DESC", [issue_sites], image_url_required=True, upper_limit=10)
-        light_novel_books = fetch_books_as_dict(f"{base_query} AND novel_type='Light Novel' ORDER BY rating DESC", [issue_sites], image_url_required=True, upper_limit=10)
-
-        cursor = connection.cursor()
-        cursor.execute("SELECT COUNT(*) FROM all_books WHERE novel_type='Manga'")
-        total_number_of_manga = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM all_books WHERE novel_type='Manhua'")
-        total_number_of_manhua = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM all_books WHERE novel_type='Manhwa'")
-        total_number_of_manhwa = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM all_books WHERE novel_type='Light Novel'")
-        total_number_of_light_novels = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(DISTINCT novel_source) FROM all_books")
-        total_number_of_sources = cursor.fetchone()[0]
-
-        return Response({
-            "carousel_books": valid_carousel_books,
-            "recently_updated_books": recently_updated_books,
-            "manga_books": manga_books,
-            "manhua_books": manhua_books,
-            "manhwa_books": manhwa_books,
-            "light_novel_books": light_novel_books,
-            "numManga": total_number_of_manga,
-            "numLightNovel": total_number_of_light_novels,
-            "numManhwa": total_number_of_manhwa,
-            "numManhua": total_number_of_manhua,
-            "numSources": total_number_of_sources
-        })
+   def get(self, request):
+       return Response(get_home_books(is_logged_in=True))
 
 class HomeNovelUnloggedGetView(views.APIView):
-    def get(self, request):
-        num_carousel_books = 15
-        carousel_titles = ("The Novel’s Extra (Remake)", "Nano Machine", "Reverend Insanity",
-                           "My Wife Is Actually The Empress?", "Sweetest Top Actress in My Home",
-                           "Glory [e-sports]", "2000 Years Of Magic History In My Head",
-                           "A Barbaric Proposal", "Academy’s Second Seat", "Absolute Sword Sense",
-                           "Adopting Disaster", "Another World in Japan", "Apotheosis", "Apotheosis of a Demon",
-                           "A Sword Master Childhood Friend Power Harassed Me Harshly, so I Broke off Our Relationship and Made a Fresh Start at the Frontier as a Magic Swordsman")
-        # carousel_titles = ("Reaper of the Drifting Moon", "Solo Leveling", "The Strongest Player",
-        #                    "Swordmaster’s Youngest Son", "Damn Reincarnation", "My Daughter is the Final Boss",
-        #                    "Talent-Swallowing Magician", "Revenge of the Iron-Blooded Sword Hound", "Villain To Kill",
-        #                    "The Novel’s Extra (Remake)", "Chronicles Of The Martial God’s Return", "Academy’s Undercover Professor",
-        #                    "Everyone Else is A Returnee", "Heavenly Inquisition Sword", "Solo Bug Player",
-        #                    "Nano Machine", "Chronicles of the Demon Faction", "Academy’s Genius Swordmaster",
-        #                    "Shadow Slave", "Reverend Insanity", "Super Gene (Web Novel)", "Martial World (Web Novel)")
-
-        # TODO: This should correlate with the issue sites in the master scraper
-        issue_sites = ("HiveScans", "Animated Glitched Scans", "Arya Scans", "Hiraeth Translation", 
-                       "FreakScans", "Manga Galaxy", "Magus Manga", "Immortal Updates",
-                       "Reset Scans", "AsuraScans")
-        issue_titles = ("The Greatest Sword Hero Returns After 69420 Years", "")
-
-        base_query = """
-            SELECT title, image_url, newest_chapter, novel_source, novel_type, chapters
-            FROM all_books
-            WHERE novel_source NOT IN %s
-        """
-
-        # Preferred titles for the carousel
-        valid_carousel_books = fetch_books_as_dict(f"{base_query} AND title IN %s", [issue_sites, carousel_titles], image_url_required=True, validate=False)
-        logger.info(f"Valid carousel books: {[book['title'] for book in valid_carousel_books]}")
-
-        # Supplemented books to ensure we have num_carousel_books books in the carousel
-        if len(valid_carousel_books) < num_carousel_books:
-            valid_additional_books = fetch_books_as_dict(f"{base_query} AND title NOT IN %s ORDER BY updated_on DESC",[issue_sites, carousel_titles], image_url_required=True, upper_limit=num_carousel_books - len(valid_carousel_books), validate=False)
-            # logger.info(f"Additional carousel books: {[book['title'] for book in additional_books]}")
-
-            valid_carousel_books.extend(valid_additional_books[:num_carousel_books - len(valid_carousel_books)])
-
-        cursor = connection.cursor()
-
-        cursor.execute("SELECT COUNT(*) FROM all_books")
-        total_number_of_books = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(DISTINCT novel_source) FROM all_books")
-        total_number_of_sources = cursor.fetchone()[0]
-
-        return Response({
-            "carousel_books": valid_carousel_books,
-            "numBooks": total_number_of_books,
-            "numSources": total_number_of_sources
-        })
+   def get(self, request):
+       return Response(get_home_books(is_logged_in=False))
 
 class AllNovelSearchView(views.APIView):
     def get(self, request):

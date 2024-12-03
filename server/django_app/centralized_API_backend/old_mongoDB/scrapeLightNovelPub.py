@@ -103,14 +103,13 @@ class LightNovelPubScraper:
             logger.info(f"{book_number}/{total_books} was 'cancelled': {title}")
             return {'status': 'cancelled', 'title': title}
     
+        start_time = datetime.datetime.now()
         title, url = title_url_tuple
         try:
             # Get next available driver
             driver = self.driver_pool.get_driver()
 
             driver.get(url)
-            
-            start_time = datetime.datetime.now()
 
             # Check if the book exists in the database
             existing_book = AllBooks.objects.filter(title=title, novel_source='Light Novel Pub').first()
@@ -141,7 +140,7 @@ class LightNovelPubScraper:
         except DatabaseError as e:
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)
-            logger.error(f"{book_number}/{total_books} took {formatted_duration} to encounter a 'database error': {title}. Please ensure the MongoDB connection is properly established and the computer's IP is connected to the database.")
+            logger.error(f"{book_number}/{total_books} took {formatted_duration} to encounter a 'database error': {title}. Please ensure the db connection is properly established and the computer's IP is connected to the database.")
         except Exception as e:
             duration = datetime.datetime.now() - start_time
             formatted_duration = self.format_duration(duration)

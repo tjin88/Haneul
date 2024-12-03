@@ -429,7 +429,7 @@ class Command(BaseCommand):
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape Cultured Works")
+        # logger.info("Starting to scrape Cultured Works")
 
         # Test database connection
         try:

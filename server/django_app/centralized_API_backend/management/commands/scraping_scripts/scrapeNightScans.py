@@ -144,12 +144,11 @@ class NightScansScraper:
                     image_url = img['src'].strip()
                     # Check if the image URL is not a placeholder
                     if not image_url.startswith('data:image/svg+xml'):
-                        logger.info(f'Found image URL: {image_url}')
                         details['image_url'] = image_url
                         break
 
-            if not details['image_url'].startswith('https://via.placeholder.com'):
-                logger.info(f'Image found for {details["title"]}: {details["image_url"]}')
+            if details['image_url'].startswith('https://via.placeholder.com'):
+                logger.warning(f'Image not found for {details["title"]}: {details["image_url"]}. Adding placeholder.')
 
             imptdt_elements = soup.find_all('div', class_='imptdt')
             for element in imptdt_elements:
@@ -441,7 +440,7 @@ class Command(BaseCommand):
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape NightScans")
+        # logger.info("Starting to scrape NightScans")
 
         # Test database connection
         try:

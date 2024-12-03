@@ -54,7 +54,7 @@ logger = logging.getLogger("ManhwaFreaksScraper")
 class ManhwaFreaksScraper:
     def scrape_manhwa_freaks(self):
         # Define URLs for scraping
-        url = 'https://manhwafreaks.org/manga/list-mode/'
+        url = 'https://manhwafreake.com/series/list-mode/'
 
         # Initialize counters for book processing
         pushed_books, error_books = 0, 0
@@ -437,7 +437,7 @@ class Command(BaseCommand):
 
         Executes the scraping process, calculates the duration of the operation, and logs the result.
         """
-        logger.info("Starting to scrape ManhwaFreaks")
+        # logger.info("Starting to scrape ManhwaFreaks")
 
         # Test database connection
         try:

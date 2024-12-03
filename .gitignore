@@ -28,6 +28,8 @@ server/django_app/centralized_API_backend/migrations/
 
 server/out
 frontend/assets/
+notes.txt
+optimizations.txt
 
 # In order to stop the perpetuation of people scraping these works,
 # I will not include the scraping scripts in the repository.
