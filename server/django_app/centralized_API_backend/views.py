@@ -229,6 +229,7 @@ def get_home_books(is_logged_in=False):
     cache_key = 'home_books_logged' if is_logged_in else 'home_books_unlogged'
     cached_data = cache.get(cache_key)
     if cached_data:
+        logger.info(f"Successfully retrieved {cache_key} data from cache")
         return cached_data
 
     carousel_titles = ("The Novel’s Extra (Remake)", "Nano Machine", "Reverend Insanity",
