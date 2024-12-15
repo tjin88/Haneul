@@ -128,10 +128,10 @@ const Home = ({ lightMode }) => {
         {!isLoggedIn && <CookieNotice />}
         {!isLoggedIn && <Statistic label="Total Number of Books" value={numBooks.total} label2="Number of Supported Sites" value2={numBooks.numSources} />}
         {isLoggedIn && <TopTenBooks title={"Recently Updated"} books={books.recentlyUpdated} numBooks={numBooks.total} />}
-        {isLoggedIn && <TopTenBooks title={"Popular Manhwa"} books={books.manhwa} numBooks={numBooks.manhwa} />}
-        {isLoggedIn && <TopTenBooks title={"Popular Manhua"} books={books.manhua} numBooks={numBooks.manhua} />}
-        {isLoggedIn && <TopTenBooks title={"Popular Manga"} books={books.manga} numBooks={numBooks.manga} />}
-        {isLoggedIn && <TopTenBooks title={"Popular Light Novels"} books={books.lightNovel} numBooks={numBooks.lightNovel} />}
+        {books.manhwa > 10 && isLoggedIn && <TopTenBooks title={"Popular Manhwa"} books={books.manhwa} numBooks={numBooks.manhwa} />}
+        {books.manhua > 10 && isLoggedIn && <TopTenBooks title={"Popular Manhua"} books={books.manhua} numBooks={numBooks.manhua} />}
+        {books.manga > 10 && isLoggedIn && <TopTenBooks title={"Popular Manga"} books={books.manga} numBooks={numBooks.manga} />}
+        {books.lightNovel > 10 && isLoggedIn && <TopTenBooks title={"Popular Light Novels"} books={books.lightNovel} numBooks={numBooks.lightNovel} />}
         {/* TODO: Update this to be most popular (after getting users)*/}
         {/* {isLoggedIn && <TopTenBooks title={"Most Popular Series"} books={books.carousel} numBooks={numBooks.total} />} */}
       </main>
