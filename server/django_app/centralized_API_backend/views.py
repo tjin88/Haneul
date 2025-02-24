@@ -313,6 +313,7 @@ def get_home_books(is_logged_in=False):
             HAVING novel_type IN ('Manga', 'Manhua', 'Manhwa', 'Light Novel')
         """)
         counts = {row[0]: row[1] for row in cursor.fetchall()}
+        logger.info(f"Counts: {counts}")
         result.update({
             "numManga": counts.get('Manga', 0),
             "numLightNovel": counts.get('Light Novel', 0),
