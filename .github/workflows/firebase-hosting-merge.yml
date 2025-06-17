@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: '20'
       - name: Cache dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/frontend/reading-database-frontend/package-lock.json') }}
