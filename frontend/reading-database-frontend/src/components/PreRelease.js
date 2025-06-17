@@ -12,7 +12,7 @@ const PreRelease = () => {
         There will also be up to 50 seconds of delay for the server to turn on, should it be inactive for over 15 minutes.
         You'll know that the server is up and running when you see the book images appear above this message.
         <br /> 
-        If you have any questions, comments, feature ideas, or find any bugs, please reach out to me at tjin368@gmail.com!
+        If you have any questions, comments, feature ideas, or find any bugs, please reach out to me at platform.haneul@gmail.com!
         <br />
         I hope you enjoy the site! 😊
       </p>

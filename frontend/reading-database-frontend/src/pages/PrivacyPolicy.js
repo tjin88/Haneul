@@ -49,7 +49,7 @@ const PrivacyPolicy = () => {
 
       <h2>Your Rights</h2>
       <p>
-        You have the right to access, correct, or delete your personal data at any time. If you have any concerns about your data, please contact us at tjin368@gmail.com.
+        You have the right to access, correct, or delete your personal data at any time. If you have any concerns about your data, please contact us at platform.haneul@gmail.com.
       </p>
 
       <h2>Changes to This Privacy Policy</h2>
@@ -61,7 +61,7 @@ const PrivacyPolicy = () => {
       <p>
         If you have any questions about this privacy policy, please contact us at:
       </p>
-      <p>Email: tjin368@gmail.com</p>
+      <p>Email: platform.haneul@gmail.com</p>
     </div>
   );
 };

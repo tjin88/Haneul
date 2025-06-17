@@ -19,7 +19,7 @@ Join me in eliminating aggregator websites from the equation. Please stay tuned 
 This is a personal project and is not licensed or open for public contribution at the moment. However, I'm open to feedback and suggestions.
 
 ## Contact
-For inquiries or suggestions, feel free to reach out to me at tjin368@gmail.com.
+For inquiries or suggestions, feel free to reach out to me at platform.haneul@gmail.com.
 
 Thank you for your interest in Haneul! Let's enhance our reading experiences together :)
 
